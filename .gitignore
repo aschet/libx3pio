@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+
+build/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+.cache/
+compile_commands.json
+build-*/
+stage-*/
+*.ctu-info
+*.dump

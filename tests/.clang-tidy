@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+#
+# A test counts with the sizes of its fixtures, which are small, and allocates
+# and reads strings of known size on purpose.
+
+InheritParentConfig: true
+Checks: >
+  -bugprone-implicit-widening-of-multiplication-result,
+  -readability-avoid-nested-conditional-operator,
+  -clang-analyzer-core.NullDereference,
+  -clang-analyzer-optin.portability.UnixAPI,
+  -clang-analyzer-unix.Malloc,
+  -clang-analyzer-security.ArrayBound

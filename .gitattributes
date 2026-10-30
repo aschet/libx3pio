@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+
+# Normalize line endings in the repository, check out native.
+* text=auto
+
+# Sources and build files are text on every platform.
+*.c text
+*.h text
+*.in text
+*.cmake text
+*.txt text
+*.json text
+*.py text
+*.yml text
+*.md text
+*.toml text
+*.xsd text
+
+# Zip files are binary, and test data is compared byte by byte.
+*.x3p binary
+tests/data/expected.txt -text

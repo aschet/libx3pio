@@ -1,0 +1,23 @@
+{
+  "name": "x3pio",
+  "version": "0.1.0",
+  "description": "Reader and writer for ISO 25178-72 x3p files in C",
+  "homepage": "https://github.com/aschet/libx3pio",
+  "license": "MIT",
+  "dependencies": [
+    "expat",
+    {
+      "name": "minizip-ng",
+      "default-features": false
+    },
+    "zlib"
+  ],
+  "features": {
+    "tests": {
+      "description": "Dependencies of the tests",
+      "dependencies": [
+        "libxml2"
+      ]
+    }
+  }
+}

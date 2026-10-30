@@ -1,0 +1,106 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # The definition of each job is in .github/ci/run.sh, which a developer runs
+  # the same way with run.sh <job>. The packages and Python tools that a job
+  # needs on the runners of GitHub are listed here. The dependencies of the
+  # library come from vcpkg, which the runners provide.
+  ci:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC x86-64 Linux
+            runner: ubuntu-latest
+            job: gcc-x86-64-linux
+            packages: ninja-build gcc
+          - name: GCC AArch64 Linux
+            runner: ubuntu-24.04-arm
+            job: gcc-aarch64-linux
+            packages: ninja-build gcc
+          - name: Clang x86-64 Linux
+            runner: ubuntu-latest
+            job: clang-x86-64-linux
+            packages: ninja-build clang
+          - name: Clang AArch64 macOS
+            runner: macos-latest
+            job: clang-aarch64-macos
+          - name: MSVC x86-64 Windows
+            runner: windows-latest
+            job: msvc-x86-64-windows
+          - name: MSVC x86 Windows
+            runner: windows-latest
+            job: msvc-x86-windows
+          - name: MSVC AArch64 Windows
+            runner: windows-11-arm
+            job: msvc-aarch64-windows
+          - name: ASan and UBSan
+            runner: ubuntu-latest
+            job: asan-ubsan
+            packages: ninja-build clang
+          - name: TSan
+            runner: ubuntu-latest
+            job: tsan
+            packages: ninja-build clang
+          - name: Static analysis
+            runner: ubuntu-latest
+            job: static-analysis
+            packages: ninja-build
+            pipx: clang-tidy==21.1.6
+          - name: Format
+            runner: ubuntu-latest
+            job: format
+            pipx: clang-format==21.1.6
+          - name: Documentation
+            runner: ubuntu-latest
+            job: documentation
+            packages: ninja-build doxygen
+          - name: Licenses
+            runner: ubuntu-latest
+            job: licenses
+            pipx: reuse
+          - name: Coverage
+            runner: ubuntu-latest
+            job: coverage
+            packages: ninja-build gcc
+            pipx: gcovr
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the tools
+        if: ${{ runner.os == 'Linux' }}
+        env:
+          PACKAGES: ${{ matrix.packages }}
+          PIPX: ${{ matrix.pipx }}
+        run: |
+          sudo apt-get update
+          # shellcheck disable=SC2086
+          sudo apt-get install -y $PACKAGES
+          for package in $PIPX; do
+            pipx install "$package"
+          done
+          pipx environment --value PIPX_BIN_DIR >> "$GITHUB_PATH"
+
+      - name: Run the job
+        env:
+          JOB: ${{ matrix.job }}
+        run: .github/ci/run.sh "$JOB"

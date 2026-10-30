@@ -1,0 +1,42 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/**
+ * @file
+ * The version of the library.
+ */
+
+#ifndef X3PIO_VERSION_H
+#define X3PIO_VERSION_H
+
+#include <x3pio/x3pio_export.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+/** The major version: the interface changes incompatibly with it. */
+#define X3PIO_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+/** The minor version: functions are added. */
+#define X3PIO_VERSION_MINOR @PROJECT_VERSION_MINOR@
+/** The patch version: errors are corrected. */
+#define X3PIO_VERSION_PATCH @PROJECT_VERSION_PATCH@
+/** The version as text, for example "1.0.0". */
+#define X3PIO_VERSION_STRING "@PROJECT_VERSION@"
+
+/**
+ * Returns the version of the library that is linked, as text. A program that
+ * wants to know whether the header and the library agree compares it with
+ * X3PIO_VERSION_STRING.
+ */
+X3PIO_API const char *x3pio_version(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* X3PIO_VERSION_H */

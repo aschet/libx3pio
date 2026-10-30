@@ -1,0 +1,203 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
+ * The main page of the API reference and the page on the x3p format, which the
+ * descriptions of the single functions refer to.
+ */
+
+/**
+ * @mainpage libx3pio
+ *
+ * libx3pio is a portable C library that reads and writes the x3p files of
+ * ISO 25178-72. An x3p file is a zip container that holds the points of a
+ * profile, of an areal surface measurement or of a point cloud, and a
+ * description of them in XML. It is used as an interchange format for
+ * topography data and as a software measurement standard.
+ *
+ * @section features Features
+ * - Implemented according to ISO 25178-72:2017 and its Amendment 1:2020, with
+ *   the revisions `ISO5436 - 2000` and `ISO25178-72:2017/DAM1`.
+ * - Profiles, surfaces with layers and point clouds; axes that are incremental
+ *   or absolute; the data types int16, int32, float and double; the binary and
+ *   the text format of the points; vendor-specific files.
+ * - Application-side buffers with arbitrary strides: a reader writes into, and
+ *   a writer reads from, the memory of the program, also members of structures
+ *   and columns of matrices.
+ * - Access to the points as numbers in metres, or as the values that the file
+ *   stores, together with the mask of the points that were measured.
+ * - Files, blocks of memory and streams as sources and sinks. A reader reads
+ *   only the member of the zip file that a call needs.
+ * - Custom allocators.
+ * - Thread support: the library holds no global state, so threads use handles
+ *   of their own at the same time.
+ * - The headers of the library do not include those of its dependencies, so a
+ *   program needs neither minizip-ng nor Expat to compile.
+ *
+ * @section limitations Limitations
+ * - A handle must not be shared between threads.
+ * - Points can be read only once and in the order of the file; a writer takes
+ *   them in the same order.
+ * - The number of points must be known before the first one is written, since
+ *   the description is part of the file.
+ * - A failure while the points are read or written makes the handle refuse
+ *   further calls.
+ * - A custom allocator serves the library and Expat. The functions of
+ *   minizip-ng and of zlib, which it uses for the zip container, allocate with
+ *   `malloc`.
+ * - The library is not meant for firmware: the zip container needs a heap, a
+ *   file system or a stream, and a deflate implementation.
+ * - Encrypted members and containers of more than one volume are not
+ *   supported.
+ *
+ * @section building_build Building and Installing
+ * The library requires a C11 compiler, CMake, minizip-ng (4.0 or later) and
+ * Expat. Both are available as packages of vcpkg and Conan; their CMake
+ * targets and package names differ, which the build hides behind the targets
+ * `x3pio_deps::minizip` and `x3pio_deps::expat`.
+ * @code{.sh}
+ * cmake -S . -B build
+ * cmake --build build
+ * ctest --test-dir build
+ * cmake --install build --prefix /path/to/prefix
+ * @endcode
+ *
+ * With Visual Studio, configure with `-A x64` (or `Win32`, `ARM64`) and name
+ * the configuration in the other commands: `--config Release`, and
+ * `-C Release` for `ctest`. The tests need libxml2, which checks the files
+ * that the writer makes against the schemas of the standard; `-DBUILD_TESTING=OFF`
+ * leaves them out.
+ *
+ * These CMake options control which components are built:
+ *
+ * <table class="doxtable">
+ * <tr><th>Option</th><th>Default</th><th>Builds</th></tr>
+ * <tr><td>X3PIO_BUILD_EXAMPLES</td><td>OFF</td><td>The examples.</td></tr>
+ * <tr><td>X3PIO_BUILD_DOCS</td><td>OFF</td><td>This API reference, with
+ * Doxygen, as the target `docs`.</td></tr>
+ * </table>
+ *
+ * With Conan, `conan create .` builds and tests the package, and with vcpkg the
+ * manifest `vcpkg.json` names the dependencies.
+ *
+ * @section building_use Using
+ * An installed library provides the CMake target `x3pio::x3pio`:
+ * @code{.unparsed}
+ * find_package(x3pio CONFIG REQUIRED)
+ * add_executable(main main.c)
+ * target_link_libraries(main PRIVATE x3pio::x3pio)
+ * @endcode
+ *
+ * Source files that use the library include `<x3pio/x3pio.h>`, and
+ * `<x3pio/file.h>` for the functions that open files. See Examples for typical
+ * uses. Without CMake, compile and link with the flags that pkg-config
+ * reports:
+ * @code{.sh}
+ * cc main.c $(pkg-config --cflags --libs x3pio) -o main
+ * @endcode
+ * A static library needs `--static`, which adds minizip-ng and Expat.
+ *
+ * @section layers Three Layers
+ * The library offers the points on three levels, from which a program takes the
+ * one that suits it:
+ * - the values as the file stores them, with the functions x3pio_read_data()
+ *   and x3pio_write_data();
+ * - the conversion of such values to metres and back, which needs no reader
+ *   and no writer, only the description: x3pio_decode_values() and
+ *   x3pio_encode_values();
+ * - the points in metres, with x3pio_read_points() and x3pio_write_points(),
+ *   and the heights of a whole surface in x3pio_read_heights() and
+ *   x3pio_write_heights().
+ */
+
+/**
+ * @page format x3p Format
+ * @details An x3p file is a zip container. The file name extension is `.x3p`.
+ * The standard defines these members:
+ * - `main.xml` describes the file: the axes, the points and the metadata.
+ * - `md5checksum.hex` holds the MD5 checksum of main.xml, the checksums of
+ *   the other members follow in main.xml.
+ * - `bindata/data.bin` holds the points in the binary format. The text format
+ *   puts them into main.xml instead.
+ * - `bindata/valid.bin` holds the mask of the points that were measured, which
+ *   integer data needs when a point is missing.
+ * - The files of vendors, for which the description names an identifier.
+ *
+ * @section format_revisions Revisions
+ * The element `Revision` names the schema of main.xml. `ISO5436 - 2000` is the
+ * schema of ISO 25178-72:2017, whose description of the calibration has a
+ * required date. `ISO25178-72:2017/DAM1` is the schema of Amendment 1, which
+ * requires the data type and the increment of an axis and allows any number of
+ * vendor-specific files. A writer writes the revision it is told to and is
+ * strict: every file it makes is valid according to the schema of its revision.
+ *
+ * @section format_axes Axes and Placement
+ * `Record1` holds the feature type: a profile (`PRF`), a surface (`SUR`) or a
+ * point cloud (`PCL`), and one description for each of the axes X, Y and Z. An
+ * axis is incremental (`I`) or absolute (`A`). An incremental axis has no
+ * stored values: its coordinate is the index of the point times the increment.
+ * The values of an absolute axis are stored, as int16, int32, float or double,
+ * and a value times the increment of the axis is a length in metres. Offset
+ * and rotation do not change the values of the file, they place the points in
+ * the coordinate system of the machine:
+ * `global = R * (I * stored) + O`. The library returns the points in the
+ * coordinate system of the file, and offers the placement with
+ * x3pio_document_placement().
+ *
+ * @section format_missing Missing Points
+ * A floating-point value that is NaN marks a point that was not measured. An
+ * integer has no such value, so the file holds a mask in `valid.bin` with one
+ * bit for each point, which is the bit `j % 8` (least significant first) of the
+ * byte `j / 8`. A reader gives the mask as a byte for each point, a writer
+ * takes it in the same form, see x3pio_validity_pack().
+ *
+ * @section format_binary Binary Format
+ * `data.bin` holds for each point the values of its absolute axes in the order
+ * X, Y, Z, as little-endian numbers without padding. The points of a surface
+ * follow in the order of the rows, with the first column varying fastest, then
+ * of the layers. The standard contradicts itself on the byte order; the files
+ * in use are little-endian, and so are those of the library.
+ *
+ * @section format_text Text Format
+ * The points are `Datum` elements in `DataList` and the values of a point are
+ * separated by semicolons. A text file is bound to main.xml and is read with
+ * it, so the text format needs the memory of the description. The binary
+ * format should be preferred for large files.
+ *
+ * @section format_vendor Vendor Files
+ * A vendor adds files to the container, and registers each by an identifier in
+ * main.xml. In Amendment 1 the identifier is a URI, and the container holds the
+ * file at a path that the URI gives: its host in reverse order, its path, and
+ * with backslashes as separators. x3pio_add_vendor_file() derives the path, or
+ * takes the name of the member as an argument; x3pio_reader_vendor_file_count()
+ * and the functions after it list the files, and x3pio_read_member() reads one
+ * without reading any other member.
+ *
+ * @section format_tolerance Tolerance
+ * Real files differ from the standard, and some are damaged. The reader
+ * accepts what it can read without doubt, and refuses the rest with an error:
+ * - It finds the elements of main.xml by their local name, in any order, with
+ *   or without a namespace, and ignores what it does not know. It accepts a
+ *   byte order mark.
+ * - It takes the defaults of the standard for an optional element that is
+ *   missing.
+ * - It finds the members in the root of the container or in one folder, as
+ *   zipped by hand, and ignores the files that other systems add, such as
+ *   `__MACOSX`, `.DS_Store` and `Thumbs.db`, and the entries of folders. It
+ *   takes backslashes in the names of members as separators.
+ * - It reads the checksum in upper or lower case, with or without a name of
+ *   the file after it, and does not check what it cannot read as a checksum,
+ *   or a file without a checksum.
+ *
+ * It refuses these files with X3PIO_ERR_FORMAT: a main.xml that is missing,
+ * that is not well-formed or whose root is not an x3p, in several folders or
+ * more than one folder deep; a required element that is missing, a data type
+ * or an axis type that the standard does not define, a size that is not a
+ * whole number, an increment that is zero or infinite; a data file whose length
+ * does not fit the dimensions. A checksum that is readable and does not match
+ * fails with X3PIO_ERR_CHECKSUM. A program that wants to read such a file
+ * regardless turns the check off with x3pio_reader_set_verify().
+ */

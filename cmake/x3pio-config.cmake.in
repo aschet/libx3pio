@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+
+@PACKAGE_INIT@
+
+# A static library needs the libraries that it was built with. A shared library
+# carries them inside.
+if(NOT "@BUILD_SHARED_LIBS@")
+    include(CMakeFindDependencyMacro)
+    include("${CMAKE_CURRENT_LIST_DIR}/x3pio-find-dependencies.cmake")
+    x3pio_find_dependencies()
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/x3pio-targets.cmake")
+
+check_required_components(x3pio)

@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+#
+# The magic number check is off: a format is made of constants, and the ones that
+# carry a meaning are named. The unsafe-buffer check wants the optional bounds
+# checked functions of Annex K. The bool conversion check treats the int of a
+# comparison in C as a conversion. The unchecked results of printing and of
+# the cleanup of a failure are meant.
+
+Checks: >
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  misc-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-reserved-identifier,
+  -cert-dcl37-c,
+  -cert-err33-c,
+  -cert-dcl51-cpp,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -misc-include-cleaner,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-uppercase-literal-suffix,
+  -readability-use-concise-preprocessor-directives,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses
+
+WarningsAsErrors: ''

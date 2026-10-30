@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+
+# The reference of the public headers: configured by CMake, built with the
+# target `docs`.
+PROJECT_NAME           = "libx3pio"
+PROJECT_NUMBER         = @PROJECT_VERSION@
+PROJECT_BRIEF          = "@PROJECT_DESCRIPTION@"
+OUTPUT_DIRECTORY       = @PROJECT_BINARY_DIR@/docs
+INPUT                  = @PROJECT_SOURCE_DIR@/include/x3pio/x3pio.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/types.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/layout.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/convert.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/document.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/reader.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/writer.h \
+                         @PROJECT_SOURCE_DIR@/include/x3pio/file.h \
+                         @PROJECT_BINARY_DIR@/generated/include/x3pio/version.h \
+                         @PROJECT_SOURCE_DIR@/docs/main.dox \
+                         @PROJECT_SOURCE_DIR@/examples/examples.dox
+EXAMPLE_PATH           = @PROJECT_SOURCE_DIR@/examples
+EXAMPLE_PATTERNS       = *.c
+LAYOUT_FILE            = @X3PIO_DOXYGEN_LAYOUT@
+OPTIMIZE_OUTPUT_FOR_C  = YES
+JAVADOC_AUTOBRIEF      = YES
+MARKDOWN_SUPPORT       = YES
+FILE_PATTERNS          = *.c *.h *.dox
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = "X3PIO_API=" \
+                         "_Static_assert(condition,message)=" \
+                         _WIN32
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = YES
+HAVE_DOT               = NO
