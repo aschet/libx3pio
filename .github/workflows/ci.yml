@@ -33,6 +33,10 @@ jobs:
             runner: ubuntu-latest
             job: gcc-x86-64-linux
             packages: ninja-build gcc
+          - name: GCC x86 Linux
+            runner: ubuntu-latest
+            job: gcc-x86-linux
+            packages: ninja-build gcc gcc-multilib g++-multilib
           - name: GCC AArch64 Linux
             runner: ubuntu-24.04-arm
             job: gcc-aarch64-linux

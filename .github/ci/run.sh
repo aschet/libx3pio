@@ -22,6 +22,7 @@ root=$(cd "$here/../.." && pwd)
 
 jobs=(
   gcc-x86-64-linux
+  gcc-x86-linux
   gcc-aarch64-linux
   clang-x86-64-linux
   clang-aarch64-macos
@@ -57,6 +58,10 @@ describe() {
       kind=build generator=Ninja triplet=x64-linux
       toolchain="-DCMAKE_C_COMPILER=gcc"
       configure="-DCMAKE_C_STANDARD=11 -DCMAKE_C_STANDARD_REQUIRED=ON -DCMAKE_C_FLAGS=-pedantic-errors"
+      ;;
+    gcc-x86-linux)
+      kind=build generator=Ninja triplet=x86-linux
+      toolchain="-DCMAKE_C_COMPILER=gcc -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32"
       ;;
     gcc-aarch64-linux)
       kind=build generator=Ninja triplet=arm64-linux

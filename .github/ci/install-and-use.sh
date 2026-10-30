@@ -39,9 +39,17 @@ for linkage in ON OFF; do
   cmake --build "$build" --config Release
   ctest --test-dir "$build" -C Release --output-on-failure --no-tests=error
   cmake --install "$build" --config Release
+  # A static library needs the libraries that it was built with. The ones of
+  # vcpkg in manifest mode are in the build folder of the library.
+  prefix_path="$stage"
+  for installed in "$build"/vcpkg_installed/*/; do
+    if [ -d "$installed/share" ]; then
+      prefix_path="$prefix_path;${installed%/}"
+    fi
+  done
   # shellcheck disable=SC2086
   cmake -S test_package -B "$build/consumer" "${generator[@]}" \
-    $TOOLCHAIN_OPTIONS -DCMAKE_PREFIX_PATH="$stage"
+    $TOOLCHAIN_OPTIONS "-DCMAKE_PREFIX_PATH=$prefix_path"
   cmake --build "$build/consumer" --config Release
   consumer=$(find "$build/consumer" \
     \( -name test_package -o -name test_package.exe \) -type f | head -1)
@@ -56,6 +64,14 @@ for linkage in ON OFF; do
     flags=$(sed -n 's/^CMAKE_C_FLAGS:[A-Z]*=//p' "$build/CMakeCache.txt")
     # A static library requires its private dependencies, which pkg-config
     # reports only with --static.
+    # The libraries of vcpkg in manifest mode are in the build folder.
+    for pkgconfig in "$build"/vcpkg_installed/*/lib/pkgconfig \
+      "$build"/vcpkg_installed/*/share/pkgconfig; do
+      if [ -d "$pkgconfig" ]; then
+        PKG_CONFIG_PATH="$pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+      fi
+    done
+    export PKG_CONFIG_PATH
     static=""
     if [ "$linkage" = OFF ]; then static="--static"; fi
     # shellcheck disable=SC2046,SC2086

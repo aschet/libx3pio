@@ -8,9 +8,11 @@
     "expat",
     {
       "name": "minizip-ng",
-      "default-features": false
-    },
-    "zlib"
+      "default-features": false,
+      "features": [
+        "zlib"
+      ]
+    }
   ],
   "features": {
     "tests": {

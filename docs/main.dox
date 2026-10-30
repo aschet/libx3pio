@@ -54,8 +54,8 @@
  *   supported.
  *
  * @section building_build Building and Installing
- * The library requires a C11 compiler, CMake, minizip-ng (4.0 or later) and
- * Expat. Both are available as packages of vcpkg and Conan; their CMake
+ * The library requires a C11 compiler, CMake, minizip-ng (4.0 or later) built
+ * with zlib, which the deflate compression of the container needs, and Expat. Both are available as packages of vcpkg and Conan; their CMake
  * targets and package names differ, which the build hides behind the targets
  * `x3pio_deps::minizip` and `x3pio_deps::expat`.
  * @code{.sh}
