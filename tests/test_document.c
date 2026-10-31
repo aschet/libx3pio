@@ -136,10 +136,10 @@ static void test_rows_and_automatic_increment(void)
                         X3PIO_AUTO_INCREMENT};
     CHECK_OK(x3pio_document_set_axis(d, X3PIO_Z, &axis));
 
-    /* A list is one row of all its points. */
+    /* A list is a column of rows of one point each. */
     CHECK_OK(x3pio_document_set_point_cloud(d, 1000, X3PIO_TYPE_FLOAT, 1.0));
-    CHECK(x3pio_document_columns(d) == 1000);
-    CHECK(x3pio_document_rows(d) == 1);
+    CHECK(x3pio_document_columns(d) == 1);
+    CHECK(x3pio_document_rows(d) == 1000);
     CHECK_OK(x3pio_document_set_matrix(d, 4, SIZE_MAX / 2, 4));
     CHECK(x3pio_document_rows(d) == 0);
     CHECK(x3pio_document_columns(NULL) == 0 && x3pio_document_rows(NULL) == 0);

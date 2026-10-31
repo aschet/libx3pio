@@ -41,7 +41,9 @@ static int write_cloud(const char *path)
     if (status == X3PIO_OK)
     {
         /* The coordinates are members of the structure: the element stride is
-         * the size of the structure. A list of points is one row. */
+         * the size of the structure. A list of points is a column: a row for
+         * each point, so the points of a cloud can be written in any number of
+         * parts. */
         x3pio_const_fields from;
         x3pio_const_fields_init(&from);
         const ptrdiff_t stride = sizeof(point);
@@ -51,7 +53,7 @@ static int write_cloud(const char *path)
             (x3pio_const_field){&points[0].y, {X3PIO_TYPE_FLOAT, stride, 0}};
         from.z =
             (x3pio_const_field){&points[0].z, {X3PIO_TYPE_FLOAT, stride, 0}};
-        status = x3pio_write_points(writer, &from, 1);
+        status = x3pio_write_points(writer, &from, COUNT);
     }
     if (status == X3PIO_OK)
     {
@@ -68,50 +70,62 @@ static int write_cloud(const char *path)
 
 /* Reads the points of any file, whether it holds a cloud, a profile or a
  * surface: the program does not need to know. A grid has no stored x and y, and
- * the reader gives them from the place of the point. */
+ * the reader gives them from the place of the point. The points come in pieces
+ * that fit an array of the program, so a cloud of any size needs the memory of
+ * one piece. A cloud has a row for each point, and a piece is a number of rows;
+ * a piece of a surface is a number of whole rows, which must fit the array. */
 static int read_points(const char *path)
 {
+    enum
+    {
+        PIECE = 256
+    };
+    point piece[PIECE];
     x3pio_reader *reader = NULL;
     x3pio_reader_create(NULL, &reader);
     x3pio_status status = x3pio_open_file(reader, path);
-    point *points = NULL;
+    size_t count = 0;
+    size_t measured = 0;
+    point last = {0, 0, 0, 0};
     if (status == X3PIO_OK)
     {
         const x3pio_document *document = x3pio_reader_document(reader);
-        const size_t count = x3pio_document_point_count(document);
-        points = calloc(count, sizeof *points);
-        if (points == NULL)
+        const size_t columns = x3pio_document_columns(document);
+        const size_t rows = x3pio_document_rows(document);
+        const size_t rows_per_piece = PIECE / columns;
+        if (rows_per_piece == 0)
         {
-            status = X3PIO_ERR_MEMORY;
+            status = X3PIO_ERR_ARGUMENT;
         }
-        else
+        x3pio_fields into;
+        x3pio_fields_init(&into);
+        const ptrdiff_t stride = sizeof(point);
+        into.x = (x3pio_field){&piece[0].x, {X3PIO_TYPE_FLOAT, stride, 0}};
+        into.y = (x3pio_field){&piece[0].y, {X3PIO_TYPE_FLOAT, stride, 0}};
+        into.z = (x3pio_field){&piece[0].z, {X3PIO_TYPE_FLOAT, stride, 0}};
+        for (size_t row = 0; status == X3PIO_OK && row < rows;
+             row += rows_per_piece)
         {
-            x3pio_fields into;
-            x3pio_fields_init(&into);
-            const ptrdiff_t stride = sizeof(point);
-            into.x = (x3pio_field){&points[0].x, {X3PIO_TYPE_FLOAT, stride, 0}};
-            into.y = (x3pio_field){&points[0].y, {X3PIO_TYPE_FLOAT, stride, 0}};
-            into.z = (x3pio_field){&points[0].z, {X3PIO_TYPE_FLOAT, stride, 0}};
-            status =
-                x3pio_read_points(reader, &into, x3pio_document_rows(document));
-        }
-        if (status == X3PIO_OK)
-        {
-            size_t measured = 0;
-            for (size_t i = 0; i < count; ++i)
+            const size_t n =
+                rows - row < rows_per_piece ? rows - row : rows_per_piece;
+            status = x3pio_read_points(reader, &into, n);
+            for (size_t i = 0; status == X3PIO_OK && i < n * columns; ++i)
             {
-                measured += isnan(points[i].z) ? 0U : 1U;
+                measured += isnan(piece[i].z) ? 0U : 1U;
+                last = piece[i];
             }
-            printf("%zu points, %zu measured; the last one is (%g, %g, %g) m\n",
-                   count, measured, (double)points[count - 1].x,
-                   (double)points[count - 1].y, (double)points[count - 1].z);
+            count += n * columns;
         }
     }
-    if (status != X3PIO_OK)
+    if (status == X3PIO_OK)
+    {
+        printf("%zu points, %zu measured; the last one is (%g, %g, %g) m\n",
+               count, measured, (double)last.x, (double)last.y, (double)last.z);
+    }
+    else
     {
         fprintf(stderr, "%s\n", x3pio_reader_error_message(reader));
     }
-    free(points);
     x3pio_reader_free(reader);
     return status == X3PIO_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }

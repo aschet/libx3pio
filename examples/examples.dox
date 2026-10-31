@@ -29,3 +29,5 @@
 /** @example eigen.cpp */
 
 /** @example vtk.cpp */
+
+/** @example pcl.cpp */

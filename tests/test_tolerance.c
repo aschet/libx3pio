@@ -965,7 +965,7 @@ static void test_feature_type(void)
     from.x = (x3pio_const_field){x, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
     from.y = (x3pio_const_field){y, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
     from.z = (x3pio_const_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
-    CHECK_OK(x3pio_write_points(writer, &from, 1));
+    CHECK_OK(x3pio_write_points(writer, &from, 3));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
     x3pio_document_free(doc);

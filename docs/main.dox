@@ -27,6 +27,9 @@
  * - Application-side buffers with arbitrary strides: a reader writes into, and
  *   a writer reads from, the memory of the program, also members of structures
  *   and columns of matrices.
+ * - A point cloud, which is a list of points, is read and written in any number
+ *   of parts, so a program needs the memory of one part and not of the whole
+ *   cloud.
  * - Access to the points as numbers in metres, or as the values that the file
  *   stores, together with the mask of the points that were measured.
  * - Files, blocks of memory and streams as sources and sinks. A reader reads

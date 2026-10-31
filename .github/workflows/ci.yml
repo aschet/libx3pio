@@ -28,7 +28,7 @@ jobs:
           - name: GCC x86-64 Linux
             runner: ubuntu-latest
             job: gcc-x86-64-linux
-            packages: ninja-build gcc libopencv-dev libeigen3-dev libvtk9-dev
+            packages: ninja-build gcc libopencv-dev libeigen3-dev libvtk9-dev libpcl-dev
           - name: GCC x86 Linux
             runner: ubuntu-latest
             job: gcc-x86-linux

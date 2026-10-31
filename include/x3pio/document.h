@@ -201,14 +201,16 @@ X3PIO_API size_t x3pio_document_point_count(const x3pio_document *document);
 
 /**
  * Returns the number of columns of the matrix that the functions transfer: the
- * points of a row, `size_x`, and for a list the number of points.
+ * points of a row, `size_x`, and 1 for a list of points, which is a single
+ * column.
  */
 X3PIO_API size_t x3pio_document_columns(const x3pio_document *document);
 
 /**
  * Returns the number of rows of that matrix: `size_y` times `size_z`, the rows
- * of the first layer, then those of the second layer, and so on; and 1 for a
- * list of points. It is 0 if the product does not fit a size_t.
+ * of the first layer, then those of the second layer, and so on; and the number
+ * of points for a list of points, which can be read and written in any number
+ * of parts. It is 0 if the product does not fit a size_t.
  */
 X3PIO_API size_t x3pio_document_rows(const x3pio_document *document);
 

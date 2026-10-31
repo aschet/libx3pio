@@ -34,7 +34,8 @@ extern "C"
  * The matrix has the columns and the rows of the file. A file of a matrix has
  * `size_x` columns and `size_y` times `size_z` rows, which are the rows of the
  * first layer, then the rows of the second layer, and so on; a file of a list
- * of points has all points in one row. The element (y, x) of a buffer is at
+ * of points has one column and a row for each point, so an array of points is
+ * the matrix at a stride of its size. The element (y, x) of a buffer is at
  * `data + y * row_stride + x * element_stride`. Both strides can be negative.
  * They must keep the elements apart: the strides of a dimension of more than
  * one element must not be 0 after the defaults below are applied. This allows

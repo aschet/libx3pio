@@ -130,7 +130,8 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
         CHECK(dims.size_x == s->columns && dims.size_y == s->rows
               && dims.size_z == s->layers
               && dims.list == (s->feature == X3PIO_POINT_CLOUD));
-        CHECK(x3pio_document_columns(doc) == s->columns);
+        CHECK(x3pio_document_columns(doc)
+              == (s->feature == X3PIO_POINT_CLOUD ? 1 : s->columns));
         CHECK(x3pio_document_rows(doc) == scenario_rows(s));
         CHECK((x3pio_document_axis(doc, X3PIO_X).type == X3PIO_AXIS_INCREMENTAL)
               == s->regular);
@@ -559,7 +560,7 @@ static void test_structures(void)
     into.y = (x3pio_field){&points[0].y, {X3PIO_TYPE_FLOAT, sizeof *points, 0}};
     into.z =
         (x3pio_field){&points[0].z, {X3PIO_TYPE_DOUBLE, sizeof *points, 0}};
-    CHECK_OK(x3pio_read_points(reader, &into, 1));
+    CHECK_OK(x3pio_read_points(reader, &into, count));
     for (size_t i = 0; i < count; ++i)
     {
         CHECK(points[i].tag == 'a' && points[i].tail == 'z'
@@ -587,7 +588,7 @@ static void test_structures(void)
                                  {X3PIO_TYPE_FLOAT, sizeof *points, 0}};
     from.z = (x3pio_const_field){&points[0].z,
                                  {X3PIO_TYPE_DOUBLE, sizeof *points, 0}};
-    CHECK_OK(x3pio_write_points(writer, &from, 1));
+    CHECK_OK(x3pio_write_points(writer, &from, count));
     CHECK_OK(x3pio_end_file(writer));
     CHECK_OK(x3pio_reader_create(NULL, &reader));
     CHECK_OK(x3pio_open_memory(reader, second.data, second.size));
@@ -631,7 +632,7 @@ static void test_structures(void)
         (x3pio_field){&records[0].y, {X3PIO_TYPE_INT16, sizeof *records, 0}};
     into.z =
         (x3pio_field){&records[0].z, {X3PIO_TYPE_INT16, sizeof *records, 0}};
-    CHECK_OK(x3pio_read_data(reader, &into, 1));
+    CHECK_OK(x3pio_read_data(reader, &into, count));
     for (size_t i = 0; i < count; ++i)
     {
         CHECK(records[i].tag == 'a' && records[i].tail == 'z');
@@ -1126,6 +1127,128 @@ static void test_structures_of_every_shape(void)
     }
 }
 
+/* A list of points is a column of rows of one point: a cloud is read and
+ * written in pieces of any number of points, whatever the chunks of the
+ * library are, and the pieces give the same points as one call. */
+static void test_point_lists_in_pieces(void)
+{
+    const char *names[] = {"point cloud float", "point cloud int16",
+                           "point cloud int32", "point cloud double"};
+    const x3pio_storage storages[] = {X3PIO_STORAGE_BINARY, X3PIO_STORAGE_TEXT};
+    for (size_t n = 0; n < sizeof names / sizeof names[0]; ++n)
+    {
+        for (size_t k = 0; k < 2; ++k)
+        {
+            const scenario *s = find_scenario(names[n]);
+            const size_t count = s->columns;
+            x3pio_buffer bytes;
+            x3pio_buffer_init(&bytes, x3pio_default_allocator());
+            write_scenario(s, X3PIO_REVISION_AMD1, storages[k], &bytes);
+
+            double *x = malloc(count * sizeof *x);
+            double *y = malloc(count * sizeof *y);
+            double *z = malloc(count * sizeof *z);
+            x3pio_reader *reader = NULL;
+            CHECK_OK(x3pio_reader_create(NULL, &reader));
+            CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
+            read_metres(reader, x, y, z);
+            x3pio_reader_free(reader);
+
+            /* Pieces of 7 points with chunks of 3: the pieces and the chunks
+             * do not line up. */
+            vertex *vertices = malloc(count * sizeof *vertices);
+            CHECK_OK(x3pio_reader_create(NULL, &reader));
+            CHECK_OK(x3pio_reader_set_chunk(reader, 3));
+            CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
+            const x3pio_document *doc = x3pio_reader_document(reader);
+            CHECK(x3pio_document_columns(doc) == 1);
+            CHECK(x3pio_document_rows(doc) == count);
+            const ptrdiff_t stride = sizeof(vertex);
+            for (size_t first = 0; first < count; first += 7)
+            {
+                const size_t piece = count - first < 7 ? count - first : 7;
+                x3pio_fields into;
+                x3pio_fields_init(&into);
+                into.x = (x3pio_field){&vertices[first].x,
+                                       {X3PIO_TYPE_FLOAT, stride, 0}};
+                into.y = (x3pio_field){&vertices[first].y,
+                                       {X3PIO_TYPE_FLOAT, stride, 0}};
+                into.z = (x3pio_field){&vertices[first].z,
+                                       {X3PIO_TYPE_FLOAT, stride, 0}};
+                CHECK_OK(x3pio_read_points(reader, &into, piece));
+            }
+            /* No point is left. */
+            x3pio_fields more;
+            x3pio_fields_init(&more);
+            more.z =
+                (x3pio_field){&vertices[0].z, {X3PIO_TYPE_FLOAT, stride, 0}};
+            CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                         x3pio_read_points(reader, &more, 1));
+            x3pio_reader_free(reader);
+            for (size_t i = 0; i < count; ++i)
+            {
+                CHECK(vertices[i].x == (float)x[i]);
+                CHECK(vertices[i].y == (float)y[i]);
+                CHECK(vertices[i].z == (float)z[i]);
+            }
+
+            /* Written in pieces of 13 points, the file has the same points. */
+            x3pio_document *doc2 = scenario_document(s, X3PIO_REVISION_AMD1);
+            x3pio_writer *writer = NULL;
+            CHECK_OK(x3pio_writer_create(NULL, &writer));
+            CHECK_OK(x3pio_writer_set_chunk(writer, 5));
+            CHECK_OK(x3pio_writer_set_storage(writer, storages[k]));
+            x3pio_buffer second;
+            x3pio_buffer_init(&second, x3pio_default_allocator());
+            CHECK_OK(create_in_buffer(writer, doc2, &second));
+            for (size_t first = 0; first < count; first += 13)
+            {
+                const size_t piece = count - first < 13 ? count - first : 13;
+                x3pio_const_fields from;
+                x3pio_const_fields_init(&from);
+                from.x = (x3pio_const_field){
+                    x + first, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+                from.y = (x3pio_const_field){
+                    y + first, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+                from.z = (x3pio_const_field){
+                    z + first, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+                CHECK_OK(x3pio_write_points(writer, &from, piece));
+            }
+            /* The file lacks no point and has room for none. */
+            x3pio_const_fields extra;
+            x3pio_const_fields_init(&extra);
+            extra.z =
+                (x3pio_const_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+            CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                         x3pio_write_points(writer, &extra, 1));
+            CHECK_OK(x3pio_end_file(writer));
+            x3pio_writer_free(writer);
+            x3pio_document_free(doc2);
+
+            double *x2 = malloc(count * sizeof *x2);
+            double *y2 = malloc(count * sizeof *y2);
+            double *z2 = malloc(count * sizeof *z2);
+            CHECK_OK(x3pio_reader_create(NULL, &reader));
+            CHECK_OK(x3pio_open_memory(reader, second.data, second.size));
+            read_metres(reader, x2, y2, z2);
+            x3pio_reader_free(reader);
+            for (size_t i = 0; i < count; ++i)
+            {
+                CHECK(x2[i] == x[i] && y2[i] == y[i] && z2[i] == z[i]);
+            }
+            x3pio_buffer_free(&second);
+            x3pio_buffer_free(&bytes);
+            free(x);
+            free(y);
+            free(z);
+            free(x2);
+            free(y2);
+            free(z2);
+            free(vertices);
+        }
+    }
+}
+
 int main(void)
 {
     test_every_shape();
@@ -1133,6 +1256,7 @@ int main(void)
     test_image_layouts();
     test_structures();
     test_structures_of_every_shape();
+    test_point_lists_in_pieces();
     test_layers();
     test_pieces();
     test_heights_and_automatic_increment();

@@ -825,7 +825,11 @@ const char *x3pio_document_vendor_id(const x3pio_document *document,
 
 size_t x3pio_document_columns(const x3pio_document *document)
 {
-    return document != NULL ? document->dims.size_x : 0;
+    if (document == NULL)
+    {
+        return 0;
+    }
+    return document->dims.list ? 1 : document->dims.size_x;
 }
 
 size_t x3pio_document_rows(const x3pio_document *document)
@@ -837,7 +841,7 @@ size_t x3pio_document_rows(const x3pio_document *document)
     }
     if (document->dims.list)
     {
-        return 1;
+        return document->dims.size_x;
     }
     return x3pio_multiply(document->dims.size_y, document->dims.size_z, &rows)
                ? rows

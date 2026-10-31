@@ -182,7 +182,8 @@ X3PIO_API x3pio_status x3pio_create_stream(x3pio_writer *writer,
  *
  * @param[in,out] writer The writer.
  * @param[in] from The buffers to write.
- * @param rows The number of rows to write. A list of points is one row.
+ * @param rows The number of rows to write. A list of points has a row for each
+ * point.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null, no field is bound, `rows`
  * exceeds the rows remaining, the type or the strides of a layout are invalid,
  * an axis that the file stores is not bound or one that it does not is, a point
@@ -209,7 +210,8 @@ X3PIO_API x3pio_status x3pio_write_data(x3pio_writer *writer,
  *
  * @param[in,out] writer The writer.
  * @param[in] from The buffers to write.
- * @param rows The number of rows to write. A list of points is one row.
+ * @param rows The number of rows to write. A list of points has a row for each
+ * point.
  * @retval X3PIO_ERR_ARGUMENT As for x3pio_write_data(), and `valid` is bound.
  * @retval X3PIO_ERR_RANGE A coordinate does not fit the type of its axis. The
  * error ends the writing.

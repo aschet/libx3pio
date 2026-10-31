@@ -23,3 +23,10 @@ vtk_module_autoinit(TARGETS example_vtk MODULES ${vtk_modules})
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 x3pio_external_example(eigen SOURCE eigen.cpp LIBS Eigen3::Eigen)
+
+# PCL reports its libraries, headers and definitions in variables.
+find_package(PCL 1.11 REQUIRED COMPONENTS common filters)
+x3pio_external_example(pcl SOURCE pcl.cpp LIBS ${PCL_LIBRARIES})
+target_include_directories(example_pcl SYSTEM PRIVATE ${PCL_INCLUDE_DIRS})
+target_compile_definitions(example_pcl PRIVATE ${PCL_DEFINITIONS})
+target_link_directories(example_pcl PRIVATE ${PCL_LIBRARY_DIRS})

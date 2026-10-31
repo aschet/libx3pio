@@ -356,7 +356,7 @@ static void test_absolute_axes(void)
     CHECK_OK(x3pio_document_set_point_cloud(doc, 6, X3PIO_TYPE_DOUBLE, 1.0));
     CHECK_OK(x3pio_writer_create(NULL, &writer));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 6));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "A point cloud cannot hold missing points");
     /* The error ends the writing. */

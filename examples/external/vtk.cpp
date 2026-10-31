@@ -85,7 +85,7 @@ struct Data
 // gives the position of the point in the grid times the increments. A point
 // that was not measured is NaN in each coordinate that the file stores, and a
 // file with an irregular grid or a cloud stores all three. The file can be read
-// in pieces of rows, and a list of points is one row.
+// in pieces of rows, and a list of points has a row for each point.
 Data read_data(x3pio_reader *reader)
 {
     const x3pio_document *document = x3pio_reader_document(reader);

@@ -184,7 +184,8 @@ x3pio_reader_document(const x3pio_reader *reader);
  *
  * @param[in,out] reader The reader.
  * @param[in] into The buffers to fill.
- * @param rows The number of rows to read. A list of points is one row.
+ * @param rows The number of rows to read. A list of points has a row for each
+ * point.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null, no field is bound, `rows`
  * exceeds the rows remaining, the type or the strides of a layout are invalid,
  * or an axis that the file does not store is bound.
@@ -213,7 +214,8 @@ X3PIO_API x3pio_status x3pio_read_data(x3pio_reader *reader,
  *
  * @param[in,out] reader The reader.
  * @param[in] into The buffers to fill.
- * @param rows The number of rows to read. A list of points is one row.
+ * @param rows The number of rows to read. A list of points has a row for each
+ * point.
  * @retval X3PIO_ERR_ARGUMENT As for x3pio_read_data(), and `valid` is bound.
  * @retval X3PIO_ERR_RANGE A coordinate does not fit the type of its buffer.
  * @return Otherwise the errors of x3pio_read_data().
