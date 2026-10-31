@@ -159,8 +159,6 @@ enum
 #define MAX_DEPTH 24
 /* The most text of the leaves that one document holds. */
 #define MAX_TEXT_TOTAL ((size_t)64 << 20U)
-/* The most text of one Datum: three numbers and their separators. */
-#define MAX_DATUM_TEXT ((size_t)1024)
 /* The chunk that Expat is fed. */
 #define PARSE_CHUNK 65536
 
@@ -310,14 +308,12 @@ typedef struct state
 
     x3pio_document *document;
 
-    /* What the Datum elements show, which are not kept: the numbers are read
-     * again when the points are read. */
+    double *values;
+    size_t value_count;
+    size_t value_capacity;
+    unsigned char *counts;
     size_t datum_count;
-    unsigned field_mask; /* bit n: a Datum has n numbers */
-    bool any_empty;
-    bool non_integer[3];
-    double lowest[3];
-    double highest[3];
+    size_t counts_capacity;
 } state;
 
 /* Records a failure of the parse and stops Expat. */
@@ -361,45 +357,6 @@ static void XMLCALL on_entity_declaration(
          "main.xml declares entities, which the library does not expand");
 }
 
-/* Names the element that a tag starts and puts it on the stack. Of an element
- * that appears twice, the first one counts. */
-static classified open_element(int *depth, element stack[MAX_DEPTH],
-                               bool *root_seen,
-                               bool container_seen[E_ELEMENT_COUNT],
-                               const XML_Char *name)
-{
-    size_t size = 0;
-    const char *local = local_name(name, &size);
-    classified found = {E_UNKNOWN, -1};
-    if (*depth == 0)
-    {
-        if (!*root_seen && is_name(local, size, "ISO5436_2"))
-        {
-            *root_seen = true;
-            found.element = E_ROOT;
-        }
-    }
-    else if (*depth <= MAX_DEPTH)
-    {
-        found = classify(stack[*depth - 1], local, size);
-    }
-    if (found.element != E_UNKNOWN && found.element != E_LEAF
-        && found.element != E_ROOT)
-    {
-        if (container_seen[found.element])
-        {
-            found = (classified){E_UNKNOWN, -1};
-        }
-        container_seen[found.element] = true;
-    }
-    if (*depth < MAX_DEPTH)
-    {
-        stack[*depth] = found.element;
-    }
-    ++*depth;
-    return found;
-}
-
 static void XMLCALL on_start(void *user, const XML_Char *name,
                              const XML_Char **attributes)
 {
@@ -409,8 +366,36 @@ static void XMLCALL on_start(void *user, const XML_Char *name,
     {
         return;
     }
-    const classified found = open_element(&s->depth, s->stack, &s->root_seen,
-                                          s->container_seen, name);
+    size_t size = 0;
+    const char *local = local_name(name, &size);
+    classified found = {E_UNKNOWN, -1};
+    if (s->depth == 0)
+    {
+        if (!s->root_seen && is_name(local, size, "ISO5436_2"))
+        {
+            s->root_seen = true;
+            found.element = E_ROOT;
+        }
+    }
+    else if (s->depth <= MAX_DEPTH)
+    {
+        found = classify(s->stack[s->depth - 1], local, size);
+    }
+    /* Of an element that appears twice, the first one counts. */
+    if (found.element != E_UNKNOWN && found.element != E_LEAF
+        && found.element != E_ROOT)
+    {
+        if (s->container_seen[found.element])
+        {
+            found = (classified){E_UNKNOWN, -1};
+        }
+        s->container_seen[found.element] = true;
+    }
+    if (s->depth < MAX_DEPTH)
+    {
+        s->stack[s->depth] = found.element;
+    }
+    ++s->depth;
     if (found.leaf >= 0)
     {
         s->collecting = found.leaf;
@@ -427,97 +412,90 @@ static void XMLCALL on_characters(void *user, const XML_Char *data, int length)
     {
         return;
     }
-    if (s->collecting == L_DATUM)
+    if (s->text_total + (size_t)length > MAX_TEXT_TOTAL)
     {
-        /* The numbers of a Datum are not kept, so their text does not count. */
-        if (s->text.size + (size_t)length > MAX_DATUM_TEXT)
-        {
-            fail(s, X3PIO_ERR_FORMAT,
-                 "A Datum is not a list of at most three numbers");
-            return;
-        }
+        fail(s, X3PIO_ERR_FORMAT, "main.xml holds too much text in one place");
+        return;
     }
-    else
-    {
-        if (s->text_total + (size_t)length > MAX_TEXT_TOTAL)
-        {
-            fail(s, X3PIO_ERR_FORMAT,
-                 "main.xml holds too much text in one place");
-            return;
-        }
-        s->text_total += (size_t)length;
-    }
+    s->text_total += (size_t)length;
     if (!x3pio_buffer_append(&s->text, data, (size_t)length))
     {
         fail_memory(s);
     }
 }
 
-/* Splits the text of a Datum into at most three numbers. */
-static bool parse_datum(const x3pio_decimal_point *point, const char *text,
-                        size_t size, double values[3], size_t *fields)
-{
-    x3pio_trim(&text, &size);
-    *fields = 0;
-    if (size == 0)
-    {
-        return true;
-    }
-    for (;;)
-    {
-        const char *semicolon = memchr(text, ';', size);
-        const size_t length =
-            semicolon != NULL ? (size_t)(semicolon - text) : size;
-        double value = 0.0;
-        if (*fields >= 3 || !x3pio_parse_number(point, text, length, &value))
-        {
-            return false;
-        }
-        values[(*fields)++] = value;
-        if (semicolon == NULL)
-        {
-            return true;
-        }
-        size -= length + 1;
-        text += length + 1;
-    }
-}
-
-/* Checks the numbers of a Datum and notes what the others have to agree on:
- * the axes are known only at the end of the document. */
+/* Parses the numbers of a Datum and appends them. */
 static void take_datum(state *s)
 {
-    double values[3] = {0.0, 0.0, 0.0};
+    if (s->datum_count == s->counts_capacity)
+    {
+        size_t capacity =
+            s->counts_capacity != 0 ? s->counts_capacity * 2 : 1024;
+        unsigned char *grown = x3pio_allocate(s->allocator, capacity);
+        if (grown == NULL)
+        {
+            fail_memory(s);
+            return;
+        }
+        if (s->datum_count > 0)
+        {
+            memcpy(grown, s->counts, s->datum_count);
+        }
+        x3pio_release(s->allocator, s->counts);
+        s->counts = grown;
+        s->counts_capacity = capacity;
+    }
+    const char *text = (const char *)s->text.data;
+    size_t size = s->text.size;
+    x3pio_trim(&text, &size);
     size_t fields = 0;
-    if (!parse_datum(&s->point, (const char *)s->text.data, s->text.size,
-                     values, &fields))
+    if (size > 0)
     {
-        fail(s, X3PIO_ERR_FORMAT,
-             "A Datum is not a list of at most three numbers");
-        return;
-    }
-    ++s->datum_count;
-    s->field_mask |= 1U << fields;
-    if (fields == 0)
-    {
-        s->any_empty = true;
-        return;
-    }
-    for (size_t k = 0; k < fields; ++k)
-    {
-        if (values[k] != floor(values[k]))
+        for (;;)
         {
-            s->non_integer[k] = true;
-        }
-        if (values[k] < s->lowest[k])
-        {
-            s->lowest[k] = values[k];
-        }
-        if (values[k] > s->highest[k])
-        {
-            s->highest[k] = values[k];
+            const char *semicolon = memchr(text, ';', size);
+            const size_t length =
+                semicolon != NULL ? (size_t)(semicolon - text) : size;
+            double value = 0.0;
+            if (fields >= 3
+                || !x3pio_parse_number(&s->point, text, length, &value))
+            {
+                x3pio_fail(s->message, X3PIO_ERR_FORMAT,
+                           "A Datum is not a list of at most three numbers");
+                s->status = X3PIO_ERR_FORMAT;
+                XML_StopParser(s->parser, XML_FALSE);
+                return;
+            }
+            if (s->value_count == s->value_capacity)
+            {
+                const size_t capacity =
+                    s->value_capacity != 0 ? s->value_capacity * 2 : 4096;
+                double *grown =
+                    x3pio_allocate_array(s->allocator, capacity, sizeof *grown);
+                if (grown == NULL)
+                {
+                    fail_memory(s);
+                    return;
+                }
+                if (s->value_count > 0)
+                {
+                    memcpy(grown, s->values, s->value_count * sizeof *grown);
+                }
+                x3pio_release(s->allocator, s->values);
+                s->values = grown;
+                s->value_capacity = capacity;
+            }
+            s->values[s->value_count++] = value;
+            ++fields;
+            if (semicolon == NULL)
+            {
+                break;
+            }
+            size -= length + 1;
+            text += length + 1;
         }
     }
+    s->counts[s->datum_count++] = (unsigned char)fields;
 }
 
 static void XMLCALL on_end(void *user, const XML_Char *name)
@@ -826,24 +804,23 @@ static x3pio_status build_metadata(state *s)
     return X3PIO_OK;
 }
 
-/* Checks what the Datum elements showed against the axes. The numbers are read
- * again when the points are read. */
-static x3pio_status check_datums(state *s)
+/* Checks the Datum elements against the axes and moves their numbers into the
+ * document. */
+static x3pio_status build_datums(state *s)
 {
     x3pio_document *d = s->document;
     const size_t absolute = x3pio_document_absolute_count(d);
-    if (s->datum_count != x3pio_document_point_count(d))
+    const size_t count = x3pio_document_point_count(d);
+    if (s->datum_count != count)
     {
         return x3pio_fail(s->message, X3PIO_ERR_FORMAT,
                           "DataList does not hold a Datum for every point");
     }
-    /* A Datum is empty, for a point that was not measured, or holds a number
-     * for every axis that is stored. */
-    if ((s->field_mask & ~(1U | (1U << absolute))) != 0)
+    size_t total = 0;
+    if (!x3pio_multiply(count, absolute, &total))
     {
-        return x3pio_fail(
-            s->message, X3PIO_ERR_FORMAT,
-            "A Datum does not hold a number for every axis that is stored");
+        return x3pio_fail(s->message, X3PIO_ERR_FORMAT,
+                          "The dimensions of the points are too large");
     }
     x3pio_coordinate axes[3];
     size_t axis_count = 0;
@@ -854,23 +831,59 @@ static x3pio_status check_datums(state *s)
             axes[axis_count++] = (x3pio_coordinate)k;
         }
     }
-    for (size_t k = 0; k < axis_count; ++k)
+    d->text_values = x3pio_allocate_array(&d->allocator, total, sizeof(double));
+    d->text_valid = x3pio_allocate(&d->allocator, count);
+    if (d->text_values == NULL || d->text_valid == NULL)
     {
-        const x3pio_type type = d->axes[axes[k]].storage;
-        if (type == X3PIO_TYPE_INT16 || type == X3PIO_TYPE_INT32)
-        {
-            const double limit =
-                type == X3PIO_TYPE_INT16 ? 32768.0 : 2147483648.0;
-            if (s->non_integer[k] || s->lowest[k] < -limit
-                || s->highest[k] >= limit)
-            {
-                return x3pio_fail(s->message, X3PIO_ERR_FORMAT,
-                                  "A Datum holds a number that is no value "
-                                  "of an integer axis");
-            }
-        }
+        return x3pio_fail(s->message, X3PIO_ERR_MEMORY, "Out of memory");
     }
-    d->text_has_missing = s->any_empty;
+    d->text_value_count = total;
+    size_t from = 0;
+    bool all_valid = true;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const size_t fields = s->counts[i];
+        if (fields == 0)
+        {
+            for (size_t k = 0; k < absolute; ++k)
+            {
+                d->text_values[i * absolute + k] = NAN;
+            }
+            d->text_valid[i] = 0;
+            all_valid = false;
+            continue;
+        }
+        if (fields != absolute)
+        {
+            return x3pio_fail(
+                s->message, X3PIO_ERR_FORMAT,
+                "A Datum does not hold a number for every axis that is stored");
+        }
+        for (size_t k = 0; k < absolute; ++k)
+        {
+            const double value = s->values[from + k];
+            const x3pio_type type = d->axes[axes[k]].storage;
+            if (type == X3PIO_TYPE_INT16 || type == X3PIO_TYPE_INT32)
+            {
+                const double limit =
+                    type == X3PIO_TYPE_INT16 ? 32768.0 : 2147483648.0;
+                if (value != floor(value) || value < -limit || value >= limit)
+                {
+                    return x3pio_fail(s->message, X3PIO_ERR_FORMAT,
+                                      "A Datum holds a number that is no value "
+                                      "of an integer axis");
+                }
+            }
+            d->text_values[i * absolute + k] = value;
+        }
+        from += fields;
+        d->text_valid[i] = 1;
+    }
+    if (all_valid)
+    {
+        x3pio_release(&d->allocator, d->text_valid);
+        d->text_valid = NULL;
+    }
     return X3PIO_OK;
 }
 
@@ -1046,7 +1059,7 @@ static x3pio_status finish(state *s)
     }
     else
     {
-        status = check_datums(s);
+        status = build_datums(s);
         if (status != X3PIO_OK)
         {
             return status;
@@ -1070,6 +1083,8 @@ static void release_state(state *s)
     {
         x3pio_release(s->allocator, s->leaves[i]);
     }
+    x3pio_release(s->allocator, s->values);
+    x3pio_release(s->allocator, s->counts);
     x3pio_buffer_free(&s->text);
 }
 
@@ -1083,11 +1098,6 @@ x3pio_status x3pio_xml_parse(const x3pio_allocator *allocator,
     s.message = message;
     s.collecting = -1;
     s.point = x3pio_decimal_point_now();
-    for (size_t k = 0; k < 3; ++k)
-    {
-        s.lowest[k] = INFINITY;
-        s.highest[k] = -INFINITY;
-    }
     x3pio_buffer_init(&s.text, allocator);
     s.document = x3pio_document_make(allocator);
     unsigned char *chunk = x3pio_allocate(allocator, PARSE_CHUNK);
@@ -1164,284 +1174,4 @@ x3pio_status x3pio_xml_parse(const x3pio_allocator *allocator,
     }
     *document = s.document;
     return X3PIO_OK;
-}
-
-/* ---- the Datum elements, a part at a time ------------------------------- */
-
-/* The parse of the points of a text file. x3pio_xml_parse() has checked the
- * whole file and counted the Datum elements; this parse goes through main.xml
- * again and stops whenever it has delivered the points that were asked for, so
- * the points of a file in text are never held as a whole. */
-struct x3pio_xml_datums
-{
-    const x3pio_allocator *allocator;
-    const char **message;
-    x3pio_status status;
-    XML_Parser parser;
-    x3pio_decimal_point point;
-    x3pio_xml_pull pull;
-    void *user;
-    unsigned char *chunk;
-    bool suspended;
-    bool finished;
-    /* The parse stops at the first Datum, so that the buffers of Expat and the
-     * text exist before the points are read. */
-    bool priming;
-
-    int depth;
-    element stack[MAX_DEPTH];
-    bool root_seen;
-    bool container_seen[E_ELEMENT_COUNT];
-    bool collecting;
-    int collecting_depth;
-    x3pio_buffer text;
-
-    size_t absolute;
-    double *values;
-    unsigned char *valid;
-    size_t want;
-    size_t got;
-};
-
-static void datums_fail(x3pio_xml_datums *d, x3pio_status status,
-                        const char *text)
-{
-    if (d->status == X3PIO_OK)
-    {
-        d->status = x3pio_fail(d->message, status, text);
-        XML_StopParser(d->parser, XML_FALSE);
-    }
-}
-
-static void XMLCALL datums_on_start(void *user, const XML_Char *name,
-                                    const XML_Char **attributes)
-{
-    (void)attributes;
-    x3pio_xml_datums *d = user;
-    if (d->status != X3PIO_OK)
-    {
-        return;
-    }
-    const classified found = open_element(&d->depth, d->stack, &d->root_seen,
-                                          d->container_seen, name);
-    if (found.leaf == L_DATUM)
-    {
-        d->collecting = true;
-        d->collecting_depth = d->depth;
-        d->text.size = 0;
-        if (d->priming)
-        {
-            d->priming = false;
-            XML_StopParser(d->parser, XML_TRUE);
-        }
-    }
-}
-
-static void XMLCALL datums_on_characters(void *user, const XML_Char *data,
-                                         int length)
-{
-    x3pio_xml_datums *d = user;
-    if (d->status != X3PIO_OK || !d->collecting
-        || d->collecting_depth != d->depth)
-    {
-        return;
-    }
-    if (d->text.size + (size_t)length > MAX_DATUM_TEXT)
-    {
-        datums_fail(d, X3PIO_ERR_FORMAT,
-                    "A Datum is not a list of at most three numbers");
-    }
-    else if (!x3pio_buffer_append(&d->text, data, (size_t)length))
-    {
-        datums_fail(d, X3PIO_ERR_MEMORY, "Out of memory");
-    }
-}
-
-static void XMLCALL datums_on_end(void *user, const XML_Char *name)
-{
-    (void)name;
-    x3pio_xml_datums *d = user;
-    if (d->status == X3PIO_OK && d->collecting
-        && d->collecting_depth == d->depth)
-    {
-        d->collecting = false;
-        double numbers[3] = {0.0, 0.0, 0.0};
-        size_t fields = 0;
-        if (d->got >= d->want)
-        {
-            datums_fail(d, X3PIO_ERR_FORMAT,
-                        "DataList holds more Datum elements than points");
-        }
-        else if (!parse_datum(&d->point, (const char *)d->text.data,
-                              d->text.size, numbers, &fields))
-        {
-            datums_fail(d, X3PIO_ERR_FORMAT,
-                        "A Datum is not a list of at most three numbers");
-        }
-        else if (fields != 0 && fields != d->absolute)
-        {
-            datums_fail(d, X3PIO_ERR_FORMAT,
-                        "A Datum does not hold a number for every axis that "
-                        "is stored");
-        }
-        else
-        {
-            double *at = d->values + d->got * d->absolute;
-            for (size_t k = 0; k < d->absolute; ++k)
-            {
-                at[k] = fields == 0 ? NAN : numbers[k];
-            }
-            d->valid[d->got] = fields != 0 ? 1U : 0U;
-            ++d->got;
-            if (d->got == d->want)
-            {
-                XML_StopParser(d->parser, XML_TRUE);
-            }
-        }
-    }
-    --d->depth;
-}
-
-static x3pio_status datums_run(x3pio_xml_datums *d, bool priming,
-                               const char **message);
-
-x3pio_status x3pio_xml_datums_open(const x3pio_allocator *allocator,
-                                   x3pio_xml_pull pull, void *user,
-                                   size_t absolute, x3pio_xml_datums **datums,
-                                   const char **message)
-{
-    *datums = NULL;
-    x3pio_xml_datums *d = x3pio_allocate(allocator, sizeof *d);
-    if (d == NULL)
-    {
-        return x3pio_fail(message, X3PIO_ERR_MEMORY, "Out of memory");
-    }
-    *d = (x3pio_xml_datums){0};
-    d->allocator = allocator;
-    d->message = message;
-    d->pull = pull;
-    d->user = user;
-    d->absolute = absolute;
-    d->point = x3pio_decimal_point_now();
-    x3pio_buffer_init(&d->text, allocator);
-    d->chunk = x3pio_allocate(allocator, PARSE_CHUNK);
-    static const XML_Memory_Handling_Suite suite = {expat_malloc, expat_realloc,
-                                                    expat_free};
-    const x3pio_allocator *saved = current_allocator;
-    current_allocator = allocator;
-    d->parser =
-        d->chunk != NULL ? XML_ParserCreate_MM(NULL, &suite, NULL) : NULL;
-    current_allocator = saved;
-    if (d->parser == NULL)
-    {
-        x3pio_xml_datums_free(d);
-        return x3pio_fail(message, X3PIO_ERR_MEMORY, "Out of memory");
-    }
-    XML_SetUserData(d->parser, d);
-    XML_SetElementHandler(d->parser, datums_on_start, datums_on_end);
-    XML_SetCharacterDataHandler(d->parser, datums_on_characters);
-    /* The buffers that Expat and the text need exist now, and the parse goes
-     * up to the first Datum, so that reading the points allocates nothing: a
-     * chunk and the start of the next one, cut in the middle of a Datum, fit
-     * the buffer of Expat. */
-    current_allocator = allocator;
-    const bool room = XML_GetBuffer(d->parser, 2 * PARSE_CHUNK) != NULL;
-    current_allocator = saved;
-    d->priming = true;
-    x3pio_status status =
-        room && x3pio_buffer_reserve(&d->text, MAX_DATUM_TEXT)
-            ? datums_run(d, true, message)
-            : x3pio_fail(message, X3PIO_ERR_MEMORY, "Out of memory");
-    if (status != X3PIO_OK)
-    {
-        x3pio_xml_datums_free(d);
-        return status;
-    }
-    *datums = d;
-    return X3PIO_OK;
-}
-
-/* Feeds the parser until it stops or `done` says that enough was delivered. */
-static x3pio_status datums_run(x3pio_xml_datums *d, bool priming,
-                               const char **message)
-{
-    const x3pio_allocator *saved = current_allocator;
-    while (priming ? d->priming && !d->finished : d->got < d->want)
-    {
-        enum XML_Status parsed = XML_STATUS_OK;
-        if (d->suspended)
-        {
-            current_allocator = d->allocator;
-            parsed = XML_ResumeParser(d->parser);
-            current_allocator = saved;
-        }
-        else if (d->finished)
-        {
-            return x3pio_fail(message, X3PIO_ERR_FORMAT,
-                              "DataList holds fewer Datum elements than "
-                              "points");
-        }
-        else
-        {
-            size_t got = 0;
-            const x3pio_status status =
-                d->pull(d->user, d->chunk, PARSE_CHUNK, &got, message);
-            if (status != X3PIO_OK)
-            {
-                return status;
-            }
-            d->finished = got == 0;
-            current_allocator = d->allocator;
-            parsed = XML_Parse(d->parser, (const char *)d->chunk, (int)got,
-                               d->finished ? 1 : 0);
-            current_allocator = saved;
-        }
-        if (d->status != X3PIO_OK)
-        {
-            return d->status;
-        }
-        if (parsed == XML_STATUS_ERROR)
-        {
-            return XML_GetErrorCode(d->parser) == XML_ERROR_NO_MEMORY
-                       ? x3pio_fail(message, X3PIO_ERR_MEMORY, "Out of memory")
-                       : x3pio_fail(
-                             message, X3PIO_ERR_FORMAT,
-                             XML_ErrorString(XML_GetErrorCode(d->parser)));
-        }
-        XML_ParsingStatus status;
-        XML_GetParsingStatus(d->parser, &status);
-        d->suspended = status.parsing == XML_SUSPENDED;
-    }
-    return X3PIO_OK;
-}
-
-x3pio_status x3pio_xml_datums_read(x3pio_xml_datums *d, size_t n,
-                                   double *values, unsigned char *valid,
-                                   const char **message)
-{
-    d->message = message;
-    d->values = values;
-    d->valid = valid;
-    d->want = n;
-    d->got = 0;
-    return datums_run(d, false, message);
-}
-
-void x3pio_xml_datums_free(x3pio_xml_datums *datums)
-{
-    if (datums == NULL)
-    {
-        return;
-    }
-    const x3pio_allocator allocator = *datums->allocator;
-    if (datums->parser != NULL)
-    {
-        const x3pio_allocator *saved = current_allocator;
-        current_allocator = &allocator;
-        XML_ParserFree(datums->parser);
-        current_allocator = saved;
-    }
-    x3pio_buffer_free(&datums->text);
-    x3pio_release(&allocator, datums->chunk);
-    x3pio_release(&allocator, datums);
 }

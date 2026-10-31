@@ -43,9 +43,7 @@
  * reads the member that a call needs and nothing else: the points are read from
  * their member in parts, and a file of a vendor is read only by
  * x3pio_read_member(). A stream cannot be read from its end, so
- * x3pio_open_stream() collects it in memory first. The points of a file in
- * text are in main.xml, which is checked when the file is opened and parsed
- * again from its start as the rows are read, so they are not held as a whole.
+ * x3pio_open_stream() collects it in memory first.
  */
 
 #ifndef X3PIO_READER_H

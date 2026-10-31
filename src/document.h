@@ -68,21 +68,15 @@ struct x3pio_document
     char *checksum_file;
 
     /**
-     * The points of a file of text that a writer has collected: the stored
-     * values of the absolute axes of every point, in the order of the axes.
-     * Null for a document of a reader, whose points are read with the rows, and
-     * for a binary file.
+     * The points of a file of text: the stored values of the absolute axes of
+     * every point, in the order of the axes. Null for a binary file, and for a
+     * document that a program built.
      */
     double *text_values;
     /** The number of values of `text_values`. */
     size_t text_value_count;
     /** One byte per point, 1 for a measured point. Null if all are. */
     unsigned char *text_valid;
-    /**
-     * Whether a file in text has an empty Datum, a point that was not measured.
-     * A reader sets it; the values themselves are read with the points.
-     */
-    bool text_has_missing;
 };
 
 /**

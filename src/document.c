@@ -198,7 +198,6 @@ x3pio_status x3pio_document_copy(x3pio_document *dst, const x3pio_document *src)
                                        strlen(src->vendor_ids[i]));
     }
     copy->binary = src->binary;
-    copy->text_has_missing = src->text_has_missing;
     ok = ok && copy_member(copy, &copy->point_path, src->point_path)
          && copy_member(copy, &copy->point_md5, src->point_md5)
          && copy_member(copy, &copy->valid_path, src->valid_path)
@@ -853,7 +852,7 @@ bool x3pio_document_has_validity(const x3pio_document *document)
 {
     return document != NULL
            && ((document->valid_path != NULL && document->valid_path[0] != '\0')
-               || document->text_valid != NULL || document->text_has_missing);
+               || document->text_valid != NULL);
 }
 
 size_t x3pio_document_absolute_count(const x3pio_document *document)

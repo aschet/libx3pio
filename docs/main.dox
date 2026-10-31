@@ -168,16 +168,9 @@
  *
  * @section format_text Text Format
  * The points are `Datum` elements in `DataList` and the values of a point are
- * separated by semicolons; an empty `Datum` is a point that was not measured. A
- * reader goes through main.xml twice: it checks the whole description and the
- * Datum elements when the file is opened, and goes through it again as the
- * rows are read, so that the points are never held as a whole and the memory of
- * the reader does not depend on the size of the file. A point list can be read
- * in any number of parts as in the binary format. A writer, however, holds the
- * points of a file in text until the file is ended, because main.xml is a
- * single member of the container that is written when all points are known. The
- * binary format is smaller and faster, and should be preferred for large
- * files.
+ * separated by semicolons. A text file is bound to main.xml and is read with
+ * it, so the text format needs the memory of the description. The binary
+ * format should be preferred for large files.
  *
  * @section format_vendor Vendor Files
  * A vendor adds files to the container, and registers each by an identifier in

@@ -52,54 +52,6 @@ x3pio_status x3pio_xml_parse(const x3pio_allocator *allocator,
                              x3pio_xml_pull pull, void *user,
                              x3pio_document **document, const char **message);
 
-/** The points of a file in text, which are delivered a part at a time. */
-typedef struct x3pio_xml_datums x3pio_xml_datums;
-
-/**
- * Starts the delivery of the Datum elements of main.xml, which
- * x3pio_xml_parse() has checked: the parser goes through main.xml again, from
- * its first byte, and only the Datum elements are used.
- *
- * @param allocator The allocator of the parser; it must outlive the result.
- * @param pull The supplier of the bytes, from the start of main.xml.
- * @param user The state of the supplier.
- * @param absolute The number of axes that the file stores, which each Datum
- * holds a number for.
- * @param[out] datums Receives the delivery, which the caller releases with
- * x3pio_xml_datums_free().
- * @param[out] message Receives the reason of a failure.
- * @retval X3PIO_ERR_MEMORY An allocation failed.
- */
-x3pio_status x3pio_xml_datums_open(const x3pio_allocator *allocator,
-                                   x3pio_xml_pull pull, void *user,
-                                   size_t absolute, x3pio_xml_datums **datums,
-                                   const char **message);
-
-/**
- * Delivers the next Datum elements.
- *
- * @param[in,out] datums The delivery.
- * @param n The number of points.
- * @param[out] values Receives `absolute` numbers for each point, NaN for a
- * point that has an empty Datum.
- * @param[out] valid Receives for each point 1, or 0 for an empty Datum.
- * @param[out] message Receives the reason of a failure.
- * @retval X3PIO_ERR_FORMAT There are fewer Datum elements than asked for, or
- * the text is not what x3pio_xml_parse() checked.
- * @retval X3PIO_ERR_MEMORY An allocation failed.
- * @return Otherwise the status of the supplier.
- */
-x3pio_status x3pio_xml_datums_read(x3pio_xml_datums *datums, size_t n,
-                                   double *values, unsigned char *valid,
-                                   const char **message);
-
-/**
- * Releases a delivery. A null pointer is ignored.
- *
- * @param[in,out] datums The delivery.
- */
-void x3pio_xml_datums_free(x3pio_xml_datums *datums);
-
 /**
  * Receives the bytes of main.xml that the builder produced.
  *

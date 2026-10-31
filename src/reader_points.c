@@ -15,21 +15,6 @@
 #include "text.h"
 #include <math.h>
 
-/* The bytes of main.xml for the delivery of the Datum elements. */
-static x3pio_status pull_text(void *user, void *buffer, size_t capacity,
-                              size_t *got, const char **message)
-{
-    return x3pio_zip_entry_read(user, buffer, capacity, got, message);
-}
-
-void x3pio_reader_release_text(x3pio_reader *reader)
-{
-    x3pio_xml_datums_free(reader->datums);
-    reader->datums = NULL;
-    x3pio_zip_entry_close(reader->text_entry);
-    reader->text_entry = NULL;
-}
-
 x3pio_status x3pio_reader_prepare(x3pio_reader *reader)
 {
     const x3pio_allocator *a = &reader->allocator;
@@ -42,15 +27,8 @@ x3pio_status x3pio_reader_prepare(x3pio_reader *reader)
     reader->bytes = x3pio_allocate_array(a, n, record);
     reader->flag_values = x3pio_allocate_array(a, n, sizeof(double));
     reader->flags = x3pio_allocate(a, n);
-    const size_t absolute = x3pio_document_absolute_count(reader->document);
-    if (!reader->document->binary)
-    {
-        reader->text_values = x3pio_allocate_array(
-            a, n, (absolute != 0 ? absolute : 1U) * sizeof(double));
-    }
     bool ok = reader->bytes != NULL && reader->flag_values != NULL
-              && reader->flags != NULL
-              && (reader->document->binary || reader->text_values != NULL);
+              && reader->flags != NULL;
     for (size_t k = 0; k < 3; ++k)
     {
         reader->raw[k] = x3pio_allocate_array(a, n, sizeof(double));
@@ -73,24 +51,6 @@ x3pio_status x3pio_reader_prepare(x3pio_reader *reader)
             return status;
         }
         x3pio_md5_init(&reader->hash);
-    }
-    else
-    {
-        /* The points are in main.xml, which is parsed again from its start:
-         * the first parse has checked it, and has not kept the points. */
-        x3pio_status status = x3pio_zip_entry_open(
-            &reader->source, &reader->allocator, reader->index.main_stored,
-            &reader->text_entry, &reader->message);
-        if (status == X3PIO_OK)
-        {
-            status = x3pio_xml_datums_open(&reader->allocator, pull_text,
-                                           reader->text_entry, absolute,
-                                           &reader->datums, &reader->message);
-        }
-        if (status != X3PIO_OK)
-        {
-            return status;
-        }
     }
     return X3PIO_OK;
 }
@@ -148,15 +108,6 @@ static x3pio_status decode(x3pio_reader *reader, size_t first, size_t n)
     }
     else
     {
-        /* The next points of main.xml: a number for each stored axis, and a
-         * flag for the points that have no Datum. */
-        const x3pio_status status =
-            x3pio_xml_datums_read(reader->datums, n, reader->text_values,
-                                  reader->flags, &reader->message);
-        if (status != X3PIO_OK)
-        {
-            return status;
-        }
         size_t column = 0;
         for (size_t k = 0; k < 3; ++k)
         {
@@ -166,23 +117,27 @@ static x3pio_status decode(x3pio_reader *reader, size_t first, size_t n)
             }
             for (size_t i = 0; i < n; ++i)
             {
-                reader->raw[k][i] = reader->text_values[i * absolute + column];
+                reader->raw[k][i] =
+                    d->text_values[(first + i) * absolute + column];
             }
             ++column;
         }
     }
-    if (d->binary)
+    memset(reader->flags, 1, n);
+    if (reader->valid_bits != NULL)
     {
-        memset(reader->flags, 1, n);
-        if (reader->valid_bits != NULL)
+        for (size_t i = 0; i < n; ++i)
         {
-            for (size_t i = 0; i < n; ++i)
-            {
-                const size_t j = first + i;
-                reader->flags[i] =
-                    (unsigned char)((reader->valid_bits[j / 8] >> (j % 8U))
-                                    & 1U);
-            }
+            const size_t j = first + i;
+            reader->flags[i] =
+                (unsigned char)((reader->valid_bits[j / 8] >> (j % 8U)) & 1U);
+        }
+    }
+    if (d->text_valid != NULL)
+    {
+        for (size_t i = 0; i < n; ++i)
+        {
+            reader->flags[i] &= d->text_valid[first + i];
         }
     }
     /* A point with a coordinate that is not a number is missing. */
@@ -419,7 +374,6 @@ static x3pio_status read_rows(x3pio_reader *reader, const x3pio_fields *into,
             status = x3pio_zip_entry_finish(reader->entry, &reader->message);
             reader->entry = NULL;
         }
-        x3pio_reader_release_text(reader);
         if (status == X3PIO_OK)
         {
             status = finish_points(reader);

@@ -105,9 +105,6 @@ void x3pio_reader_reset(x3pio_reader *reader)
     const x3pio_allocator *a = &reader->allocator;
     x3pio_zip_entry_close(reader->entry);
     reader->entry = NULL;
-    x3pio_reader_release_text(reader);
-    x3pio_release(a, reader->text_values);
-    reader->text_values = NULL;
     release_vendors(reader);
     x3pio_member_index_free(&reader->index);
     x3pio_document_free(reader->document);
