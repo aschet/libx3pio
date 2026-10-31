@@ -22,6 +22,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * Memory management callbacks that every allocation of the library goes
+ * through. They are internal: the tests give a handle an allocator that fails
+ * on demand with the `_with` functions of the create functions, and a program
+ * has the default one, malloc() and free(). The zip libraries and the system
+ * libraries allocate with malloc() whatever the callbacks are.
+ */
+typedef struct x3pio_allocator
+{
+    /** Opaque pointer passed as the first argument of both callbacks. */
+    void *user;
+    /**
+     * Returns a block of at least `size` bytes, aligned for any object type,
+     * or null on failure.
+     */
+    void *(*allocate)(void *user, size_t size);
+    /** Releases a block returned by `allocate`. Never called with null. */
+    void (*release)(void *user, void *memory);
+} x3pio_allocator;
+
 /** Storage that every thread has a copy of, as C11 has it. */
 #if defined(_MSC_VER) && !defined(__clang__) && _MSC_VER < 1928
 #define X3PIO_THREAD_LOCAL __declspec(thread)

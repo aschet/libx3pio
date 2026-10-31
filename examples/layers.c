@@ -26,12 +26,12 @@ int main(int argc, char **argv)
     }
 
     x3pio_document *document = NULL;
-    x3pio_document_create(NULL, &document);
+    x3pio_document_create(&document);
     x3pio_document_set_surface(document, COLUMNS, ROWS, 1e-6, 1e-6,
                                X3PIO_TYPE_FLOAT, 1.0, LAYERS);
     x3pio_document_set_software_metadata(document, "layers", "1.0");
     x3pio_writer *writer = NULL;
-    x3pio_writer_create(NULL, &writer);
+    x3pio_writer_create(&writer);
     x3pio_status status = x3pio_create_file(writer, path, document);
     for (size_t l = 0; status == X3PIO_OK && l < LAYERS; ++l)
     {
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     }
 
     x3pio_reader *reader = NULL;
-    x3pio_reader_create(NULL, &reader);
+    x3pio_reader_create(&reader);
     status = x3pio_open_file(reader, path);
     static float back[ROWS * COLUMNS];
     for (size_t l = 0; status == X3PIO_OK && l < LAYERS; ++l)

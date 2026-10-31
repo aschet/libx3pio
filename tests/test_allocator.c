@@ -4,12 +4,16 @@
  * SPDX-License-Identifier: MIT
  */
 
-/* The allocator of the program: every block is released, a handle allocates
- * when it is created and when a file is opened or created and not while rows
- * are transferred, and a failed allocation is reported and leaves nothing
- * behind. */
+/* The internal allocator of the library, which the tests replace to count and
+ * to fail allocations: every block is released, a handle allocates when it is
+ * created and when a file is opened or created and not while rows are
+ * transferred, and a failed allocation is reported and leaves nothing behind.
+ * The zip libraries allocate with malloc and are not counted. */
 
+#include "document.h"
 #include "helpers.h"
+#include "reader.h"
+#include "writer.h"
 
 #include <x3pio/file.h>
 
@@ -85,7 +89,7 @@ static x3pio_buffer sample(x3pio_storage storage, bool vendor)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     x3pio_document *doc = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &doc));
+    CHECK_OK(x3pio_document_create(&doc));
     CHECK_OK(x3pio_document_set_surface(doc, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_INT16,
                                         1e-9, 1));
     x3pio_timestamp date = {2026, 3, 4, 12, 30, 0, 0, true, 60};
@@ -100,7 +104,7 @@ static x3pio_buffer sample(x3pio_storage storage, bool vendor)
         mask[i] = i != 5;
     }
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_writer_set_storage(writer, storage));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     x3pio_const_fields from;
@@ -128,7 +132,7 @@ static x3pio_status read_cycle(counter *c, const x3pio_buffer *bytes,
 {
     const x3pio_allocator allocator = allocator_of(c);
     x3pio_reader *reader = NULL;
-    x3pio_status status = x3pio_reader_create(&allocator, &reader);
+    x3pio_status status = x3pio_reader_create_with(&allocator, &reader);
     if (status != X3PIO_OK)
     {
         return status;
@@ -176,7 +180,7 @@ static x3pio_status write_cycle(counter *c, x3pio_storage storage, bool vendor,
 {
     const x3pio_allocator allocator = allocator_of(c);
     x3pio_document *doc = NULL;
-    x3pio_status status = x3pio_document_create(&allocator, &doc);
+    x3pio_status status = x3pio_document_create_with(&allocator, &doc);
     x3pio_writer *writer = NULL;
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
@@ -200,7 +204,7 @@ static x3pio_status write_cycle(counter *c, x3pio_storage storage, bool vendor,
     }
     if (status == X3PIO_OK)
     {
-        status = x3pio_writer_create(&allocator, &writer);
+        status = x3pio_writer_create_with(&allocator, &writer);
     }
     if (status == X3PIO_OK)
     {
@@ -347,23 +351,27 @@ static void test_arguments(void)
     x3pio_writer *writer = NULL;
     x3pio_document *doc = NULL;
     allocator.release = NULL;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_reader_create(&allocator, &reader));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_create(&allocator, &writer));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_create(&allocator, &doc));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_reader_create_with(&allocator, &reader));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_writer_create_with(&allocator, &writer));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_create_with(&allocator, &doc));
     CHECK(reader == NULL && writer == NULL && doc == NULL);
     allocator = allocator_of(&c);
     allocator.allocate = NULL;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_reader_create(&allocator, &reader));
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_reader_create_with(&allocator, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     x3pio_reader_free(reader);
-    CHECK_OK(x3pio_reader_create(x3pio_default_allocator(), &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     x3pio_reader_free(reader);
     CHECK(c.calls == 0);
 
     /* The allocator is copied: it need not outlive the call. */
     {
         x3pio_allocator temporary = allocator_of(&c);
-        CHECK_OK(x3pio_document_create(&temporary, &doc));
+        CHECK_OK(x3pio_document_create_with(&temporary, &doc));
         memset(&temporary, 0, sizeof temporary);
     }
     CHECK_OK(x3pio_document_set_comment(doc, "still works"));
@@ -384,8 +392,8 @@ static void test_copy_between_allocators(void)
     const x3pio_allocator b = allocator_of(&second);
     x3pio_document *from = NULL;
     x3pio_document *to = NULL;
-    CHECK_OK(x3pio_document_create(&a, &from));
-    CHECK_OK(x3pio_document_create(&b, &to));
+    CHECK_OK(x3pio_document_create_with(&a, &from));
+    CHECK_OK(x3pio_document_create_with(&b, &to));
     CHECK_OK(x3pio_document_set_creator(from, "someone"));
     CHECK_OK(x3pio_document_copy(to, from));
     x3pio_document_free(from);

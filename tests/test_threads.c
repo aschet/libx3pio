@@ -40,7 +40,7 @@ static bool build(int n, x3pio_storage storage, x3pio_buffer *out)
     double *z = malloc(40 * 30 * sizeof *z);
     const x3pio_type type = types[n % 4];
     const x3pio_timestamp date = {2026, 3, 4, 12, 30, n, 0, true, 60};
-    bool ok = z != NULL && x3pio_document_create(NULL, &doc) == X3PIO_OK;
+    bool ok = z != NULL && x3pio_document_create(&doc) == X3PIO_OK;
     ok = ok
          && x3pio_document_set_surface(doc, 40, 30, 1e-6, 1e-6, type,
                                        type == X3PIO_TYPE_FLOAT
@@ -56,7 +56,7 @@ static bool build(int n, x3pio_storage storage, x3pio_buffer *out)
     if (ok)
     {
         heights_of(n, z);
-        ok = x3pio_writer_create(NULL, &writer) == X3PIO_OK
+        ok = x3pio_writer_create(&writer) == X3PIO_OK
              && x3pio_writer_set_storage(writer, storage) == X3PIO_OK
              && create_in_buffer(writer, doc, out) == X3PIO_OK
              && x3pio_write_heights(writer,
@@ -102,7 +102,7 @@ static void *write_and_read(void *argument)
             j->ok = false;
         }
         x3pio_reader *reader = NULL;
-        if (x3pio_reader_create(NULL, &reader) != X3PIO_OK
+        if (x3pio_reader_create(&reader) != X3PIO_OK
             || x3pio_open_memory(reader, out.data, out.size) != X3PIO_OK)
         {
             j->ok = false;
@@ -137,8 +137,8 @@ static void *write_and_read(void *argument)
         /* A file of its own on disk. */
         x3pio_writer *writer = NULL;
         x3pio_document *doc = NULL;
-        if (x3pio_writer_create(NULL, &writer) != X3PIO_OK
-            || x3pio_document_create(NULL, &doc) != X3PIO_OK
+        if (x3pio_writer_create(&writer) != X3PIO_OK
+            || x3pio_document_create(&doc) != X3PIO_OK
             || x3pio_document_set_surface(doc, 4, 3, 1e-6, 1e-6,
                                           X3PIO_TYPE_FLOAT, 1.0, 1)
                    != X3PIO_OK
@@ -160,7 +160,7 @@ static void *write_and_read(void *argument)
         x3pio_writer_free(writer);
         x3pio_document_free(doc);
         x3pio_reader *again = NULL;
-        if (x3pio_reader_create(NULL, &again) != X3PIO_OK
+        if (x3pio_reader_create(&again) != X3PIO_OK
             || x3pio_open_file(again, j->path) != X3PIO_OK)
         {
             j->ok = false;
@@ -212,7 +212,7 @@ static void *read_shared(void *argument)
     for (int round = 0; round < ROUNDS * 4; ++round)
     {
         x3pio_reader *reader = NULL;
-        if (x3pio_reader_create(NULL, &reader) != X3PIO_OK)
+        if (x3pio_reader_create(&reader) != X3PIO_OK)
         {
             s->ok = false;
             break;
@@ -322,7 +322,7 @@ static void test_locale(void)
         CHECK(build(2, X3PIO_STORAGE_TEXT, &in_comma));
         CHECK(same(&in_c, &in_comma));
         x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         CHECK_OK(x3pio_open_memory(reader, in_c.data, in_c.size));
         double *z = malloc(40 * 30 * sizeof *z);
         double *want = malloc(40 * 30 * sizeof *want);

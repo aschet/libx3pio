@@ -94,4 +94,17 @@ void x3pio_reader_reset(x3pio_reader *reader);
  */
 x3pio_status x3pio_reader_prepare(x3pio_reader *reader);
 
+/**
+ * Creates a reader that takes its memory from an allocator, which the tests
+ * use to fail an allocation on demand. x3pio_reader_create() uses malloc().
+ *
+ * @param[in] allocator The allocator, or null for the default. It is copied.
+ * @param[out] reader Receives the reader.
+ * @retval X3PIO_ERR_ARGUMENT `reader` is null, or the allocator lacks a
+ * callback.
+ * @retval X3PIO_ERR_MEMORY An allocation failed.
+ */
+x3pio_status x3pio_reader_create_with(const x3pio_allocator *allocator,
+                                      x3pio_reader **reader);
+
 #endif /* X3PIO_SRC_READER_H */

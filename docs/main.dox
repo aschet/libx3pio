@@ -34,7 +34,6 @@
  *   stores, together with the mask of the points that were measured.
  * - Files, blocks of memory and streams as sources and sinks. A reader reads
  *   only the member of the zip file that a call needs.
- * - Custom allocators.
  * - Thread support: the library holds no global state, so threads use handles
  *   of their own at the same time.
  * - The headers of the library do not include those of its dependencies, so a
@@ -48,11 +47,11 @@
  *   the description is part of the file.
  * - A failure while the points are read or written makes the handle refuse
  *   further calls.
- * - A custom allocator serves the library and Expat. The functions of
- *   minizip-ng and of zlib, which it uses for the zip container, allocate with
- *   `malloc`.
- * - The library is not meant for firmware: the zip container needs a heap, a
- *   file system or a stream, and a deflate implementation.
+ * - The library allocates with `malloc`; it has no custom allocators, since the
+ *   zip libraries it builds on could not honor them.
+ * - The library is not meant for microcontroller firmware: the zip container
+ *   needs a heap, a file system or a stream, and a deflate implementation. It
+ *   targets hosts and embedded Linux.
  * - Encrypted members and containers of more than one volume are not
  *   supported.
  *

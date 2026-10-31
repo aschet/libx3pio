@@ -38,7 +38,7 @@ int main(void)
     /* Write a file of integers with a mask, and read it back. */
     static const char path[] = "test_public.x3p";
     x3pio_document *document = NULL;
-    expect(x3pio_document_create(NULL, &document) == X3PIO_OK, "document");
+    expect(x3pio_document_create(&document) == X3PIO_OK, "document");
     expect(x3pio_document_set_surface(document, 4, 3, 1e-6, 1e-6,
                                       X3PIO_TYPE_INT16, X3PIO_AUTO_INCREMENT, 1)
                == X3PIO_OK,
@@ -53,7 +53,7 @@ int main(void)
     }
     heights[5] = NAN;
     x3pio_writer *writer = NULL;
-    expect(x3pio_writer_create(NULL, &writer) == X3PIO_OK, "writer");
+    expect(x3pio_writer_create(&writer) == X3PIO_OK, "writer");
     expect(x3pio_create_file(writer, path, document) == X3PIO_OK, "create");
     expect(x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
                                heights)
@@ -64,7 +64,7 @@ int main(void)
     x3pio_document_free(document);
 
     x3pio_reader *reader = NULL;
-    expect(x3pio_reader_create(NULL, &reader) == X3PIO_OK, "reader");
+    expect(x3pio_reader_create(&reader) == X3PIO_OK, "reader");
     expect(x3pio_open_file(reader, path) == X3PIO_OK, "open");
     const x3pio_document *read = x3pio_reader_document(reader);
     expect(read != NULL && x3pio_document_has_validity(read),

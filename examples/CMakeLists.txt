@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 foreach(example write_heights read_heights read_stream write_data read_data
-        points layers vendor_files allocators write_memory)
+        points layers vendor_files write_memory)
     add_executable(${example} ${example}.c)
     target_link_libraries(${example} PRIVATE x3pio)
     target_compile_options(${example} PRIVATE ${X3PIO_WARNINGS})

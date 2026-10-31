@@ -72,16 +72,11 @@ typedef struct x3pio_reader x3pio_reader;
  * reader, and the buffers are allocated when a file is opened. Release the
  * reader with x3pio_reader_free().
  *
- * @param[in] allocator The allocator for the memory of the reader, for example
- * x3pio_default_allocator(). The structure is copied, so it need not outlive
- * the call. Both callbacks must be set. Null selects the default.
  * @param[out] reader Receives the reader, or null if the call fails.
- * @retval X3PIO_ERR_ARGUMENT `reader` is null, or the allocator lacks a
- * callback.
+ * @retval X3PIO_ERR_ARGUMENT `reader` is null.
  * @retval X3PIO_ERR_MEMORY An allocation failed.
  */
-X3PIO_API x3pio_status x3pio_reader_create(const x3pio_allocator *allocator,
-                                           x3pio_reader **reader);
+X3PIO_API x3pio_status x3pio_reader_create(x3pio_reader **reader);
 
 /**
  * Sets whether the reader checks the checksums that the file states. The

@@ -52,7 +52,7 @@ void check(x3pio_status status, const char *message)
 Reader create_reader()
 {
     x3pio_reader *reader = nullptr;
-    x3pio_reader_create(nullptr, &reader);
+    x3pio_reader_create(&reader);
     return {reader, x3pio_reader_free};
 }
 

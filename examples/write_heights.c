@@ -36,7 +36,7 @@ static int write_surface(const char *path, x3pio_revision revision,
                          x3pio_type type)
 {
     x3pio_document *document = NULL;
-    x3pio_document_create(NULL, &document);
+    x3pio_document_create(&document);
     x3pio_document_set_revision(document, revision);
     x3pio_document_set_surface(
         document, COLUMNS, ROWS, 1e-6, 1e-6, type,
@@ -48,7 +48,7 @@ static int write_surface(const char *path, x3pio_revision revision,
     x3pio_document_set_creator(document, "Jane Doe");
 
     x3pio_writer *writer = NULL;
-    x3pio_writer_create(NULL, &writer);
+    x3pio_writer_create(&writer);
     x3pio_status status = x3pio_create_file(writer, path, document);
     if (status == X3PIO_OK)
     {

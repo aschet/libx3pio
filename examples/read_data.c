@@ -16,7 +16,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     x3pio_reader *reader = NULL;
-    x3pio_reader_create(NULL, &reader);
+    x3pio_reader_create(&reader);
     x3pio_status status = x3pio_open_file(reader, argv[1]);
     if (status != X3PIO_OK)
     {

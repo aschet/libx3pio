@@ -15,7 +15,7 @@
 int main(void)
 {
     x3pio_reader *reader = NULL;
-    x3pio_reader_create(NULL, &reader);
+    x3pio_reader_create(&reader);
     x3pio_stream stream;
     x3pio_stdio_stream(&stream, stdin);
     x3pio_status status = x3pio_open_stream(reader, &stream);

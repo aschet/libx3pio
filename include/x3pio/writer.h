@@ -76,16 +76,11 @@ typedef struct x3pio_writer x3pio_writer;
  * writer, and the buffers are allocated when a file is created. Release the
  * writer with x3pio_writer_free().
  *
- * @param[in] allocator The allocator for the memory of the writer, for example
- * x3pio_default_allocator(). The structure is copied, so it need not outlive
- * the call. Both callbacks must be set. Null selects the default.
  * @param[out] writer Receives the writer, or null if the call fails.
- * @retval X3PIO_ERR_ARGUMENT `writer` is null, or the allocator lacks a
- * callback.
+ * @retval X3PIO_ERR_ARGUMENT `writer` is null.
  * @retval X3PIO_ERR_MEMORY An allocation failed.
  */
-X3PIO_API x3pio_status x3pio_writer_create(const x3pio_allocator *allocator,
-                                           x3pio_writer **writer);
+X3PIO_API x3pio_status x3pio_writer_create(x3pio_writer **writer);
 
 /**
  * Sets how the points are stored: in a binary file of the container, which is

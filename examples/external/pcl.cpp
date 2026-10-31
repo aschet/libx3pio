@@ -74,7 +74,7 @@ Cloud read_cloud(const char *path)
     Reader reader{nullptr, x3pio_reader_free};
     {
         x3pio_reader *created = nullptr;
-        check(x3pio_reader_create(nullptr, &created), "reader");
+        check(x3pio_reader_create(&created), "reader");
         reader.reset(created);
     }
     check(x3pio_open_file(reader.get(), path),
@@ -101,14 +101,14 @@ Cloud read_cloud(const char *path)
 void write_cloud(const char *path, const Cloud &cloud)
 {
     x3pio_document *created = nullptr;
-    x3pio_document_create(nullptr, &created);
+    x3pio_document_create(&created);
     Document document{created, x3pio_document_free};
     x3pio_document_set_point_cloud(document.get(), cloud.points.size(),
                                    X3PIO_TYPE_FLOAT, 1.0);
     x3pio_document_set_software_metadata(document.get(), "pcl", "1.0");
 
     x3pio_writer *made = nullptr;
-    x3pio_writer_create(nullptr, &made);
+    x3pio_writer_create(&made);
     Writer writer{made, x3pio_writer_free};
     check(x3pio_create_file(writer.get(), path, document.get()),
           x3pio_writer_error_message(writer.get()));

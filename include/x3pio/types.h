@@ -421,40 +421,6 @@ X3PIO_API size_t x3pio_timestamp_format(const x3pio_timestamp *timestamp,
 X3PIO_API bool x3pio_timestamp_parse(const char *text,
                                      x3pio_timestamp *timestamp);
 
-/**
- * Memory management callbacks that replace malloc() and free(), for example
- * with a pool.
- *
- * A handle or a document calls them for the memory that the library allocates
- * itself, which is all of its own memory and the memory of the XML parser. The
- * libraries that handle the zip container, minizip-ng and the zlib in it,
- * allocate with malloc() and free(): their state for compression and
- * decompression and their buffers, a few hundred kilobytes for a file that is
- * open, are not covered.
- *
- * The structure is frozen for the major version: it has these three fields and
- * a new property of an allocator is a new function.
- */
-typedef struct x3pio_allocator
-{
-    /** Opaque pointer passed as the first argument of both callbacks. */
-    void *user;
-    /**
-     * Returns a block of at least `size` bytes, aligned for any object type,
-     * or null on failure.
-     */
-    void *(*allocate)(void *user, size_t size);
-    /** Releases a block returned by `allocate`. Never called with null. */
-    void (*release)(void *user, void *memory);
-} x3pio_allocator;
-
-/**
- * Returns the allocator that uses malloc() and free().
- *
- * @return A pointer to a constant allocator, valid for the life of the program.
- */
-X3PIO_API const x3pio_allocator *x3pio_default_allocator(void);
-
 /** Value of a read callback that failed: the largest size_t. */
 #define X3PIO_STREAM_ERROR ((size_t)-1)
 

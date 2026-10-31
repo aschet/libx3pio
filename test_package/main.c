@@ -39,8 +39,7 @@ int main(void)
 
     int failed = 0;
     x3pio_document *document = NULL;
-    x3pio_status described =
-        x3pio_document_create(x3pio_default_allocator(), &document);
+    x3pio_status described = x3pio_document_create(&document);
     if (described == X3PIO_OK)
     {
         described = x3pio_document_set_surface(
@@ -48,8 +47,7 @@ int main(void)
     }
     failed |= check(described, "document");
     x3pio_writer *writer = NULL;
-    x3pio_status made_writer =
-        x3pio_writer_create(x3pio_default_allocator(), &writer);
+    x3pio_status made_writer = x3pio_writer_create(&writer);
     failed |= check(made_writer, "writer");
     if (made_writer == X3PIO_OK && described == X3PIO_OK)
     {
@@ -64,8 +62,7 @@ int main(void)
     x3pio_document_free(document);
 
     x3pio_reader *reader = NULL;
-    x3pio_status made_reader =
-        x3pio_reader_create(x3pio_default_allocator(), &reader);
+    x3pio_status made_reader = x3pio_reader_create(&reader);
     failed |= check(made_reader, "reader");
     if (made_reader == X3PIO_OK)
     {

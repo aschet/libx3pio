@@ -89,6 +89,19 @@ struct x3pio_document
 x3pio_document *x3pio_document_make(const x3pio_allocator *allocator);
 
 /**
+ * Creates a document that takes its memory from an allocator, which the tests
+ * use to fail an allocation on demand. x3pio_document_create() uses malloc().
+ *
+ * @param[in] allocator The allocator, or null for the default. It is copied.
+ * @param[out] document Receives the document.
+ * @retval X3PIO_ERR_ARGUMENT `document` is null, or the allocator lacks a
+ * callback.
+ * @retval X3PIO_ERR_MEMORY The allocation failed.
+ */
+x3pio_status x3pio_document_create_with(const x3pio_allocator *allocator,
+                                        x3pio_document **document);
+
+/**
  * Sets a text of a document: the old text is released and the new one copied.
  *
  * @param document The document.

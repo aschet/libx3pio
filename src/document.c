@@ -39,8 +39,13 @@ x3pio_document *x3pio_document_make(const x3pio_allocator *allocator)
     return document;
 }
 
-x3pio_status x3pio_document_create(const x3pio_allocator *allocator,
-                                   x3pio_document **document)
+x3pio_status x3pio_document_create(x3pio_document **document)
+{
+    return x3pio_document_create_with(NULL, document);
+}
+
+x3pio_status x3pio_document_create_with(const x3pio_allocator *allocator,
+                                        x3pio_document **document)
 {
     if (document == NULL)
     {

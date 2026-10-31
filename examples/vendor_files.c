@@ -14,14 +14,14 @@ int main(int argc, char **argv)
     const char *path = argc > 1 ? argv[1] : "vendor.x3p";
     static const char settings[] = "exposure=12ms\nobjective=50x\n";
     x3pio_document *document = NULL;
-    x3pio_document_create(NULL, &document);
+    x3pio_document_create(&document);
     x3pio_document_set_surface(document, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
                                1.0, 1);
     x3pio_document_set_software_metadata(document, "vendor_files", "1.0");
     const double heights[12] = {0};
 
     x3pio_writer *writer = NULL;
-    x3pio_writer_create(NULL, &writer);
+    x3pio_writer_create(&writer);
     x3pio_status status = x3pio_create_file(writer, path, document);
     if (status == X3PIO_OK)
     {
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     }
 
     x3pio_reader *reader = NULL;
-    x3pio_reader_create(NULL, &reader);
+    x3pio_reader_create(&reader);
     status = x3pio_open_file(reader, path);
     for (size_t i = 0;
          status == X3PIO_OK && i < x3pio_reader_vendor_file_count(reader); ++i)

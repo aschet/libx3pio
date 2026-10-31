@@ -950,10 +950,10 @@ static void test_feature_type(void)
 
     /* A cloud keeps its feature type whatever the file says. */
     x3pio_document *doc = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &doc));
+    CHECK_OK(x3pio_document_create(&doc));
     CHECK_OK(x3pio_document_set_point_cloud(doc, 3, X3PIO_TYPE_DOUBLE, 1.0));
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
@@ -1255,7 +1255,7 @@ static void test_damaged_zip(void)
     for (size_t length = 0; length < bytes.size; length += 7)
     {
         x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         const x3pio_status status =
             x3pio_open_memory(reader, bytes.data, length);
         CHECK(status == X3PIO_ERR_FORMAT || status == X3PIO_OK);
@@ -1273,7 +1273,7 @@ static void test_damaged_zip(void)
                 (unsigned char)(1U << ((state >> 20U) % 8U));
         }
         x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         const x3pio_status status =
             x3pio_open_memory(reader, damaged.data, damaged.size);
         if (status == X3PIO_OK)
@@ -1292,7 +1292,7 @@ static void test_damaged_zip(void)
     x3pio_buffer_init(&other, x3pio_default_allocator());
     CHECK(archive_zip(&a, &other));
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_STATUS(X3PIO_ERR_FORMAT,
                  x3pio_open_memory(reader, other.data, other.size));
     x3pio_reader_free(reader);

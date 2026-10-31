@@ -18,7 +18,7 @@
 static x3pio_document *grid_document(x3pio_type type, double increment)
 {
     x3pio_document *d = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &d));
+    CHECK_OK(x3pio_document_create(&d));
     CHECK_OK(x3pio_document_set_surface(d, COLUMNS, ROWS, 1e-6, 1e-6, type,
                                         increment, 1));
     return d;
@@ -32,7 +32,7 @@ static bool is_hole(size_t i)
 static x3pio_reader *open_bytes(const x3pio_buffer *bytes)
 {
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes->data, bytes->size));
     return reader;
 }
@@ -66,7 +66,7 @@ static void test_floats(void)
         x3pio_buffer_init(&by_nan, x3pio_default_allocator());
 
         x3pio_writer *writer = NULL;
-        CHECK_OK(x3pio_writer_create(NULL, &writer));
+        CHECK_OK(x3pio_writer_create(&writer));
         CHECK_OK(x3pio_writer_set_storage(writer, storage));
         CHECK_OK(create_in_buffer(writer, doc, &by_mask));
         x3pio_const_fields from;
@@ -77,7 +77,7 @@ static void test_floats(void)
         CHECK_OK(x3pio_end_file(writer));
         x3pio_writer_free(writer);
 
-        CHECK_OK(x3pio_writer_create(NULL, &writer));
+        CHECK_OK(x3pio_writer_create(&writer));
         CHECK_OK(x3pio_writer_set_storage(writer, storage));
         CHECK_OK(create_in_buffer(writer, doc, &by_nan));
         x3pio_const_fields_init(&from);
@@ -143,7 +143,7 @@ static void test_integer_mask(void)
         mask[i] = is_hole(i) ? 0 : 1;
     }
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
@@ -214,7 +214,7 @@ static void test_integer_mask(void)
     x3pio_reader_free(reader);
 
     /* Without a mask all points count as measured. */
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){counts, *packed(X3PIO_TYPE_INT16)};
@@ -254,7 +254,7 @@ static void test_integers_stay_integers(void)
     }
     x3pio_document *doc = grid_document(X3PIO_TYPE_INT16, 2.5e-9);
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
@@ -279,7 +279,7 @@ static void test_integers_stay_integers(void)
     x3pio_reader_free(reader);
 
     /* The types of the program and of the file must be the same. */
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     uint16_t unsigned_image[COUNT] = {0};
     x3pio_const_fields_init(&from);
@@ -312,7 +312,7 @@ static void test_integers_stay_integers(void)
 static void test_absolute_axes(void)
 {
     x3pio_document *doc = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &doc));
+    CHECK_OK(x3pio_document_create(&doc));
     CHECK_OK(x3pio_document_set_irregular_surface(doc, 3, 2, X3PIO_TYPE_FLOAT,
                                                   1.0, 1));
     double x[6] = {0, 1, 2, 0, 1, 2};
@@ -321,7 +321,7 @@ static void test_absolute_axes(void)
     x[1] = NAN;
     y[4] = INFINITY;
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
@@ -354,7 +354,7 @@ static void test_absolute_axes(void)
 
     /* A point cloud has no missing points. */
     CHECK_OK(x3pio_document_set_point_cloud(doc, 6, X3PIO_TYPE_DOUBLE, 1.0));
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 6));
     CHECK_STRING(x3pio_writer_error_message(writer),

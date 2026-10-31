@@ -22,8 +22,13 @@
  */
 #define MAX_SMALL_MEMBER ((size_t)1 << 30U)
 
-x3pio_status x3pio_reader_create(const x3pio_allocator *allocator,
-                                 x3pio_reader **reader)
+x3pio_status x3pio_reader_create(x3pio_reader **reader)
+{
+    return x3pio_reader_create_with(NULL, reader);
+}
+
+x3pio_status x3pio_reader_create_with(const x3pio_allocator *allocator,
+                                      x3pio_reader **reader)
 {
     if (reader == NULL)
     {

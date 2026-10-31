@@ -32,11 +32,11 @@ static int write_cloud(const char *path)
                     (float)(1e-6 * (double)i), (unsigned char)(i & 0xFF)};
     }
     x3pio_document *document = NULL;
-    x3pio_document_create(NULL, &document);
+    x3pio_document_create(&document);
     x3pio_document_set_point_cloud(document, COUNT, X3PIO_TYPE_FLOAT, 1.0);
     x3pio_document_set_software_metadata(document, "points", "1.0");
     x3pio_writer *writer = NULL;
-    x3pio_writer_create(NULL, &writer);
+    x3pio_writer_create(&writer);
     x3pio_status status = x3pio_create_file(writer, path, document);
     if (status == X3PIO_OK)
     {
@@ -82,7 +82,7 @@ static int read_points(const char *path)
     };
     point piece[PIECE];
     x3pio_reader *reader = NULL;
-    x3pio_reader_create(NULL, &reader);
+    x3pio_reader_create(&reader);
     x3pio_status status = x3pio_open_file(reader, path);
     size_t count = 0;
     size_t measured = 0;

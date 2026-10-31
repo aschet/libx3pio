@@ -170,7 +170,7 @@ static inline x3pio_document *scenario_document(const scenario *s,
                                                 x3pio_revision revision)
 {
     x3pio_document *d = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &d));
+    CHECK_OK(x3pio_document_create(&d));
     CHECK_OK(x3pio_document_set_revision(d, revision));
     if (s->feature == X3PIO_POINT_CLOUD)
     {

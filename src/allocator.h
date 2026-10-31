@@ -15,6 +15,13 @@
 #include "common.h"
 
 /**
+ * Returns the allocator that uses malloc() and free().
+ *
+ * @return A pointer to a constant allocator, valid for the life of the program.
+ */
+const x3pio_allocator *x3pio_default_allocator(void);
+
+/**
  * Allocates memory through an allocator.
  *
  * @param allocator The allocator, with both callbacks set.

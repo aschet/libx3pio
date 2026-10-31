@@ -12,7 +12,7 @@
 static x3pio_document *create(void)
 {
     x3pio_document *d = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &d));
+    CHECK_OK(x3pio_document_create(&d));
     return d;
 }
 
@@ -43,7 +43,7 @@ static void test_defaults(void)
     CHECK(x3pio_document_point_count(NULL) == 0);
     CHECK(!x3pio_document_date(NULL, NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_validate(NULL, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_create(NULL, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_create(NULL));
 }
 
 static void test_descriptions(void)
@@ -339,7 +339,7 @@ static void test_copy(void)
 static void test_pointer_getters(void)
 {
     x3pio_document *d = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &d));
+    CHECK_OK(x3pio_document_create(&d));
     CHECK_OK(x3pio_document_set_surface(d, 7, 5, 2e-6, 3e-6, X3PIO_TYPE_INT16,
                                         1e-9, 2));
     x3pio_placement place = x3pio_placement_identity();

@@ -113,6 +113,19 @@ struct x3pio_writer
 x3pio_status x3pio_writer_prepare(x3pio_writer *writer);
 
 /**
+ * Creates a writer that takes its memory from an allocator, which the tests
+ * use to fail an allocation on demand. x3pio_writer_create() uses malloc().
+ *
+ * @param[in] allocator The allocator, or null for the default. It is copied.
+ * @param[out] writer Receives the writer.
+ * @retval X3PIO_ERR_ARGUMENT `writer` is null, or the allocator lacks a
+ * callback.
+ * @retval X3PIO_ERR_MEMORY An allocation failed.
+ */
+x3pio_status x3pio_writer_create_with(const x3pio_allocator *allocator,
+                                      x3pio_writer **writer);
+
+/**
  * Writes the remaining members and completes the zip file: the validity bits,
  * main.xml, the checksum and the files of vendors.
  *

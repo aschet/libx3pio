@@ -35,7 +35,7 @@ void check(x3pio_status status, const char *message)
 Document copy_document(const x3pio_document *source)
 {
     x3pio_document *document = nullptr;
-    x3pio_document_create(nullptr, &document);
+    x3pio_document_create(&document);
     x3pio_document_copy(document, source);
     x3pio_document_set_surface(document, x3pio_document_columns(source),
                                x3pio_document_rows(source),
@@ -48,14 +48,14 @@ Document copy_document(const x3pio_document *source)
 Reader create_reader()
 {
     x3pio_reader *reader = nullptr;
-    x3pio_reader_create(nullptr, &reader);
+    x3pio_reader_create(&reader);
     return {reader, x3pio_reader_free};
 }
 
 Writer create_writer()
 {
     x3pio_writer *writer = nullptr;
-    x3pio_writer_create(nullptr, &writer);
+    x3pio_writer_create(&writer);
     return {writer, x3pio_writer_free};
 }
 

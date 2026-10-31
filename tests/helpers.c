@@ -453,7 +453,7 @@ bool read_whole_file(const char *path, x3pio_buffer *out)
 void make_base_file(const file_spec *spec, x3pio_buffer *out)
 {
     x3pio_document *doc = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &doc));
+    CHECK_OK(x3pio_document_create(&doc));
     CHECK_OK(x3pio_document_set_revision(doc, spec->revision));
     const double increment =
         spec->z_type == X3PIO_TYPE_DOUBLE || spec->z_type == X3PIO_TYPE_FLOAT
@@ -481,7 +481,7 @@ void make_base_file(const file_spec *spec, x3pio_buffer *out)
         z[i] = spec->missing && i == 5 ? NAN : 1e-7 * (double)(i + 1);
     }
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_writer_set_storage(writer, spec->storage));
     CHECK_OK(x3pio_writer_set_compression(writer, &spec->compression));
     CHECK_OK(create_in_buffer(writer, doc, out));
@@ -505,7 +505,7 @@ x3pio_reader *open_archive(const archive *a, x3pio_buffer *keep, bool verify,
                            x3pio_status *status)
 {
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_reader_set_verify(reader, verify));
     CHECK(archive_zip(a, keep));
     *status = x3pio_open_memory(reader, keep->data, keep->size);

@@ -74,7 +74,7 @@ def load_library(argument):
         function.argtypes = argtypes
 
     handle = c_void_p
-    declare("x3pio_document_create", c_int, c_void_p, POINTER(handle))
+    declare("x3pio_document_create", c_int, POINTER(handle))
     declare("x3pio_document_free", None, handle)
     declare(
         "x3pio_document_set_surface",
@@ -90,13 +90,13 @@ def load_library(argument):
     )
     declare("x3pio_document_get_dimensions", c_int, handle, POINTER(Dimensions))
     declare("x3pio_layout_packed", POINTER(Layout), c_int)
-    declare("x3pio_writer_create", c_int, c_void_p, POINTER(handle))
+    declare("x3pio_writer_create", c_int, POINTER(handle))
     declare("x3pio_writer_free", None, handle)
     declare("x3pio_create_file", c_int, handle, c_char_p, handle)
     declare("x3pio_write_heights", c_int, handle, POINTER(Layout), c_void_p)
     declare("x3pio_end_file", c_int, handle)
     declare("x3pio_writer_error_message", c_char_p, handle)
-    declare("x3pio_reader_create", c_int, c_void_p, POINTER(handle))
+    declare("x3pio_reader_create", c_int, POINTER(handle))
     declare("x3pio_reader_free", None, handle)
     declare("x3pio_open_file", c_int, handle, c_char_p)
     declare("x3pio_reader_document", handle, handle)
@@ -114,7 +114,7 @@ def check(status, message=b""):
 def write_surface(lib, path, columns, rows, heights):
     """Writes the heights, a row after the other, in metres."""
     document = c_void_p()
-    check(lib.x3pio_document_create(None, byref(document)))
+    check(lib.x3pio_document_create(byref(document)))
     writer = c_void_p()
     try:
         # A surface of floats: the points lie 1 micrometre apart.
@@ -123,7 +123,7 @@ def write_surface(lib, path, columns, rows, heights):
                 document, columns, rows, 1e-6, 1e-6, X3PIO_TYPE_FLOAT, 1.0, 1
             )
         )
-        check(lib.x3pio_writer_create(None, byref(writer)))
+        check(lib.x3pio_writer_create(byref(writer)))
         check(
             lib.x3pio_create_file(writer, path.encode(), document),
             lib.x3pio_writer_error_message(writer),
@@ -145,7 +145,7 @@ def write_surface(lib, path, columns, rows, heights):
 def read_surface(lib, path):
     """Returns the columns, the rows and the heights as an array of doubles."""
     reader = c_void_p()
-    check(lib.x3pio_reader_create(None, byref(reader)))
+    check(lib.x3pio_reader_create(byref(reader)))
     try:
         check(
             lib.x3pio_open_file(reader, path.encode()),

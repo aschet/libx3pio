@@ -46,14 +46,14 @@ int main(void)
     stream.write = membuf_write;
 
     x3pio_document *document = NULL;
-    x3pio_document_create(NULL, &document);
+    x3pio_document_create(&document);
     x3pio_document_set_surface(document, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
                                1.0, 1);
     x3pio_document_set_software_metadata(document, "write_memory", "1.0");
     const double heights[12] = {1e-7, 2e-7, 3e-7, 4e-7, 5e-7,   6e-7,
                                 7e-7, 8e-7, 9e-7, 1e-6, 1.1e-6, 1.2e-6};
     x3pio_writer *writer = NULL;
-    x3pio_writer_create(NULL, &writer);
+    x3pio_writer_create(&writer);
     x3pio_status status = x3pio_create_stream(writer, &stream, document);
     if (status == X3PIO_OK)
     {
@@ -75,7 +75,7 @@ int main(void)
 
     /* And back from memory, where the reader reads the bytes where they are. */
     x3pio_reader *reader = NULL;
-    x3pio_reader_create(NULL, &reader);
+    x3pio_reader_create(&reader);
     status = x3pio_open_memory(reader, buffer.data, buffer.size);
     double back[12];
     if (status == X3PIO_OK)

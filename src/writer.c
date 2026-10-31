@@ -17,8 +17,13 @@
 #include "writer.h"
 #include "xml.h"
 
-x3pio_status x3pio_writer_create(const x3pio_allocator *allocator,
-                                 x3pio_writer **writer)
+x3pio_status x3pio_writer_create(x3pio_writer **writer)
+{
+    return x3pio_writer_create_with(NULL, writer);
+}
+
+x3pio_status x3pio_writer_create_with(const x3pio_allocator *allocator,
+                                      x3pio_writer **writer)
 {
     if (writer == NULL)
     {

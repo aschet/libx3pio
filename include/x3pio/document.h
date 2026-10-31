@@ -48,24 +48,18 @@ typedef struct x3pio_document x3pio_document;
  * caller sets the dimensions, and what differs. Release it with
  * x3pio_document_free().
  *
- * @param[in] allocator The allocator for all memory of the document, or null
- * for x3pio_default_allocator(). The structure is copied, so it need not
- * outlive the call. Both callbacks must be set.
  * @param[out] document Receives the document, or null if the call fails.
- * @retval X3PIO_ERR_ARGUMENT `document` is null, or the allocator lacks a
- * callback.
+ * @retval X3PIO_ERR_ARGUMENT `document` is null.
  * @retval X3PIO_ERR_MEMORY The allocation failed.
  */
-X3PIO_API x3pio_status x3pio_document_create(const x3pio_allocator *allocator,
-                                             x3pio_document **document);
+X3PIO_API x3pio_status x3pio_document_create(x3pio_document **document);
 
 /**
  * Copies every field of a document into another document. A copy of the
  * document of a reader is one that the caller can change and keep after the
  * reader is freed. The points of a file of text are not part of a document.
  *
- * @param[out] dst The document that receives the fields; it keeps its
- * allocator.
+ * @param[out] dst The document that receives the fields.
  * @param[in] src The document to copy.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null.
  * @retval X3PIO_ERR_MEMORY An allocation failed. `dst` is unchanged.

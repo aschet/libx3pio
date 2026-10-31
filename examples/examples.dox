@@ -20,8 +20,6 @@
 
 /** @example vendor_files.c */
 
-/** @example allocators.c */
-
 /** @example write_memory.c */
 
 /** @example opencv.cpp */

@@ -12,6 +12,7 @@
 #ifndef X3PIO_TESTS_HELPERS_H
 #define X3PIO_TESTS_HELPERS_H
 
+#include "allocator.h"
 #include "buffer.h"
 #include "check.h"
 

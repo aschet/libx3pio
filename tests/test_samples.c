@@ -206,7 +206,7 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
 {
     const x3pio_document *doc = x3pio_reader_document(reader);
     x3pio_document *copy = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &copy));
+    CHECK_OK(x3pio_document_create(&copy));
     CHECK_OK(x3pio_document_copy(copy, doc));
     CHECK_OK(x3pio_document_set_revision(copy, revision));
     const size_t count = x3pio_document_point_count(doc);
@@ -231,7 +231,7 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
     CHECK_OK(x3pio_read_data(reader, &into, rows));
 
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_writer_set_storage(writer, storage));
     CHECK_OK(create_in_buffer(writer, copy, out));
     x3pio_const_fields from;
@@ -289,7 +289,7 @@ static void check_sample(const char *base, const expectation *e,
     snprintf(path, sizeof path, "%s/%s", base, e->path);
     const int before = failures;
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     const x3pio_status opened = x3pio_open_file(reader, path);
     CHECK_STATUS(X3PIO_OK, opened);
     if (opened != X3PIO_OK)
@@ -347,7 +347,7 @@ static void check_sample(const char *base, const expectation *e,
                     r == 0 ? X3PIO_REVISION_AMD1 : X3PIO_REVISION_2017;
                 const x3pio_storage storage =
                     t == 0 ? X3PIO_STORAGE_BINARY : X3PIO_STORAGE_TEXT;
-                CHECK_OK(x3pio_reader_create(NULL, &reader));
+                CHECK_OK(x3pio_reader_create(&reader));
                 CHECK_OK(x3pio_open_file(reader, path));
                 x3pio_buffer out;
                 x3pio_buffer_init(&out, x3pio_default_allocator());
@@ -368,7 +368,7 @@ static void check_sample(const char *base, const expectation *e,
                 archive_free(&a);
 
                 x3pio_reader *copy = NULL;
-                CHECK_OK(x3pio_reader_create(NULL, &copy));
+                CHECK_OK(x3pio_reader_create(&copy));
                 CHECK_OK(x3pio_open_memory(copy, out.data, out.size));
                 points q = {0};
                 read_global(copy, &q);
@@ -474,7 +474,7 @@ static void test_standard_example(void)
     x3pio_buffer_init(&zip, x3pio_default_allocator());
     CHECK(archive_zip(&a, &zip));
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, zip.data, zip.size));
     const x3pio_document *doc = x3pio_reader_document(reader);
     CHECK(doc != NULL && x3pio_document_revision(doc) == X3PIO_REVISION_AMD1);

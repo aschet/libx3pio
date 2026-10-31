@@ -17,7 +17,7 @@
 static x3pio_document *base_document(x3pio_revision revision)
 {
     x3pio_document *d = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &d));
+    CHECK_OK(x3pio_document_create(&d));
     CHECK_OK(x3pio_document_set_revision(d, revision));
     CHECK_OK(x3pio_document_set_surface(d, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
                                         1.0, 1));
@@ -54,13 +54,13 @@ static void test_disk(void)
     remove(path);
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_create_file(writer, path, doc));
     finish_with_heights(writer);
     x3pio_writer_free(writer);
 
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_file(reader, path));
     check_heights(reader);
     x3pio_reader_free(reader);
@@ -71,7 +71,7 @@ static void test_disk(void)
     x3pio_buffer_init(&on_disk, x3pio_default_allocator());
     x3pio_buffer_init(&in_memory, x3pio_default_allocator());
     CHECK(read_whole_file(path, &on_disk));
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(create_in_buffer(writer, doc, &in_memory));
     finish_with_heights(writer);
     x3pio_writer_free(writer);
@@ -85,7 +85,7 @@ static void test_disk(void)
     {
         x3pio_stream stream;
         x3pio_stdio_stream(&stream, file);
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         CHECK_OK(x3pio_open_stream(reader, &stream));
         check_heights(reader);
         x3pio_reader_free(reader);
@@ -98,7 +98,7 @@ static void test_disk(void)
     {
         x3pio_stream stream;
         x3pio_stdio_stream(&stream, file);
-        CHECK_OK(x3pio_writer_create(NULL, &writer));
+        CHECK_OK(x3pio_writer_create(&writer));
         CHECK_OK(x3pio_create_stream(writer, &stream, doc));
         finish_with_heights(writer);
         x3pio_writer_free(writer);
@@ -114,7 +114,7 @@ static void test_disk(void)
 
     /* A file that cannot be created creates nothing, and the writer can try
      * again. */
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_STATUS(X3PIO_ERR_IO,
                  x3pio_create_file(writer, "no/such/folder/file.x3p", doc));
     CHECK_STRING(x3pio_writer_error_message(writer),
@@ -126,8 +126,8 @@ static void test_disk(void)
 
     /* A document that cannot be written creates no file. */
     x3pio_document *empty = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &empty));
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_document_create(&empty));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_file(writer, copy, empty));
     FILE *probe = fopen(copy, "rb");
     CHECK(probe == NULL);
@@ -141,7 +141,7 @@ static void test_disk(void)
     x3pio_document_free(empty);
 
     /* What cannot be opened. */
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_STATUS(X3PIO_ERR_IO, x3pio_open_file(reader, "does/not/exist.x3p"));
     CHECK_STATUS(X3PIO_ERR_IO, x3pio_open_file(reader, "."));
     FILE *text = fopen(copy, "wb");
@@ -227,7 +227,7 @@ static void test_streams(void)
         stream.user = &t;
         stream.read = trickle_read;
         x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         CHECK_OK(x3pio_open_stream(reader, &stream));
         double back[12];
         CHECK_OK(x3pio_read_heights(
@@ -242,7 +242,7 @@ static void test_streams(void)
     stream.user = &failing;
     stream.read = trickle_read;
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_STATUS(X3PIO_ERR_IO, x3pio_open_stream(reader, &stream));
     CHECK_STRING(x3pio_reader_error_message(reader),
                  "The stream could not be read");
@@ -266,7 +266,7 @@ static void test_streams(void)
         out.write = sink_write;
         x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
         x3pio_writer *writer = NULL;
-        CHECK_OK(x3pio_writer_create(NULL, &writer));
+        CHECK_OK(x3pio_writer_create(&writer));
         CHECK_OK(x3pio_create_stream(writer, &out, doc));
         finish_with_heights(writer);
         CHECK(k.bytes.size > 0);
@@ -283,7 +283,7 @@ static void test_streams(void)
     out.write = sink_write;
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_create_stream(writer, &out, doc));
     CHECK_OK(x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
                                  heights));
@@ -307,7 +307,7 @@ static void test_vendor_files_amd1(void)
 {
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
@@ -371,7 +371,7 @@ static void test_vendor_files_amd1(void)
     archive_free(&a);
 
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     const x3pio_document *read = x3pio_reader_document(reader);
     CHECK(x3pio_document_vendor_count(read) == 3);
@@ -437,7 +437,7 @@ static void test_vendor_files_2017(void)
 {
     x3pio_document *doc = base_document(X3PIO_REVISION_2017);
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
@@ -477,7 +477,7 @@ static void test_vendor_files_2017(void)
 
     /* Every file that is not part of the format belongs to the vendor. */
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     CHECK(x3pio_reader_vendor_file_count(reader) == 2);
     bool settings = false;
@@ -508,7 +508,7 @@ static void test_vendor_files_2017(void)
 static size_t file_size_with(const x3pio_compression *compression, archive *a)
 {
     x3pio_document *doc = NULL;
-    CHECK_OK(x3pio_document_create(NULL, &doc));
+    CHECK_OK(x3pio_document_create(&doc));
     CHECK_OK(x3pio_document_set_surface(doc, 200, 200, 1e-6, 1e-6,
                                         X3PIO_TYPE_DOUBLE, 1.0, 1));
     double *z = malloc(200 * 200 * sizeof *z);
@@ -517,7 +517,7 @@ static size_t file_size_with(const x3pio_compression *compression, archive *a)
         z[i] = 1e-7 * (double)((i / 200) % 7);
     }
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     if (compression != NULL)
     {
         CHECK_OK(x3pio_writer_set_compression(writer, compression));
@@ -567,7 +567,7 @@ static void test_compression(void)
     archive_free(&deflated);
 
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_writer_set_compression(
                      writer, &(x3pio_compression){X3PIO_COMPRESS_DEFLATE, 10}));
@@ -597,8 +597,8 @@ static void test_reader_states(void)
     file_spec spec = default_spec();
     make_base_file(&spec, &bytes);
     x3pio_reader *reader = NULL;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_reader_create(NULL, NULL));
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_reader_create(NULL));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_STRING(x3pio_reader_error_message(reader), "");
     CHECK_STRING(x3pio_reader_error_message(NULL), "");
 
@@ -661,8 +661,8 @@ static void test_writer_states(void)
 {
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_create(NULL, NULL));
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_create(NULL));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_STRING(x3pio_writer_error_message(writer), "");
     CHECK_STRING(x3pio_writer_error_message(NULL), "");
 
@@ -729,7 +729,7 @@ static void test_writer_states(void)
 
     /* A file that was written is read. */
     x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(NULL, &reader));
+    CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     CHECK(x3pio_document_columns(x3pio_reader_document(reader)) == 4);
     x3pio_reader_free(reader);
@@ -751,7 +751,7 @@ static void test_damage(void)
     /* A file of vendor with a pattern that is found in the zip file. */
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
-    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_writer_set_compression(writer, &spec.compression));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     static const unsigned char pattern[] = "VENDOR-PATTERN-0123456789";
@@ -779,7 +779,7 @@ static void test_damage(void)
     {
         hit[5] ^= 0x55;
         x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         CHECK_OK(x3pio_open_memory(reader, damaged.data, damaged.size));
         check_heights(reader);
         unsigned char content[64];
@@ -812,7 +812,7 @@ static void test_damage(void)
     {
         where[0] ^= 0x01;
         x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_reader_create(&reader));
         CHECK_OK(x3pio_open_memory(reader, damaged.data, damaged.size));
         unsigned char content[64];
         size_t size = 0;
