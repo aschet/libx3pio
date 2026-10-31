@@ -13,6 +13,7 @@
 
 #include <x3pio/file.h>
 
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -21,7 +22,11 @@
 typedef struct counter
 {
     void *blocks[MAX_BLOCKS];
+    size_t sizes[MAX_BLOCKS];
     size_t live;
+    /* The bytes that are allocated now, and the most there were. */
+    size_t live_bytes;
+    size_t peak_bytes;
     size_t calls;
     /* The number of the allocation that fails, counted from 1; 0 for none. */
     size_t fail_at;
@@ -47,7 +52,13 @@ static void *counting_allocate(void *user, size_t size)
     {
         ++c->misaligned;
     }
+    c->sizes[c->live] = size;
     c->blocks[c->live++] = block;
+    c->live_bytes += size;
+    if (c->live_bytes > c->peak_bytes)
+    {
+        c->peak_bytes = c->live_bytes;
+    }
     return block;
 }
 
@@ -58,7 +69,10 @@ static void counting_release(void *user, void *memory)
     {
         if (c->blocks[i] == memory)
         {
-            c->blocks[i] = c->blocks[--c->live];
+            c->live_bytes -= c->sizes[i];
+            --c->live;
+            c->blocks[i] = c->blocks[c->live];
+            c->sizes[i] = c->sizes[c->live];
             free(memory);
             return;
         }
@@ -74,6 +88,8 @@ static x3pio_allocator allocator_of(counter *c)
 static void reset(counter *c, size_t fail_at)
 {
     c->live = 0;
+    c->live_bytes = 0;
+    c->peak_bytes = 0;
     c->calls = 0;
     c->fail_at = fail_at;
     c->foreign_releases = 0;
@@ -396,11 +412,105 @@ static void test_copy_between_allocators(void)
     CHECK(first.calls > 0 && second.calls > 0);
 }
 
+/* Reads a cloud of `count` points from a file in text in pieces of odd sizes,
+ * and returns the most memory the reader held. */
+static size_t read_text_cloud(size_t count)
+{
+    const size_t COUNT = count;
+    double *x = malloc(COUNT * sizeof *x);
+    double *y = malloc(COUNT * sizeof *y);
+    double *z = malloc(COUNT * sizeof *z);
+    for (size_t i = 0; i < COUNT; ++i)
+    {
+        x[i] = (double)(float)(1e-3 * sin(0.01 * (double)i));
+        y[i] = (double)(float)(1e-3 * cos(0.01 * (double)i));
+        z[i] = (double)(float)(1e-6 * (double)(i % 977));
+    }
+    x3pio_document *doc = NULL;
+    CHECK_OK(x3pio_document_create(NULL, &doc));
+    CHECK_OK(x3pio_document_set_point_cloud(doc, COUNT, X3PIO_TYPE_FLOAT, 1.0));
+    x3pio_writer *writer = NULL;
+    CHECK_OK(x3pio_writer_create(NULL, &writer));
+    CHECK_OK(x3pio_writer_set_storage(writer, X3PIO_STORAGE_TEXT));
+    x3pio_buffer bytes;
+    x3pio_buffer_init(&bytes, x3pio_default_allocator());
+    CHECK_OK(create_in_buffer(writer, doc, &bytes));
+    x3pio_const_fields from;
+    x3pio_const_fields_init(&from);
+    from.x = (x3pio_const_field){x, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    from.y = (x3pio_const_field){y, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    from.z = (x3pio_const_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    CHECK_OK(x3pio_write_points(writer, &from, COUNT));
+    CHECK_OK(x3pio_end_file(writer));
+    x3pio_writer_free(writer);
+    x3pio_document_free(doc);
+
+    static counter c;
+    reset(&c, 0);
+    const x3pio_allocator allocator = allocator_of(&c);
+    x3pio_reader *reader = NULL;
+    CHECK_OK(x3pio_reader_create(&allocator, &reader));
+    CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
+    const size_t calls_after_open = c.calls;
+
+    /* Pieces that do not line up with the chunks of the library or the parts
+     * of the file. */
+    double *rx = malloc(1500 * sizeof *rx);
+    double *ry = malloc(1500 * sizeof *ry);
+    double *rz = malloc(1500 * sizeof *rz);
+    x3pio_fields into;
+    x3pio_fields_init(&into);
+    into.x = (x3pio_field){rx, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    into.y = (x3pio_field){ry, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    into.z = (x3pio_field){rz, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    size_t done = 0;
+    size_t piece = 1;
+    while (done < COUNT)
+    {
+        const size_t n = COUNT - done < piece ? COUNT - done : piece;
+        CHECK_OK(x3pio_read_points(reader, &into, n));
+        for (size_t i = 0; i < n; ++i)
+        {
+            CHECK(rx[i] == x[done + i] && ry[i] == y[done + i]
+                  && rz[i] == z[done + i]);
+        }
+        done += n;
+        piece = piece * 3 % 1499 + 1;
+    }
+    CHECK(c.calls == calls_after_open);
+    const size_t peak = c.peak_bytes;
+    x3pio_reader_free(reader);
+    CHECK(c.live == 0);
+    free(rx);
+    free(ry);
+    free(rz);
+    free(x);
+    free(y);
+    free(z);
+    x3pio_buffer_free(&bytes);
+    return peak;
+}
+
+/* A file in text is read as the rows are asked for: the points are not held as
+ * a whole, so the memory of the reader does not depend on the size of the
+ * file, and the transfer of rows allocates nothing, however many parts of the
+ * file the parser goes through. */
+static void test_text_in_parts(void)
+{
+    const size_t small = read_text_cloud(12000);
+    const size_t large = read_text_cloud(120000);
+    CHECK(large < small + 65536);
+    /* The points of the large file as numbers alone would take 2.9 megabytes.
+     */
+    CHECK(large < (size_t)2000000);
+}
+
 int main(void)
 {
     test_balanced();
     test_failures();
     test_arguments();
     test_copy_between_allocators();
+    test_text_in_parts();
     return finish_tests();
 }

@@ -16,6 +16,7 @@
 #include "document.h"
 #include "md5.h"
 #include "members.h"
+#include "xml.h"
 #include "zip.h"
 
 /** A file of a vendor in the container. */
@@ -71,6 +72,13 @@ struct x3pio_reader
     /** Whether an error in the middle of the points ended the reading. */
     bool failed;
 
+    /** The member main.xml, open while the points of a text file are read. */
+    x3pio_zip_entry *text_entry;
+    /** The Datum elements of a text file, delivered as the rows are read. */
+    x3pio_xml_datums *datums;
+    /** The numbers of a chunk of a text file. */
+    double *text_values;
+
     /** The room for a chunk. */
     unsigned char *bytes;
     double *raw[3];
@@ -78,6 +86,14 @@ struct x3pio_reader
     double *flag_values;
     unsigned char *flags;
 };
+
+/**
+ * Releases what a reader holds for reading the points of a text file: the
+ * parser and the member. It is done when the last point is read.
+ *
+ * @param reader The reader.
+ */
+void x3pio_reader_release_text(x3pio_reader *reader);
 
 /**
  * Releases everything a reader holds for an open file, and makes it new again.

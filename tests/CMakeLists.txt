@@ -36,6 +36,7 @@ function(x3pio_add_test name)
 endfunction()
 
 x3pio_add_test(test_text)
+x3pio_add_test(test_datums)
 x3pio_add_test(test_md5)
 x3pio_add_test(test_codec)
 x3pio_add_test(test_vendor)
