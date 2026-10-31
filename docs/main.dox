@@ -67,6 +67,10 @@
  * cmake --install build --prefix /path/to/prefix
  * @endcode
  *
+ * One test is skipped unless the environment variable `X3PIO_LARGE_TESTS` is
+ * set: it writes and reads more than 4 GiB of point data, which needs zip64
+ * records, and takes about 30 seconds.
+ *
  * With Visual Studio, configure with `-A x64` (or `Win32`, `ARM64`) and name
  * the configuration in the other commands: `--config Release`, and
  * `-C Release` for `ctest`. The tests need libxml2, which checks the files

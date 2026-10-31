@@ -46,6 +46,10 @@ x3pio_add_test(test_samples)
 x3pio_add_test(test_tolerance)
 x3pio_add_test(test_allocator)
 x3pio_add_test(test_files)
+# More than 4 GiB of point data, which needs zip64. It runs only if the
+# environment variable X3PIO_LARGE_TESTS is set, and is skipped otherwise.
+x3pio_add_test(test_large)
+set_tests_properties(test_large PROPERTIES SKIP_RETURN_CODE 77)
 
 if(Threads_FOUND AND CMAKE_USE_PTHREADS_INIT)
     x3pio_add_test(test_threads)
