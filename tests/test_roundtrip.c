@@ -981,12 +981,158 @@ static void test_heights_and_automatic_increment(void)
     free(z);
 }
 
+/* An array of structures of the program, as a std::vector of points is, holds
+ * every shape: the coordinates of a regular grid, an irregular one, layers, a
+ * profile and a cloud. The rows come in pieces that continue in the array, the
+ * other members stay as they were, and the array written to a file gives the
+ * same points back. */
+typedef struct vertex
+{
+    float x;
+    float y;
+    float z;
+    unsigned char colour[3];
+} vertex;
+
+static bool same_float(float a, float b)
+{
+    return isnan(a) ? isnan(b) : a == b;
+}
+
+/* The description of the shape of a scenario, with the points stored as floats.
+ */
+static x3pio_document *float_document(const scenario *s)
+{
+    x3pio_document *doc = scenario_document(s, X3PIO_REVISION_AMD1);
+    if (s->feature == X3PIO_POINT_CLOUD)
+    {
+        CHECK_OK(x3pio_document_set_point_cloud(doc, s->columns,
+                                                X3PIO_TYPE_FLOAT, 1.0));
+    }
+    else if (!s->regular)
+    {
+        CHECK_OK(x3pio_document_set_irregular_surface(
+            doc, s->columns, s->rows, X3PIO_TYPE_FLOAT, 1.0, s->layers));
+    }
+    else if (s->feature == X3PIO_PROFILE)
+    {
+        CHECK_OK(x3pio_document_set_profile(doc, s->columns, GRID_STEP,
+                                            X3PIO_TYPE_FLOAT, 1.0, s->layers));
+    }
+    else
+    {
+        CHECK_OK(x3pio_document_set_surface(doc, s->columns, s->rows, GRID_STEP,
+                                            GRID_STEP, X3PIO_TYPE_FLOAT, 1.0,
+                                            s->layers));
+    }
+    return doc;
+}
+
+static void test_structures_of_every_shape(void)
+{
+    for (size_t k = 0; k < SCENARIO_COUNT; ++k)
+    {
+        const scenario *s = &scenarios[k];
+        const size_t count = scenario_points(s);
+        x3pio_buffer bytes;
+        x3pio_buffer_init(&bytes, x3pio_default_allocator());
+        x3pio_reader *reader =
+            open_scenario(s, X3PIO_REVISION_AMD1, X3PIO_STORAGE_BINARY, &bytes);
+        const x3pio_document *doc = x3pio_reader_document(reader);
+        const size_t columns = x3pio_document_columns(doc);
+        const size_t rows = x3pio_document_rows(doc);
+
+        vertex *vertices = malloc(count * sizeof *vertices);
+        for (size_t i = 0; i < count; ++i)
+        {
+            vertices[i] = (vertex){0, 0, 0, {1, 2, 3}};
+        }
+        x3pio_fields into;
+        x3pio_fields_init(&into);
+        const ptrdiff_t stride = sizeof(vertex);
+        for (size_t row = 0; row < rows; row += 2)
+        {
+            const size_t piece = rows - row < 2 ? rows - row : 2;
+            vertex *first = vertices + row * columns;
+            into.x = (x3pio_field){&first->x, {X3PIO_TYPE_FLOAT, stride, 0}};
+            into.y = (x3pio_field){&first->y, {X3PIO_TYPE_FLOAT, stride, 0}};
+            into.z = (x3pio_field){&first->z, {X3PIO_TYPE_FLOAT, stride, 0}};
+            CHECK_OK(x3pio_read_points(reader, &into, piece));
+        }
+        x3pio_reader_free(reader);
+
+        double *x = malloc(count * sizeof *x);
+        double *y = malloc(count * sizeof *y);
+        double *z = malloc(count * sizeof *z);
+        reader = NULL;
+        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
+        read_metres(reader, x, y, z);
+        x3pio_reader_free(reader);
+        for (size_t i = 0; i < count; ++i)
+        {
+            CHECK(same_float(vertices[i].x, (float)x[i]));
+            CHECK(same_float(vertices[i].y, (float)y[i]));
+            CHECK(same_float(vertices[i].z, (float)z[i]));
+            CHECK(vertices[i].colour[0] == 1 && vertices[i].colour[1] == 2
+                  && vertices[i].colour[2] == 3);
+        }
+
+        /* The structures written to a file of floats come back as they were. */
+        x3pio_document *copy = float_document(s);
+        x3pio_writer *writer = NULL;
+        CHECK_OK(x3pio_writer_create(NULL, &writer));
+        x3pio_buffer second;
+        x3pio_buffer_init(&second, x3pio_default_allocator());
+        CHECK_OK(create_in_buffer(writer, copy, &second));
+        x3pio_const_fields from;
+        x3pio_const_fields_init(&from);
+        from.z =
+            (x3pio_const_field){&vertices->z, {X3PIO_TYPE_FLOAT, stride, 0}};
+        if (!s->regular)
+        {
+            /* A regular grid stores no x and y. */
+            from.x = (x3pio_const_field){&vertices->x,
+                                         {X3PIO_TYPE_FLOAT, stride, 0}};
+            from.y = (x3pio_const_field){&vertices->y,
+                                         {X3PIO_TYPE_FLOAT, stride, 0}};
+        }
+        CHECK_OK(x3pio_write_points(writer, &from, rows));
+        CHECK_OK(x3pio_end_file(writer));
+        CHECK_OK(x3pio_reader_create(NULL, &reader));
+        CHECK_OK(x3pio_open_memory(reader, second.data, second.size));
+        double *x2 = malloc(count * sizeof *x2);
+        double *y2 = malloc(count * sizeof *y2);
+        double *z2 = malloc(count * sizeof *z2);
+        read_metres(reader, x2, y2, z2);
+        for (size_t i = 0; i < count; ++i)
+        {
+            CHECK(same_float((float)x2[i], vertices[i].x));
+            CHECK(same_float((float)y2[i], vertices[i].y));
+            CHECK(same_float((float)z2[i], vertices[i].z));
+        }
+        x3pio_reader_free(reader);
+        x3pio_writer_free(writer);
+        x3pio_document_free(copy);
+        x3pio_buffer_free(&second);
+        x3pio_buffer_free(&bytes);
+        free(x);
+        free(y);
+        free(z);
+        free(x2);
+        free(y2);
+        free(z2);
+        free(vertices);
+    }
+}
+
 int main(void)
 {
     test_every_shape();
     test_rewrite();
     test_image_layouts();
     test_structures();
+    test_structures_of_every_shape();
     test_layers();
     test_pieces();
     test_heights_and_automatic_increment();
