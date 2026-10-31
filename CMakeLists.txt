@@ -22,6 +22,7 @@ include(GenerateExportHeader)
 include(GNUInstallDirs)
 
 option(X3PIO_BUILD_EXAMPLES "Build the examples" OFF)
+option(X3PIO_BUILD_EXTERNAL_EXAMPLES "Build the examples that use OpenCV, VTK and Eigen, which must be found" OFF)
 option(X3PIO_BUILD_DOCS "Build the API reference with Doxygen" OFF)
 
 set(X3PIO_WARNINGS
@@ -174,6 +175,11 @@ set_target_properties(x3pio PROPERTIES
 
 if(X3PIO_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+if(X3PIO_BUILD_EXTERNAL_EXAMPLES)
+    enable_language(CXX)
+    add_subdirectory(examples/external)
 endif()
 
 if(X3PIO_BUILD_DOCS)

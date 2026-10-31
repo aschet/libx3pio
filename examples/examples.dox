@@ -4,61 +4,28 @@
  * SPDX-License-Identifier: MIT
  */
 
-/*
- * The example programs for the API reference, each with a short description.
- */
+/** @example write_heights.c */
 
-/**
- * @example write_heights.c
- * @details Write the heights of a surface as float, int16 and int32 in both
- * revisions.
- */
+/** @example read_heights.c */
 
-/**
- * @example read_heights.c
- * @details Read the heights of a surface into a buffer of the program.
- */
+/** @example read_stream.c */
 
-/**
- * @example read_stream.c
- * @details Read a file from standard input, a row at a time.
- */
+/** @example write_data.c */
 
-/**
- * @example write_data.c
- * @details Write the values of int16 as they are, with a mask of the points
- * that were not measured.
- */
+/** @example read_data.c */
 
-/**
- * @example read_data.c
- * @details Read the values as the file stores them, with the mask, and convert
- * some of them to metres.
- */
+/** @example points.c */
 
-/**
- * @example points.c
- * @details Write and read points held in a structure of the program, with
- * strides.
- */
+/** @example layers.c */
 
-/**
- * @example layers.c
- * @details Write and read a file with several layers.
- */
+/** @example vendor_files.c */
 
-/**
- * @example vendor_files.c
- * @details Add a file of a vendor and read it without reading the points.
- */
+/** @example allocators.c */
 
-/**
- * @example allocators.c
- * @details Count the memory that the library asks for with a custom allocator.
- */
+/** @example write_memory.c */
 
-/**
- * @example write_memory.c
- * @details Write a file to a growing buffer with a stream, and read it from
- * memory.
- */
+/** @example opencv.cpp */
+
+/** @example eigen.cpp */
+
+/** @example vtk.cpp */

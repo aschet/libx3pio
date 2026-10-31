@@ -76,6 +76,8 @@
  * <table class="doxtable">
  * <tr><th>Option</th><th>Default</th><th>Builds</th></tr>
  * <tr><td>X3PIO_BUILD_EXAMPLES</td><td>OFF</td><td>The examples.</td></tr>
+ * <tr><td>X3PIO_BUILD_EXTERNAL_EXAMPLES</td><td>OFF</td><td>The examples that
+ * use external libraries.</td></tr>
  * <tr><td>X3PIO_BUILD_DOCS</td><td>OFF</td><td>This API reference, with
  * Doxygen, as the target `docs`.</td></tr>
  * </table>

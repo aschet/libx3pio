@@ -18,10 +18,6 @@ defaults:
     shell: bash
 
 jobs:
-  # The definition of each job is in .github/ci/run.sh, which a developer runs
-  # the same way with run.sh <job>. The packages and Python tools that a job
-  # needs on the runners of GitHub are listed here. The dependencies of the
-  # library come from vcpkg, which the runners provide.
   ci:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
@@ -32,7 +28,7 @@ jobs:
           - name: GCC x86-64 Linux
             runner: ubuntu-latest
             job: gcc-x86-64-linux
-            packages: ninja-build gcc
+            packages: ninja-build gcc libopencv-dev libeigen3-dev libvtk9-dev
           - name: GCC x86 Linux
             runner: ubuntu-latest
             job: gcc-x86-linux
@@ -88,7 +84,7 @@ jobs:
             packages: ninja-build gcc
             pipx: gcovr
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install the tools
         if: ${{ runner.os == 'Linux' }}
@@ -107,4 +103,4 @@ jobs:
       - name: Run the job
         env:
           JOB: ${{ matrix.job }}
-        run: .github/ci/run.sh "$JOB"
+        run: python .github/ci/ci.py "$JOB"

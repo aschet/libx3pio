@@ -19,8 +19,9 @@ INPUT                  = @PROJECT_SOURCE_DIR@/include/x3pio/x3pio.h \
                          @PROJECT_BINARY_DIR@/generated/include/x3pio/version.h \
                          @PROJECT_SOURCE_DIR@/docs/main.dox \
                          @PROJECT_SOURCE_DIR@/examples/examples.dox
-EXAMPLE_PATH           = @PROJECT_SOURCE_DIR@/examples
-EXAMPLE_PATTERNS       = *.c
+EXAMPLE_PATH           = @PROJECT_SOURCE_DIR@/examples \
+                         @PROJECT_SOURCE_DIR@/examples/external
+EXAMPLE_PATTERNS       = *.c *.cpp
 LAYOUT_FILE            = @X3PIO_DOXYGEN_LAYOUT@
 OPTIMIZE_OUTPUT_FOR_C  = YES
 JAVADOC_AUTOBRIEF      = YES

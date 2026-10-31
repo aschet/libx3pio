@@ -29,6 +29,6 @@ SPDX-FileCopyrightText = "2026 Thomas Ascher <thomas.ascher@gmx.at>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
-path = ["examples/*.c", "examples/*.cmake", "examples/*.dox", "examples/CMakeLists.txt"]
+path = ["examples/*.c", "examples/external/*.cpp"]
 SPDX-FileCopyrightText = "2026 Thomas Ascher <thomas.ascher@gmx.at>"
 SPDX-License-Identifier = "0BSD"
