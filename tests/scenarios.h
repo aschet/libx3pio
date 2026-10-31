@@ -56,6 +56,14 @@ static const scenario scenarios[] = {
      1.0, true, false},
     {"placed irregular surface float", X3PIO_SURFACE, 7, 6, 1, false,
      X3PIO_TYPE_FLOAT, 1.0, true, true},
+    {"profile int16 with missing points", X3PIO_PROFILE, 48, 1, 1, true,
+     X3PIO_TYPE_INT16, 2e-10, false, true},
+    {"irregular profile double", X3PIO_PROFILE, 40, 1, 1, false,
+     X3PIO_TYPE_DOUBLE, 1.0, false, false},
+    {"irregular profile int32 with missing points", X3PIO_PROFILE, 40, 1, 1,
+     false, X3PIO_TYPE_INT32, 1e-12, false, true},
+    {"irregular profile layers float with missing points", X3PIO_PROFILE, 24, 1,
+     3, false, X3PIO_TYPE_FLOAT, 1.0, false, true},
     {"point cloud float", X3PIO_POINT_CLOUD, 100, 1, 1, false, X3PIO_TYPE_FLOAT,
      1.0, false, false},
     {"point cloud int16", X3PIO_POINT_CLOUD, 100, 1, 1, false, X3PIO_TYPE_INT16,
@@ -66,6 +74,18 @@ static const scenario scenarios[] = {
      X3PIO_TYPE_DOUBLE, 1.0, false, false},
 };
 #define SCENARIO_COUNT (sizeof scenarios / sizeof scenarios[0])
+
+/* A file stores x for every shape but a regular grid, and y for none of the
+ * profiles, which lie on a line. */
+static inline bool scenario_stores_x(const scenario *s)
+{
+    return !s->regular;
+}
+
+static inline bool scenario_stores_y(const scenario *s)
+{
+    return !s->regular && s->feature != X3PIO_PROFILE;
+}
 
 #define GRID_STEP 1e-6
 
@@ -125,8 +145,9 @@ static inline void scenario_points_view(const scenario *s, double *x, double *y,
         {
             x[i] = s->regular ? (double)u * GRID_STEP
                               : (double)u * GRID_STEP + wobble;
-            y[i] = s->regular ? (double)v * GRID_STEP
-                              : (double)v * GRID_STEP - wobble;
+            y[i] = s->regular || s->feature == X3PIO_PROFILE
+                       ? (double)v * GRID_STEP
+                       : (double)v * GRID_STEP - wobble;
             z[i] = 4e-6 * sin(0.2 * (double)u) * cos(0.3 * (double)v)
                    + 5e-7 * (double)w;
         }
@@ -176,6 +197,11 @@ static inline x3pio_document *scenario_document(const scenario *s,
     {
         CHECK_OK(x3pio_document_set_point_cloud(d, s->columns, s->type,
                                                 s->increment));
+    }
+    else if (!s->regular && s->feature == X3PIO_PROFILE)
+    {
+        CHECK_OK(x3pio_document_set_irregular_profile(d, s->columns, s->type,
+                                                      s->increment, s->layers));
     }
     else if (!s->regular)
     {

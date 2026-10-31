@@ -333,6 +333,40 @@ static void test_copy(void)
     x3pio_document_free(b);
 }
 
+/* A profile whose points are not equally spaced stores x and z. */
+static void test_irregular_profile(void)
+{
+    x3pio_document *d = NULL;
+    CHECK_OK(x3pio_document_create(&d));
+    CHECK_OK(
+        x3pio_document_set_irregular_profile(d, 50, X3PIO_TYPE_INT16, 1e-9, 2));
+    CHECK(x3pio_document_feature(d) == X3PIO_PROFILE);
+    x3pio_axis axis = x3pio_document_axis(d, X3PIO_X);
+    CHECK(axis.type == X3PIO_AXIS_ABSOLUTE && axis.storage == X3PIO_TYPE_INT16
+          && axis.increment == 1e-9);
+    axis = x3pio_document_axis(d, X3PIO_Y);
+    CHECK(axis.type == X3PIO_AXIS_INCREMENTAL);
+    axis = x3pio_document_axis(d, X3PIO_Z);
+    CHECK(axis.type == X3PIO_AXIS_ABSOLUTE && axis.storage == X3PIO_TYPE_INT16);
+    const x3pio_dimensions dims = x3pio_document_dimensions(d);
+    CHECK(dims.size_x == 50 && dims.size_y == 1 && dims.size_z == 2
+          && !dims.list);
+    CHECK(x3pio_document_columns(d) == 50 && x3pio_document_rows(d) == 2);
+    CHECK_OK(x3pio_document_validate(d, NULL));
+
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_irregular_profile(
+                                         NULL, 5, X3PIO_TYPE_FLOAT, 1.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_irregular_profile(
+                                         d, 5, X3PIO_TYPE_FLOAT, 0.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_irregular_profile(
+                                         d, 5, X3PIO_TYPE_FLOAT, -1.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_irregular_profile(
+                                         d, 5, X3PIO_TYPE_FLOAT, NAN, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_irregular_profile(
+                                         d, 5, X3PIO_TYPE_INT8, 1.0, 1));
+    x3pio_document_free(d);
+}
+
 /* The functions that return a structure through a pointer give what the ones
  * that return it by value give, for a language that cannot take a structure
  * as a return value. */
@@ -408,5 +442,6 @@ int main(void)
     test_software();
     test_copy();
     test_pointer_getters();
+    test_irregular_profile();
     return finish_tests();
 }

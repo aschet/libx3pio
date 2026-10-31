@@ -309,6 +309,18 @@ X3PIO_API x3pio_status x3pio_document_set_irregular_surface(
     x3pio_document *document, size_t columns, size_t rows, x3pio_type type,
     double increment, size_t layers);
 
+/**
+ * Describes a profile whose points are not equally spaced: x and z are stored,
+ * as `type`, and the points lie on the line y = 0. `increment` is the increment
+ * of both stored axes; x3pio_document_set_axis() sets another for one of them.
+ * With `layers` greater than 1 the layers are profiles on the same line.
+ *
+ * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
+ */
+X3PIO_API x3pio_status x3pio_document_set_irregular_profile(
+    x3pio_document *document, size_t points, x3pio_type type, double increment,
+    size_t layers);
+
 /** @} */
 
 /**

@@ -640,6 +640,26 @@ x3pio_status x3pio_document_set_irregular_surface(x3pio_document *document,
     return status;
 }
 
+x3pio_status x3pio_document_set_irregular_profile(x3pio_document *document,
+                                                  size_t points,
+                                                  x3pio_type type,
+                                                  double increment,
+                                                  size_t layers)
+{
+    if (!step_valid(increment))
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    const x3pio_status status = x3pio_document_set_profile(
+        document, points, 1.0, type, increment, layers);
+    if (status == X3PIO_OK)
+    {
+        document->axes[X3PIO_X] =
+            (x3pio_axis){X3PIO_AXIS_ABSOLUTE, type, increment};
+    }
+    return status;
+}
+
 /* ---- metadata ----------------------------------------------------------- */
 
 bool x3pio_document_has_metadata(const x3pio_document *document)

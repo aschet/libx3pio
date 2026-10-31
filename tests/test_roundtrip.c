@@ -28,10 +28,13 @@ static void bind_metres(const scenario *s, const double *x, const double *y,
 {
     x3pio_const_fields_init(out);
     out->z = (x3pio_const_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
-    if (!s->regular)
+    if (scenario_stores_x(s))
     {
         out->x =
             (x3pio_const_field){x, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
+    }
+    if (scenario_stores_y(s))
+    {
         out->y =
             (x3pio_const_field){y, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
     }
@@ -110,7 +113,9 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
             fprintf(stderr, "%s: %s\n", label, error);
         }
     }
-    const size_t record = (s->regular ? 1U : 3U) * x3pio_type_size(s->type);
+    const size_t record = (1U + (scenario_stores_x(s) ? 1U : 0U)
+                           + (scenario_stores_y(s) ? 1U : 0U))
+                          * x3pio_type_size(s->type);
     member *data = archive_find(&a, "bindata/data.bin");
     if (data != NULL)
     {
@@ -134,7 +139,9 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
               == (s->feature == X3PIO_POINT_CLOUD ? 1 : s->columns));
         CHECK(x3pio_document_rows(doc) == scenario_rows(s));
         CHECK((x3pio_document_axis(doc, X3PIO_X).type == X3PIO_AXIS_INCREMENTAL)
-              == s->regular);
+              == !scenario_stores_x(s));
+        CHECK((x3pio_document_axis(doc, X3PIO_Y).type == X3PIO_AXIS_INCREMENTAL)
+              == !scenario_stores_y(s));
         CHECK(x3pio_document_axis(doc, X3PIO_Z).storage == s->type);
         CHECK(x3pio_document_has_metadata(doc));
         CHECK_STRING(x3pio_document_model(doc), s->name);
@@ -152,26 +159,33 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
     scenario_points_view(s, ex, ey, ez);
     read_metres(reader, x, y, z);
     const double tolerance = scenario_tolerance(s);
-    const double position_tolerance = s->regular ? 1e-20 : tolerance;
+    const double x_tolerance = scenario_stores_x(s) ? tolerance : 1e-20;
+    const double y_tolerance = scenario_stores_y(s) ? tolerance : 1e-20;
     for (size_t i = 0; i < count; ++i)
     {
         if (scenario_is_missing(s, i))
         {
             CHECK(isnan(z[i]));
-            if (!s->regular)
+            if (scenario_stores_x(s))
             {
-                CHECK(isnan(x[i]) && isnan(y[i]));
+                CHECK(isnan(x[i]));
+            }
+            if (scenario_stores_y(s))
+            {
+                CHECK(isnan(y[i]));
             }
             continue;
         }
         const double want_z = scenario_stored(s->type, s->increment, ez[i]);
         const double want_x =
-            s->regular ? ex[i] : scenario_stored(s->type, s->increment, ex[i]);
+            scenario_stores_x(s) ? scenario_stored(s->type, s->increment, ex[i])
+                                 : ex[i];
         const double want_y =
-            s->regular ? ey[i] : scenario_stored(s->type, s->increment, ey[i]);
+            scenario_stores_y(s) ? scenario_stored(s->type, s->increment, ey[i])
+                                 : ey[i];
         CHECK_NEAR(z[i], want_z, tolerance + fabs(want_z) * 1e-12);
-        CHECK_NEAR(x[i], want_x, position_tolerance + fabs(want_x) * 1e-12);
-        CHECK_NEAR(y[i], want_y, position_tolerance + fabs(want_y) * 1e-12);
+        CHECK_NEAR(x[i], want_x, x_tolerance + fabs(want_x) * 1e-12);
+        CHECK_NEAR(y[i], want_y, y_tolerance + fabs(want_y) * 1e-12);
     }
 
     /* The placement of the document puts the points in the global system. */
@@ -214,9 +228,12 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
     x3pio_fields_init(&into);
     into.z = (x3pio_field){stored_z, *x3pio_layout_packed(s->type)};
     into.valid = (x3pio_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    if (!s->regular)
+    if (scenario_stores_x(s))
     {
         into.x = (x3pio_field){stored_x, *x3pio_layout_packed(s->type)};
+    }
+    if (scenario_stores_y(s))
+    {
         into.y = (x3pio_field){stored_y, *x3pio_layout_packed(s->type)};
     }
     CHECK_OK(x3pio_read_data(reader, &into, scenario_rows(s)));
@@ -303,9 +320,12 @@ static void test_rewrite(void)
             into.z = (x3pio_field){sz, *x3pio_layout_packed(s->type)};
             into.valid =
                 (x3pio_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-            if (!s->regular)
+            if (scenario_stores_x(s))
             {
                 into.x = (x3pio_field){sx, *x3pio_layout_packed(s->type)};
+            }
+            if (scenario_stores_y(s))
+            {
                 into.y = (x3pio_field){sy, *x3pio_layout_packed(s->type)};
             }
             CHECK_OK(x3pio_read_data(reader, &into, rows));
@@ -321,9 +341,12 @@ static void test_rewrite(void)
             from.z = (x3pio_const_field){sz, *x3pio_layout_packed(s->type)};
             from.valid = (x3pio_const_field){
                 mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-            if (!s->regular)
+            if (scenario_stores_x(s))
             {
                 from.x = (x3pio_const_field){sx, *x3pio_layout_packed(s->type)};
+            }
+            if (scenario_stores_y(s))
+            {
                 from.y = (x3pio_const_field){sy, *x3pio_layout_packed(s->type)};
             }
             CHECK_OK(x3pio_write_data(writer, &from, rows));
@@ -1010,6 +1033,11 @@ static x3pio_document *float_document(const scenario *s)
         CHECK_OK(x3pio_document_set_point_cloud(doc, s->columns,
                                                 X3PIO_TYPE_FLOAT, 1.0));
     }
+    else if (!s->regular && s->feature == X3PIO_PROFILE)
+    {
+        CHECK_OK(x3pio_document_set_irregular_profile(
+            doc, s->columns, X3PIO_TYPE_FLOAT, 1.0, s->layers));
+    }
     else if (!s->regular)
     {
         CHECK_OK(x3pio_document_set_irregular_surface(
@@ -1090,11 +1118,14 @@ static void test_structures_of_every_shape(void)
         x3pio_const_fields_init(&from);
         from.z =
             (x3pio_const_field){&vertices->z, {X3PIO_TYPE_FLOAT, stride, 0}};
-        if (!s->regular)
+        /* A regular grid stores no x and y, and a profile no y. */
+        if (scenario_stores_x(s))
         {
-            /* A regular grid stores no x and y. */
             from.x = (x3pio_const_field){&vertices->x,
                                          {X3PIO_TYPE_FLOAT, stride, 0}};
+        }
+        if (scenario_stores_y(s))
+        {
             from.y = (x3pio_const_field){&vertices->y,
                                          {X3PIO_TYPE_FLOAT, stride, 0}};
         }
