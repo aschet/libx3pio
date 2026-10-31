@@ -54,7 +54,6 @@ set(X3PIO_SOURCES
     src/document.c
     src/document.h
     src/convert.c
-    src/stdio_stream.c
     src/layout.c
     src/md5.c
     src/md5.h

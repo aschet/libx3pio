@@ -3,48 +3,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-/* A stream that appends to a buffer of the program that grows, so that a file
- * can be made in memory, for example to send it over a network. */
-typedef struct membuf
-{
-    unsigned char *data;
-    size_t size;
-    size_t capacity;
-} membuf;
-
-static size_t membuf_write(void *user, const void *data, size_t size)
-{
-    membuf *buffer = user;
-    if (buffer->size + size > buffer->capacity)
-    {
-        size_t capacity = buffer->capacity != 0 ? buffer->capacity : 4096;
-        while (capacity < buffer->size + size)
-        {
-            capacity *= 2;
-        }
-        unsigned char *grown = realloc(buffer->data, capacity);
-        if (grown == NULL)
-        {
-            return 0;
-        }
-        buffer->data = grown;
-        buffer->capacity = capacity;
-    }
-    memcpy(buffer->data + buffer->size, data, size);
-    buffer->size += size;
-    return size;
-}
-
+/* Makes a file in memory, for example to send it over a network, and reads it
+ * back from memory. The writer holds the bytes until it is freed. */
 int main(void)
 {
-    membuf buffer = {NULL, 0, 0};
-    x3pio_stream stream;
-    x3pio_stream_init(&stream);
-    stream.user = &buffer;
-    stream.write = membuf_write;
-
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
     x3pio_document_set_surface(document, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
@@ -54,7 +17,7 @@ int main(void)
                                 7e-7, 8e-7, 9e-7, 1e-6, 1.1e-6, 1.2e-6};
     x3pio_writer *writer = NULL;
     x3pio_writer_create(&writer);
-    x3pio_status status = x3pio_create_stream(writer, &stream, document);
+    x3pio_status status = x3pio_create_memory(writer, document);
     if (status == X3PIO_OK)
     {
         status = x3pio_write_heights(
@@ -64,19 +27,25 @@ int main(void)
     {
         status = x3pio_end_file(writer);
     }
-    x3pio_writer_free(writer);
-    x3pio_document_free(document);
+    const void *file = NULL;
+    size_t size = 0;
+    if (status == X3PIO_OK)
+    {
+        status = x3pio_writer_memory(writer, &file, &size);
+    }
     if (status != X3PIO_OK)
     {
-        free(buffer.data);
+        fprintf(stderr, "%s\n", x3pio_writer_error_message(writer));
+        x3pio_writer_free(writer);
+        x3pio_document_free(document);
         return EXIT_FAILURE;
     }
-    printf("the file has %zu bytes\n", buffer.size);
+    printf("the file has %zu bytes\n", size);
 
-    /* And back from memory, where the reader reads the bytes where they are. */
+    /* The bytes are the program's to send, store or open. */
     x3pio_reader *reader = NULL;
     x3pio_reader_create(&reader);
-    status = x3pio_open_memory(reader, buffer.data, buffer.size);
+    status = x3pio_open_memory(reader, file, size);
     double back[12];
     if (status == X3PIO_OK)
     {
@@ -88,6 +57,7 @@ int main(void)
         printf("the last height is %g m\n", back[11]);
     }
     x3pio_reader_free(reader);
-    free(buffer.data);
+    x3pio_writer_free(writer);
+    x3pio_document_free(document);
     return status == X3PIO_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -136,11 +136,6 @@ void x3pio_placement_to_view(const x3pio_placement *p, const double g[3],
     v[2] = p->rotation[2] * a + p->rotation[5] * b + p->rotation[8] * c;
 }
 
-void x3pio_stream_init(x3pio_stream *stream)
-{
-    *stream = (x3pio_stream){0};
-}
-
 const char *x3pio_version(void)
 {
     return X3PIO_VERSION_STRING;

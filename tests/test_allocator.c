@@ -213,7 +213,7 @@ static x3pio_status write_cycle(counter *c, x3pio_storage storage, bool vendor,
     if (status == X3PIO_OK)
     {
         status = to_file ? x3pio_create_file(writer, "test_allocator.x3p", doc)
-                         : create_in_buffer(writer, doc, &bytes);
+                         : x3pio_create_memory(writer, doc);
     }
     if (status == X3PIO_OK)
     {
@@ -270,7 +270,7 @@ static void test_balanced(void)
         CHECK(during == 0);
 
         /* A file on disk is written without allocations while rows go out. A
-         * file on a stream is collected in memory, which grows. */
+         * file in memory is collected in the writer, which grows. */
         reset(&c, 0);
         during = 99;
         CHECK_OK(write_cycle(&c, storage, true, true, &during));

@@ -43,8 +43,6 @@ struct x3pio_reader
 
     /** The path of the file that was opened by path, or null. */
     char *path;
-    /** The bytes of a stream that the reader collected, or null. */
-    unsigned char *owned;
     /** Where the zip file is. */
     x3pio_zip_source source;
     /** The members of the container. */

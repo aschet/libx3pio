@@ -36,7 +36,7 @@ typedef enum x3pio_target
 {
     X3PIO_TARGET_NONE,
     X3PIO_TARGET_FILE,
-    X3PIO_TARGET_STREAM
+    X3PIO_TARGET_MEMORY
 } x3pio_target;
 
 /** State of a writer. */
@@ -68,12 +68,13 @@ struct x3pio_writer
 
     /** Where the file goes. */
     x3pio_target target;
-    /** The stream of a file on a stream. */
-    x3pio_stream stream;
     /** The zip file being written. */
     x3pio_zip_writer *zip;
-    /** The zip file in memory, for memory and streams. */
+    /** The zip file in memory, for a file in memory. */
     x3pio_buffer memory;
+    /** Where the zip file in memory goes: `memory`, or a buffer of the tests.
+     */
+    x3pio_buffer *sink;
 
     /** Whether the member with the binary points was started. */
     bool data_started;
@@ -124,6 +125,20 @@ x3pio_status x3pio_writer_prepare(x3pio_writer *writer);
  */
 x3pio_status x3pio_writer_create_with(const x3pio_allocator *allocator,
                                       x3pio_writer **writer);
+
+/**
+ * Starts a file in memory like x3pio_create_memory(), but the container goes
+ * into a buffer of the caller, which the tests use to hold the file while the
+ * writer is alive. The buffer is not released with the writer.
+ *
+ * @param[in,out] writer The writer.
+ * @param[in] document The description of the file.
+ * @param[in,out] sink The buffer, which is emptied first.
+ * @return The result of x3pio_create_memory().
+ */
+x3pio_status x3pio_create_memory_into(x3pio_writer *writer,
+                                      const x3pio_document *document,
+                                      x3pio_buffer *sink);
 
 /**
  * Writes the remaining members and completes the zip file: the validity bits,

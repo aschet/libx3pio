@@ -115,7 +115,6 @@ void x3pio_reader_reset(x3pio_reader *reader)
     x3pio_document_free(reader->document);
     reader->document = NULL;
     x3pio_release(a, reader->path);
-    x3pio_release(a, reader->owned);
     x3pio_release(a, reader->point_name);
     x3pio_release(a, reader->valid_bits);
     x3pio_release(a, reader->bytes);
@@ -129,7 +128,6 @@ void x3pio_reader_reset(x3pio_reader *reader)
         reader->values[k] = NULL;
     }
     reader->path = NULL;
-    reader->owned = NULL;
     reader->point_name = NULL;
     reader->valid_bits = NULL;
     reader->valid_size = 0;
@@ -786,45 +784,5 @@ x3pio_status x3pio_open_file(x3pio_reader *reader, const char *path)
         return x3pio_fail(&reader->message, X3PIO_ERR_MEMORY, "Out of memory");
     }
     reader->source = (x3pio_zip_source){reader->path, NULL, 0};
-    return open_and_keep(reader);
-}
-
-x3pio_status x3pio_open_stream(x3pio_reader *reader, const x3pio_stream *stream)
-{
-    if (reader == NULL || stream == NULL || stream->read == NULL)
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    const x3pio_status ready = require_closed(reader);
-    if (ready != X3PIO_OK)
-    {
-        return ready;
-    }
-    x3pio_buffer all;
-    x3pio_buffer_init(&all, &reader->allocator);
-    for (;;)
-    {
-        if (!x3pio_buffer_reserve(&all, 65536))
-        {
-            x3pio_buffer_free(&all);
-            return x3pio_fail(&reader->message, X3PIO_ERR_MEMORY,
-                              "Out of memory");
-        }
-        const size_t got = stream->read(stream->user, all.data + all.size,
-                                        all.capacity - all.size);
-        if (got == X3PIO_STREAM_ERROR || got > all.capacity - all.size)
-        {
-            x3pio_buffer_free(&all);
-            return x3pio_fail(&reader->message, X3PIO_ERR_IO,
-                              "The stream could not be read");
-        }
-        if (got == 0)
-        {
-            break;
-        }
-        all.size += got;
-    }
-    reader->owned = all.data;
-    reader->source = (x3pio_zip_source){NULL, all.data, all.size};
     return open_and_keep(reader);
 }

@@ -46,6 +46,7 @@ x3pio_status x3pio_writer_create_with(const x3pio_allocator *allocator,
                              .compression = x3pio_compression_default(),
                              .chunk = X3PIO_DEFAULT_CHUNK};
     x3pio_buffer_init(&handle->memory, &handle->allocator);
+    handle->sink = &handle->memory;
     *writer = handle;
     return X3PIO_OK;
 }
@@ -230,9 +231,8 @@ static x3pio_status begin(x3pio_writer *writer, const x3pio_document *document,
     x3pio_status status = prepare(writer, document);
     if (status == X3PIO_OK && target != X3PIO_TARGET_FILE)
     {
-        status =
-            x3pio_zip_writer_open_memory(&writer->allocator, &writer->memory,
-                                         &writer->zip, &writer->message);
+        status = x3pio_zip_writer_open_memory(&writer->allocator, writer->sink,
+                                              &writer->zip, &writer->message);
     }
     if (status != X3PIO_OK)
     {
@@ -246,20 +246,51 @@ static x3pio_status begin(x3pio_writer *writer, const x3pio_document *document,
     return X3PIO_OK;
 }
 
-x3pio_status x3pio_create_stream(x3pio_writer *writer,
-                                 const x3pio_stream *stream,
-                                 const x3pio_document *document)
+x3pio_status x3pio_create_memory_into(x3pio_writer *writer,
+                                      const x3pio_document *document,
+                                      x3pio_buffer *sink)
 {
-    if (writer == NULL || stream == NULL || stream->write == NULL)
+    if (writer == NULL || sink == NULL)
     {
         return X3PIO_ERR_ARGUMENT;
     }
-    const x3pio_status status = begin(writer, document, X3PIO_TARGET_STREAM);
-    if (status == X3PIO_OK)
+    if (writer->created)
     {
-        writer->stream = *stream;
+        return x3pio_fail(&writer->message, X3PIO_ERR_STATE,
+                          "The writer has created a file already");
+    }
+    sink->size = 0;
+    writer->sink = sink;
+    const x3pio_status status = begin(writer, document, X3PIO_TARGET_MEMORY);
+    if (status != X3PIO_OK)
+    {
+        writer->sink = &writer->memory;
     }
     return status;
+}
+
+x3pio_status x3pio_create_memory(x3pio_writer *writer,
+                                 const x3pio_document *document)
+{
+    return writer != NULL
+               ? x3pio_create_memory_into(writer, document, &writer->memory)
+               : X3PIO_ERR_ARGUMENT;
+}
+
+x3pio_status x3pio_writer_memory(const x3pio_writer *writer, const void **data,
+                                 size_t *size)
+{
+    if (writer == NULL || data == NULL || size == NULL)
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    if (writer->target != X3PIO_TARGET_MEMORY || !writer->ended)
+    {
+        return X3PIO_ERR_STATE;
+    }
+    *data = writer->sink->data;
+    *size = writer->sink->size;
+    return X3PIO_OK;
 }
 
 x3pio_status x3pio_create_file(x3pio_writer *writer, const char *path,
@@ -634,25 +665,6 @@ x3pio_status x3pio_writer_finish(x3pio_writer *writer)
     return status;
 }
 
-/* Passes the zip file in memory to the stream. */
-static x3pio_status flush_stream(x3pio_writer *writer)
-{
-    size_t done = 0;
-    while (done < writer->memory.size)
-    {
-        const size_t put = writer->stream.write(writer->stream.user,
-                                                writer->memory.data + done,
-                                                writer->memory.size - done);
-        if (put == 0 || put > writer->memory.size - done)
-        {
-            return x3pio_fail(&writer->message, X3PIO_ERR_IO,
-                              "The stream could not be written");
-        }
-        done += put;
-    }
-    return X3PIO_OK;
-}
-
 x3pio_status x3pio_end_file(x3pio_writer *writer)
 {
     if (writer == NULL)
@@ -671,10 +683,6 @@ x3pio_status x3pio_end_file(x3pio_writer *writer)
                           "Not all points of the file were written");
     }
     x3pio_status status = x3pio_writer_finish(writer);
-    if (status == X3PIO_OK && writer->target == X3PIO_TARGET_STREAM)
-    {
-        status = flush_stream(writer);
-    }
     if (status != X3PIO_OK)
     {
         writer->failed = true;

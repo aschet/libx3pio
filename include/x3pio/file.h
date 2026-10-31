@@ -6,7 +6,7 @@
 
 /**
  * @file
- * Files by path, and the stream over a C file.
+ * Files by path.
  * `<x3pio/x3pio.h>` does not include this header.
  *
  * A path is UTF-8, also on Windows, where the library converts it to the wide
@@ -21,33 +21,16 @@
 #include <x3pio/writer.h>
 #include <x3pio/x3pio_export.h>
 
-#include <stdio.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
 /**
- * Creates a stream over a C file. The file remains owned by the caller and is
- * not closed.
- *
- * The file must be open in binary mode. On Windows `stdin` and `stdout` are in
- * text mode, which translates line ends and treats the byte 0x1A as the end of
- * the input. Switch them before the first use with
- * `_setmode(_fileno(stdin), _O_BINARY)`. The files of x3pio_open_file() and
- * x3pio_create_file() are always binary.
- *
- * @param[out] stream The stream, whose `user` is the file.
- * @param[in] file The C file.
- */
-X3PIO_API void x3pio_stdio_stream(x3pio_stream *stream, FILE *file);
-
-/**
  * Opens the file at a path as the source and reads the description, as
- * x3pio_open_memory() does for memory. Unlike x3pio_open_stream() the function
- * does not read the whole file into memory: the reader reads the members that a
- * call needs. The file must remain unchanged while the reader is in use.
+ * x3pio_open_memory() does for memory. The function does not read the whole
+ * file into memory: the reader reads the members that a call needs. The file
+ * must remain unchanged while the reader is in use.
  *
  * @param[in,out] reader The reader.
  * @param[in] path The path of the file, in UTF-8.
@@ -58,7 +41,8 @@ X3PIO_API void x3pio_stdio_stream(x3pio_stream *stream, FILE *file);
 X3PIO_API x3pio_status x3pio_open_file(x3pio_reader *reader, const char *path);
 
 /**
- * Creates the file at a path and starts it as x3pio_create_stream() does. An
+ * Creates the file at a path and starts it as x3pio_create_memory() does for
+ * memory. An
  * existing file is truncated. The container is written in place, and
  * x3pio_end_file() completes and closes the file. If the writing fails, the
  * data written so far remains. A document that cannot be written creates no

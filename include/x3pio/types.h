@@ -39,7 +39,7 @@ typedef enum x3pio_status
      * opening a reader a second time.
      */
     X3PIO_ERR_STATE = 2,
-    /** A file or a stream could not be opened, read or written. */
+    /** A file could not be opened, read or written. */
     X3PIO_ERR_IO = 3,
     /** The data is not an x3p file, is damaged or is truncated. */
     X3PIO_ERR_FORMAT = 4,
@@ -420,48 +420,6 @@ X3PIO_API size_t x3pio_timestamp_format(const x3pio_timestamp *timestamp,
  */
 X3PIO_API bool x3pio_timestamp_parse(const char *text,
                                      x3pio_timestamp *timestamp);
-
-/** Value of a read callback that failed: the largest size_t. */
-#define X3PIO_STREAM_ERROR ((size_t)-1)
-
-/**
- * Callbacks that provide or accept the bytes of a file.
- *
- * A reader uses `read` and a writer uses `write`. The bytes are processed once
- * and in order, as for a pipe. A reader collects the bytes of its stream in
- * memory before it opens the file, because a zip file is read from its end, and
- * a writer collects the file in memory and passes it to the stream when the
- * file ends. A program that does not use an initializer calls
- * x3pio_stream_init() before it assigns fields.
- *
- * The structure is frozen for the major version: it has these three fields and
- * a new property of a stream is a new function.
- */
-typedef struct x3pio_stream
-{
-    /** Opaque pointer passed as the first argument of every callback. */
-    void *user;
-    /**
-     * Reads up to `size` bytes into `data`. Returns the number of bytes read,
-     * or X3PIO_STREAM_ERROR on failure. The count can be smaller than `size` at
-     * any call, as for a pipe or a socket, and the reader calls again for the
-     * rest. Only 0 means the end of the data.
-     */
-    size_t (*read)(void *user, void *data, size_t size);
-    /**
-     * Writes `size` bytes from `data`. Returns the number of bytes written; a
-     * count smaller than `size` indicates a failure.
-     */
-    size_t (*write)(void *user, const void *data, size_t size);
-} x3pio_stream;
-
-/**
- * Initializes a stream: every field is null. The caller sets `user` and the
- * callback that its handle uses.
- *
- * @param[out] stream The stream to initialize.
- */
-X3PIO_API void x3pio_stream_init(x3pio_stream *stream);
 
 #ifdef __cplusplus
 }

@@ -32,8 +32,8 @@
  *   cloud.
  * - Access to the points as numbers in metres, or as the values that the file
  *   stores, together with the mask of the points that were measured.
- * - Files, blocks of memory and streams as sources and sinks. A reader reads
- *   only the member of the zip file that a call needs.
+ * - Files and blocks of memory as sources, and files and memory as targets. A
+ *   reader reads only the member of the zip file that a call needs.
  * - Thread support: the library holds no global state, so threads use handles
  *   of their own at the same time.
  * - The headers of the library do not include those of its dependencies, so a

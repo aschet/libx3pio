@@ -15,6 +15,7 @@
 #include "allocator.h"
 #include "buffer.h"
 #include "check.h"
+#include "writer.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -105,11 +106,8 @@ x3pio_reader *open_archive(const archive *a, x3pio_buffer *keep, bool verify,
 /* Reads the heights of a reader in metres; the array is released with free. */
 double *read_heights_of(x3pio_reader *reader);
 
-/* A stream that appends what a writer passes to it to a buffer. */
-x3pio_stream buffer_stream(x3pio_buffer *out);
-
-/* Starts a writer on a stream that fills a buffer; the file is in the buffer
- * when the writer has ended it. */
+/* Starts a writer in memory on a buffer of the test; the file is in the buffer
+ * when the writer has ended it, and the buffer outlives the writer. */
 x3pio_status create_in_buffer(x3pio_writer *writer, const x3pio_document *doc,
                               x3pio_buffer *out);
 

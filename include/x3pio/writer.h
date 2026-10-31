@@ -6,14 +6,14 @@
 
 /**
  * @file
- * Writer of a file or a stream.
+ * Writer of a file or of memory.
  *
  * @par Process
  * A writer writes one file at a time, from the start to the end:
  * -# x3pio_writer_create() creates the writer, and x3pio_writer_set_storage(),
  *    x3pio_writer_set_compression() and x3pio_writer_set_chunk() set the
  *    options.
- * -# x3pio_create_file() (in `<x3pio/file.h>`) or x3pio_create_stream() starts
+ * -# x3pio_create_file() (in `<x3pio/file.h>`) or x3pio_create_memory() starts
  *    the file from a document, which fixes the layout of the points.
  * -# x3pio_write_heights() writes the whole matrix of heights, or
  *    x3pio_write_points() or x3pio_write_data() writes the rows of points in
@@ -28,7 +28,7 @@
  * A writer is in one of four states. It is new until a file is created, then
  * created. x3pio_end_file() moves it to ended, from created if all rows are
  * written. An error that loses the position in the file moves it to failed: an
- * error of the file or the stream, and a value in a call that writes that
+ * error of the file, and a value in a call that writes that
  * cannot be written.
  * - The options can be set in the state new only. The first creation that
  * passes the checks of the document fixes them.
@@ -137,25 +137,35 @@ X3PIO_API x3pio_status x3pio_writer_set_chunk(x3pio_writer *writer,
 X3PIO_API void x3pio_writer_free(x3pio_writer *writer);
 
 /**
- * Starts a file on a stream. The writer collects the container in memory and
- * passes it to the stream in x3pio_end_file(), because a zip file is not
- * written in one go. The structure is copied, and the object that `user` refers
- * to must remain valid until x3pio_end_file(). A file in memory is written to a
- * stream that appends to a buffer of the program.
+ * Starts a file in memory. The writer collects the container in memory, because
+ * a zip file is not written in one go. After x3pio_end_file(),
+ * x3pio_writer_memory() returns the bytes, which the program can write where it
+ * wants, for example to a network connection.
  *
  * @param[in,out] writer The writer.
- * @param[in] stream The stream; `write` is required.
  * @param[in] document The description of the file.
- * @retval X3PIO_ERR_ARGUMENT A pointer is null, `write` is not set, or the
- * document cannot be written. The document is checked and copied, its revision
- * decides the form of the file, and its points, links and vendor identifiers
- * are not used.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the document cannot be
+ * written. The document is checked and copied, its revision decides the form of
+ * the file, and its points, links and vendor identifiers are not used.
  * @retval X3PIO_ERR_STATE The writer has created a file already.
  * @retval X3PIO_ERR_MEMORY An allocation failed.
  */
-X3PIO_API x3pio_status x3pio_create_stream(x3pio_writer *writer,
-                                           const x3pio_stream *stream,
+X3PIO_API x3pio_status x3pio_create_memory(x3pio_writer *writer,
                                            const x3pio_document *document);
+
+/**
+ * Returns the bytes of a file that x3pio_create_memory() started and
+ * x3pio_end_file() completed. The bytes are the writer's: they remain valid
+ * until the writer is freed.
+ *
+ * @param[in] writer The writer.
+ * @param[out] data Receives the address of the bytes.
+ * @param[out] size Receives the number of bytes.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null.
+ * @retval X3PIO_ERR_STATE The file is not in memory, or is not ended.
+ */
+X3PIO_API x3pio_status x3pio_writer_memory(const x3pio_writer *writer,
+                                           const void **data, size_t *size);
 
 /**
  * Writes the next rows of points as the file stores them.
@@ -272,15 +282,14 @@ X3PIO_API x3pio_status x3pio_add_vendor_file(
 
 /**
  * Ends the file: writes main.xml and the checksum, completes the container, and
- * for a file that x3pio_create_file() created closes the file, and for a stream
- * passes the container to it. All rows of the document must be written. Nothing
- * can be written afterwards.
+ * for a file that x3pio_create_file() created closes the file. All rows of the
+ * document must be written. Nothing can be written afterwards.
  *
  * @param[in,out] writer The writer.
  * @retval X3PIO_ERR_ARGUMENT The writer is null.
  * @retval X3PIO_ERR_STATE No file is created, rows are missing, the file is
  * ended already, or an earlier error ended the writing.
- * @retval X3PIO_ERR_IO The file or the stream could not be written.
+ * @retval X3PIO_ERR_IO The file could not be written.
  */
 X3PIO_API x3pio_status x3pio_end_file(x3pio_writer *writer);
 

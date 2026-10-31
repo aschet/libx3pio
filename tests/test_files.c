@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-/* Files on disk, streams, the files of vendors, the compression of the
+/* Files on disk and in memory, the files of vendors, the compression of the
  * container, and the states of the handles. */
 
 #include "helpers.h"
@@ -45,7 +45,7 @@ static void check_heights(x3pio_reader *reader)
     }
 }
 
-/* ---- disk and streams
+/* ---- disk and memory
  * ---------------------------------------------------------- */
 
 static void test_disk(void)
@@ -65,7 +65,7 @@ static void test_disk(void)
     check_heights(reader);
     x3pio_reader_free(reader);
 
-    /* The same file written to a stream is the same bytes. */
+    /* The same file written to memory is the same bytes. */
     x3pio_buffer on_disk;
     x3pio_buffer in_memory;
     x3pio_buffer_init(&on_disk, x3pio_default_allocator());
@@ -78,42 +78,9 @@ static void test_disk(void)
     CHECK(on_disk.size == in_memory.size
           && memcmp(on_disk.data, in_memory.data, on_disk.size) == 0);
 
-    /* A C file as a stream, both ways. */
-    FILE *file = fopen(path, "rb");
-    CHECK(file != NULL);
-    if (file != NULL)
-    {
-        x3pio_stream stream;
-        x3pio_stdio_stream(&stream, file);
-        CHECK_OK(x3pio_reader_create(&reader));
-        CHECK_OK(x3pio_open_stream(reader, &stream));
-        check_heights(reader);
-        x3pio_reader_free(reader);
-        fclose(file);
-    }
-    const char *copy = "test_files_copy.x3p";
-    file = fopen(copy, "wb");
-    CHECK(file != NULL);
-    if (file != NULL)
-    {
-        x3pio_stream stream;
-        x3pio_stdio_stream(&stream, file);
-        CHECK_OK(x3pio_writer_create(&writer));
-        CHECK_OK(x3pio_create_stream(writer, &stream, doc));
-        finish_with_heights(writer);
-        x3pio_writer_free(writer);
-        fclose(file);
-        x3pio_buffer again;
-        x3pio_buffer_init(&again, x3pio_default_allocator());
-        CHECK(read_whole_file(copy, &again));
-        CHECK(again.size == on_disk.size
-              && memcmp(again.data, on_disk.data, again.size) == 0);
-        x3pio_buffer_free(&again);
-    }
-    remove(copy);
-
     /* A file that cannot be created creates nothing, and the writer can try
      * again. */
+    const char *copy = "test_files_copy.x3p";
     CHECK_OK(x3pio_writer_create(&writer));
     CHECK_STATUS(X3PIO_ERR_IO,
                  x3pio_create_file(writer, "no/such/folder/file.x3p", doc));
@@ -169,132 +136,58 @@ static void test_disk(void)
     remove(path);
 }
 
-/* A stream that gives a few bytes at a time, like a pipe. */
-typedef struct trickle
+/* A file in memory: the writer holds the bytes until it is freed, they are the
+ * bytes of the file on disk, and they open as they are. */
+static void test_memory_writer(void)
 {
-    const unsigned char *data;
-    size_t size;
-    size_t position;
-    size_t step;
-    size_t fail_at;
-} trickle;
-
-static size_t trickle_read(void *user, void *data, size_t size)
-{
-    trickle *t = user;
-    if (t->fail_at != 0 && t->position >= t->fail_at)
-    {
-        return X3PIO_STREAM_ERROR;
-    }
-    size_t n = t->size - t->position;
-    n = n < size ? n : size;
-    n = n < t->step ? n : t->step;
-    memcpy(data, t->data + t->position, n);
-    t->position += n;
-    return n;
-}
-
-typedef struct sink
-{
-    x3pio_buffer bytes;
-    size_t fail_after;
-    size_t step;
-} sink;
-
-static size_t sink_write(void *user, const void *data, size_t size)
-{
-    sink *k = user;
-    if (k->fail_after != 0 && k->bytes.size + size > k->fail_after)
-    {
-        return 0;
-    }
-    size_t n = k->step != 0 && size > k->step ? k->step : size;
-    return x3pio_buffer_append(&k->bytes, data, n) ? n : 0;
-}
-
-static void test_streams(void)
-{
-    x3pio_buffer bytes;
-    x3pio_buffer_init(&bytes, x3pio_default_allocator());
-    file_spec spec = default_spec();
-    make_base_file(&spec, &bytes);
-
-    for (size_t step = 1; step <= 4096; step *= 8)
-    {
-        trickle t = {bytes.data, bytes.size, 0, step, 0};
-        x3pio_stream stream;
-        x3pio_stream_init(&stream);
-        stream.user = &t;
-        stream.read = trickle_read;
-        x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(&reader));
-        CHECK_OK(x3pio_open_stream(reader, &stream));
-        double back[12];
-        CHECK_OK(x3pio_read_heights(
-            reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back));
-        CHECK_NEAR(back[11], 1.2e-6, 1e-12);
-        x3pio_reader_free(reader);
-    }
-    /* A stream that fails. */
-    trickle failing = {bytes.data, bytes.size, 0, 100, 300};
-    x3pio_stream stream;
-    x3pio_stream_init(&stream);
-    stream.user = &failing;
-    stream.read = trickle_read;
-    x3pio_reader *reader = NULL;
-    CHECK_OK(x3pio_reader_create(&reader));
-    CHECK_STATUS(X3PIO_ERR_IO, x3pio_open_stream(reader, &stream));
-    CHECK_STRING(x3pio_reader_error_message(reader),
-                 "The stream could not be read");
-    /* A stream with a part of a file. */
-    trickle partial = {bytes.data, bytes.size / 2, 0, 1000, 0};
-    stream.user = &partial;
-    CHECK_STATUS(X3PIO_ERR_FORMAT, x3pio_open_stream(reader, &stream));
-    x3pio_stream_init(&stream);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_open_stream(reader, &stream));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_open_stream(reader, NULL));
-    x3pio_reader_free(reader);
-
-    /* A writer into a stream that takes a few bytes at a time. */
-    for (size_t step = 1; step <= 4096; step *= 16)
-    {
-        sink k = {{0}, 0, step};
-        x3pio_buffer_init(&k.bytes, x3pio_default_allocator());
-        x3pio_stream out;
-        x3pio_stream_init(&out);
-        out.user = &k;
-        out.write = sink_write;
-        x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
-        x3pio_writer *writer = NULL;
-        CHECK_OK(x3pio_writer_create(&writer));
-        CHECK_OK(x3pio_create_stream(writer, &out, doc));
-        finish_with_heights(writer);
-        CHECK(k.bytes.size > 0);
-        x3pio_writer_free(writer);
-        x3pio_document_free(doc);
-        x3pio_buffer_free(&k.bytes);
-    }
-    /* A stream that fails ends the writing. */
-    sink broken = {{0}, 200, 0};
-    x3pio_buffer_init(&broken.bytes, x3pio_default_allocator());
-    x3pio_stream out;
-    x3pio_stream_init(&out);
-    out.user = &broken;
-    out.write = sink_write;
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
-    CHECK_OK(x3pio_create_stream(writer, &out, doc));
-    CHECK_OK(x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                                 heights));
-    CHECK_STATUS(X3PIO_ERR_IO, x3pio_end_file(writer));
-    CHECK_STRING(x3pio_writer_error_message(writer),
-                 "The stream could not be written");
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_end_file(writer));
+    const void *data = NULL;
+    size_t size = 0;
+    /* Not started, and not ended. */
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_writer_memory(writer, &data, &size));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_memory(NULL, doc));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_memory(writer, NULL));
+    CHECK_OK(x3pio_create_memory(writer, doc));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_create_memory(writer, doc));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_writer_memory(writer, &data, &size));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_memory(NULL, &data, &size));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_memory(writer, NULL, &size));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_memory(writer, &data, NULL));
+    finish_with_heights(writer);
+    CHECK_OK(x3pio_writer_memory(writer, &data, &size));
+    CHECK(data != NULL && size > 0);
+
+    /* The bytes are those of a file written to disk. */
+    const char *path = "test_files_memory.x3p";
+    x3pio_writer *to_disk = NULL;
+    CHECK_OK(x3pio_writer_create(&to_disk));
+    CHECK_OK(x3pio_create_file(to_disk, path, doc));
+    finish_with_heights(to_disk);
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_writer_memory(to_disk, &data, &size));
+    x3pio_writer_free(to_disk);
+    x3pio_buffer on_disk;
+    x3pio_buffer_init(&on_disk, x3pio_default_allocator());
+    CHECK(read_whole_file(path, &on_disk));
+    remove(path);
+    CHECK_OK(x3pio_writer_memory(writer, &data, &size));
+    CHECK(size == on_disk.size && memcmp(data, on_disk.data, size) == 0);
+
+    /* And they open as they are, in memory, while the writer lives. */
+    x3pio_reader *reader = NULL;
+    CHECK_OK(x3pio_reader_create(&reader));
+    CHECK_OK(x3pio_open_memory(reader, data, size));
+    check_heights(reader);
+    x3pio_reader_free(reader);
+
+    /* A file that is cut short is no file. */
+    CHECK_OK(x3pio_reader_create(&reader));
+    CHECK_STATUS(X3PIO_ERR_FORMAT, x3pio_open_memory(reader, data, size / 2));
+    x3pio_reader_free(reader);
     x3pio_writer_free(writer);
+    x3pio_buffer_free(&on_disk);
     x3pio_document_free(doc);
-    x3pio_buffer_free(&broken.bytes);
-    x3pio_buffer_free(&bytes);
 }
 
 /* ---- the files of vendors
@@ -680,11 +573,7 @@ static void test_writer_states(void)
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_file(writer, "http://a.b/c",
                                                         NULL, "x", 1, NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_end_file(NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_stream(writer, NULL, doc));
-    x3pio_stream no_write;
-    x3pio_stream_init(&no_write);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_create_stream(writer, &no_write, doc));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_memory(writer, NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(NULL, &from, 3));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_set_chunk(writer, 0));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
@@ -837,7 +726,7 @@ static void test_damage(void)
 int main(void)
 {
     test_disk();
-    test_streams();
+    test_memory_writer();
     test_vendor_files_amd1();
     test_vendor_files_2017();
     test_compression();

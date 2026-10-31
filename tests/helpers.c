@@ -409,26 +409,10 @@ file_spec default_spec(void)
     return spec;
 }
 
-static size_t buffer_write(void *user, const void *data, size_t size)
-{
-    return x3pio_buffer_append(user, data, size) ? size : 0;
-}
-
-x3pio_stream buffer_stream(x3pio_buffer *out)
-{
-    x3pio_stream stream;
-    x3pio_stream_init(&stream);
-    stream.user = out;
-    stream.write = buffer_write;
-    return stream;
-}
-
 x3pio_status create_in_buffer(x3pio_writer *writer, const x3pio_document *doc,
                               x3pio_buffer *out)
 {
-    out->size = 0;
-    const x3pio_stream stream = buffer_stream(out);
-    return x3pio_create_stream(writer, &stream, doc);
+    return x3pio_create_memory_into(writer, doc, out);
 }
 
 bool read_whole_file(const char *path, x3pio_buffer *out)

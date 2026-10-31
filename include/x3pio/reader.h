@@ -6,13 +6,13 @@
 
 /**
  * @file
- * Reader of a file, memory or a stream.
+ * Reader of a file or of memory.
  *
  * @par Process
  * A reader reads one file at a time, from the start to the end:
  * -# x3pio_reader_create() creates the reader, and x3pio_reader_set_verify()
  *    and x3pio_reader_set_chunk() set the options.
- * -# x3pio_open_file(), x3pio_open_memory() or x3pio_open_stream() opens the
+ * -# x3pio_open_file() or x3pio_open_memory() opens the
  *    file and reads its description, which x3pio_reader_document() returns.
  * -# x3pio_read_heights() reads the whole matrix of heights, or
  *    x3pio_read_points() or x3pio_read_data() reads the rows of points in
@@ -39,11 +39,12 @@
  * fails with X3PIO_ERR_CHECKSUM on a mismatch.
  *
  * @par Selective Reading
- * A zip file lists its members at its end, so a reader of a file or of memory
- * reads the member that a call needs and nothing else: the points are read from
- * their member in parts, and a file of a vendor is read only by
- * x3pio_read_member(). A stream cannot be read from its end, so
- * x3pio_open_stream() collects it in memory first.
+ * A zip file lists its members at its end, so a reader needs the whole file to
+ * be available, on disk or in memory, and reads the member that a call needs
+ * and nothing else: the points are read from their member in parts, and a file
+ * of a vendor is read only by x3pio_read_member(). A program that receives a
+ * file as a stream, for example from a pipe, collects the bytes in a buffer
+ * first and opens that with x3pio_open_memory().
  */
 
 #ifndef X3PIO_READER_H
@@ -128,22 +129,6 @@ X3PIO_API void x3pio_reader_free(x3pio_reader *reader);
  */
 X3PIO_API x3pio_status x3pio_open_memory(x3pio_reader *reader, const void *data,
                                          size_t size);
-
-/**
- * Opens a stream as the source and reads the description. The reader collects
- * the whole stream in memory first, because a zip file is read from its end,
- * and then does not use the stream any more. The structure is copied, and the
- * object that `user` refers to must remain valid during the call only.
- *
- * @param[in,out] reader The reader.
- * @param[in] stream The stream; `read` is required.
- * @retval X3PIO_ERR_ARGUMENT A pointer is null or `read` is not set.
- * @retval X3PIO_ERR_STATE The reader is open already.
- * @retval X3PIO_ERR_IO The stream failed.
- * @return Otherwise the result of x3pio_open_memory().
- */
-X3PIO_API x3pio_status x3pio_open_stream(x3pio_reader *reader,
-                                         const x3pio_stream *stream);
 
 /**
  * Returns the description of the opened file, or null if no file is open. The
