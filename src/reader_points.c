@@ -43,18 +43,14 @@ x3pio_status x3pio_reader_prepare(x3pio_reader *reader)
     reader->flag_values = x3pio_allocate_array(a, n, sizeof(double));
     reader->flags = x3pio_allocate(a, n);
     const size_t absolute = x3pio_document_absolute_count(reader->document);
-    /* A file in text whose points did not fit the budget is read from main.xml
-     * again as the rows are asked for. */
-    const bool streamed =
-        !reader->document->binary && reader->document->text_values == NULL;
-    if (streamed)
+    if (!reader->document->binary)
     {
         reader->text_values = x3pio_allocate_array(
             a, n, (absolute != 0 ? absolute : 1U) * sizeof(double));
     }
     bool ok = reader->bytes != NULL && reader->flag_values != NULL
               && reader->flags != NULL
-              && (!streamed || reader->text_values != NULL);
+              && (reader->document->binary || reader->text_values != NULL);
     for (size_t k = 0; k < 3; ++k)
     {
         reader->raw[k] = x3pio_allocate_array(a, n, sizeof(double));
@@ -78,7 +74,7 @@ x3pio_status x3pio_reader_prepare(x3pio_reader *reader)
         }
         x3pio_md5_init(&reader->hash);
     }
-    else if (streamed)
+    else
     {
         /* The points are in main.xml, which is parsed again from its start:
          * the first parse has checked it, and has not kept the points. */
@@ -148,29 +144,6 @@ static x3pio_status decode(x3pio_reader *reader, size_t first, size_t n)
                         + x3pio_document_record_offset(d, (x3pio_coordinate)k),
                     record, reader->raw[k], n);
             }
-        }
-    }
-    else if (d->text_values != NULL)
-    {
-        /* The numbers that the first parse kept. */
-        size_t column = 0;
-        for (size_t k = 0; k < 3; ++k)
-        {
-            if (d->axes[k].type != X3PIO_AXIS_ABSOLUTE)
-            {
-                continue;
-            }
-            for (size_t i = 0; i < n; ++i)
-            {
-                reader->raw[k][i] =
-                    d->text_values[(first + i) * absolute + column];
-            }
-            ++column;
-        }
-        for (size_t i = 0; i < n; ++i)
-        {
-            reader->flags[i] =
-                d->text_valid != NULL ? d->text_valid[first + i] : 1U;
         }
     }
     else

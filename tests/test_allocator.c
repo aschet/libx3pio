@@ -413,9 +413,8 @@ static void test_copy_between_allocators(void)
 }
 
 /* Reads a cloud of `count` points from a file in text in pieces of odd sizes,
- * with a reader that may hold `budget` bytes of points, and returns the most
- * memory the reader held. */
-static size_t read_text_cloud(size_t count, size_t budget)
+ * and returns the most memory the reader held. */
+static size_t read_text_cloud(size_t count)
 {
     const size_t COUNT = count;
     double *x = malloc(COUNT * sizeof *x);
@@ -451,7 +450,6 @@ static size_t read_text_cloud(size_t count, size_t budget)
     const x3pio_allocator allocator = allocator_of(&c);
     x3pio_reader *reader = NULL;
     CHECK_OK(x3pio_reader_create(&allocator, &reader));
-    CHECK_OK(x3pio_reader_set_text_memory(reader, budget));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     const size_t calls_after_open = c.calls;
 
@@ -493,31 +491,18 @@ static size_t read_text_cloud(size_t count, size_t budget)
     return peak;
 }
 
-/* The points of a file in text are held while they fit the budget of the
- * reader, so that the file is parsed once. A file with more points is parsed
- * again as the rows are asked for: the memory of the reader then does not
- * depend on the size of the file. Either way the transfer of rows allocates
- * nothing, however many parts of the file the parser goes through. */
+/* A file in text is read as the rows are asked for: the points are not held as
+ * a whole, so the memory of the reader does not depend on the size of the
+ * file, and the transfer of rows allocates nothing, however many parts of the
+ * file the parser goes through. */
 static void test_text_in_parts(void)
 {
-    const size_t megabyte = (size_t)1 << 20U;
-    /* Always parsed again. */
-    const size_t small = read_text_cloud(12000, 0);
-    const size_t large = read_text_cloud(120000, 0);
+    const size_t small = read_text_cloud(12000);
+    const size_t large = read_text_cloud(120000);
     CHECK(large < small + 65536);
     /* The points of the large file as numbers alone would take 2.9 megabytes.
      */
-    CHECK(large < 2 * megabyte);
-
-    /* Held: the memory follows the size of the file. */
-    const size_t held = read_text_cloud(120000, 64 * megabyte);
-    CHECK(held > large + 2 * megabyte);
-
-    /* The budget decides: 12000 points fit 1 MiB, 120000 do not. */
-    const size_t fits = read_text_cloud(12000, megabyte);
-    const size_t does_not_fit = read_text_cloud(120000, megabyte);
-    CHECK(fits == read_text_cloud(12000, 64 * megabyte));
-    CHECK(does_not_fit < 2 * megabyte);
+    CHECK(large < (size_t)2000000);
 }
 
 int main(void)

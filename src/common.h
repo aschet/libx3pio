@@ -31,8 +31,6 @@
 
 /** The number of points a reader or a writer converts at a time. */
 #define X3PIO_DEFAULT_CHUNK 8192
-/** The memory that a reader holds for the points of a file in text. */
-#define X3PIO_DEFAULT_TEXT_MEMORY ((size_t)64 << 20U)
 /** The largest number of bytes a conversion needs per point. */
 #define X3PIO_BYTES_PER_POINT 64
 

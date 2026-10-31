@@ -1249,111 +1249,6 @@ static void test_point_lists_in_pieces(void)
     }
 }
 
-static bool same_double(double a, double b)
-{
-    return isnan(a) ? isnan(b) : a == b;
-}
-
-/* The points of a file in text are held while they fit the budget of the reader
- * and are read from main.xml again as the rows are asked for if they do not.
- * Both give the same points, in metres and as the file stores them, with the
- * points that were not measured. */
-static void test_text_held_and_streamed(void)
-{
-    for (size_t k = 0; k < SCENARIO_COUNT; ++k)
-    {
-        const scenario *s = &scenarios[k];
-        const size_t count = scenario_points(s);
-        x3pio_buffer bytes;
-        x3pio_buffer_init(&bytes, x3pio_default_allocator());
-        write_scenario(s, X3PIO_REVISION_AMD1, X3PIO_STORAGE_TEXT, &bytes);
-        double *x = malloc(count * sizeof *x);
-        double *y = malloc(count * sizeof *y);
-        double *z = malloc(count * sizeof *z);
-        double *sx = calloc(count, sizeof *sx);
-        double *sy = calloc(count, sizeof *sy);
-        double *sz = calloc(count, sizeof *sz);
-        x3pio_reader *reader = NULL;
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
-        CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
-        read_metres(reader, x, y, z);
-        x3pio_reader_free(reader);
-
-        /* Streamed, in pieces of rows that are no multiple of the chunk. */
-        CHECK_OK(x3pio_reader_create(NULL, &reader));
-        CHECK_OK(x3pio_reader_set_text_memory(reader, 0));
-        CHECK_OK(x3pio_reader_set_chunk(reader, 4));
-        CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
-        const x3pio_document *doc = x3pio_reader_document(reader);
-        const size_t columns = x3pio_document_columns(doc);
-        const size_t rows = x3pio_document_rows(doc);
-        for (size_t row = 0; row < rows; row += 3)
-        {
-            const size_t piece = rows - row < 3 ? rows - row : 3;
-            x3pio_fields into;
-            x3pio_fields_init(&into);
-            const x3pio_layout *packed = x3pio_layout_packed(X3PIO_TYPE_DOUBLE);
-            into.x = (x3pio_field){sx + row * columns, *packed};
-            into.y = (x3pio_field){sy + row * columns, *packed};
-            into.z = (x3pio_field){sz + row * columns, *packed};
-            CHECK_OK(x3pio_read_points(reader, &into, piece));
-        }
-        x3pio_reader_free(reader);
-        for (size_t i = 0; i < count; ++i)
-        {
-            CHECK(same_double(x[i], sx[i]) && same_double(y[i], sy[i])
-                  && same_double(z[i], sz[i]));
-        }
-
-        /* The stored values with the mask, where the file stores integers. */
-        if (s->type != X3PIO_TYPE_FLOAT && s->type != X3PIO_TYPE_DOUBLE)
-        {
-            const x3pio_type type = s->type;
-            const size_t size = type == X3PIO_TYPE_INT16 ? 2U : 4U;
-            unsigned char *held = malloc(count * size);
-            unsigned char *streamed = malloc(count * size);
-            unsigned char *held_mask = malloc(count);
-            unsigned char *streamed_mask = malloc(count);
-            for (int mode = 0; mode < 2; ++mode)
-            {
-                CHECK_OK(x3pio_reader_create(NULL, &reader));
-                if (mode == 1)
-                {
-                    CHECK_OK(x3pio_reader_set_text_memory(reader, 0));
-                }
-                CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
-                x3pio_fields into;
-                x3pio_fields_init(&into);
-                into.z = (x3pio_field){mode == 0 ? held : streamed,
-                                       *x3pio_layout_packed(type)};
-                into.valid =
-                    (x3pio_field){mode == 0 ? held_mask : streamed_mask,
-                                  *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-                CHECK_OK(x3pio_read_data(reader, &into, rows));
-                x3pio_reader_free(reader);
-            }
-            for (size_t i = 0; i < count; ++i)
-            {
-                CHECK(held_mask[i] == streamed_mask[i]);
-                CHECK(!held_mask[i]
-                      || memcmp(held + i * size, streamed + i * size, size)
-                             == 0);
-            }
-            free(held);
-            free(streamed);
-            free(held_mask);
-            free(streamed_mask);
-        }
-        x3pio_buffer_free(&bytes);
-        free(x);
-        free(y);
-        free(z);
-        free(sx);
-        free(sy);
-        free(sz);
-    }
-}
-
 int main(void)
 {
     test_every_shape();
@@ -1362,7 +1257,6 @@ int main(void)
     test_structures();
     test_structures_of_every_shape();
     test_point_lists_in_pieces();
-    test_text_held_and_streamed();
     test_layers();
     test_pieces();
     test_heights_and_automatic_increment();

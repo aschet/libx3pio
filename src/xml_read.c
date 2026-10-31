@@ -313,15 +313,6 @@ typedef struct state
     /* What the Datum elements show, which are not kept: the numbers are read
      * again when the points are read. */
     size_t datum_count;
-    /* The numbers are kept while they fit the budget, so that a file is parsed
-     * once. */
-    bool keep;
-    size_t budget;
-    double *values;
-    size_t value_count;
-    size_t value_capacity;
-    unsigned char *counts;
-    size_t counts_capacity;
     unsigned field_mask; /* bit n: a Datum has n numbers */
     bool any_empty;
     bool non_integer[3];
@@ -492,67 +483,6 @@ static bool parse_datum(const x3pio_decimal_point *point, const char *text,
     }
 }
 
-/* Keeps the numbers of a Datum, or gives up all that were kept if they would
- * take more than the budget. They are held twice while the document is put
- * together, which the budget counts. */
-static void keep_datum(state *s, const double numbers[3], size_t fields)
-{
-    const size_t held =
-        (s->value_count + fields) * sizeof(double) + s->datum_count;
-    if (held > s->budget / 2)
-    {
-        x3pio_release(s->allocator, s->values);
-        x3pio_release(s->allocator, s->counts);
-        s->values = NULL;
-        s->counts = NULL;
-        s->value_count = s->value_capacity = s->counts_capacity = 0;
-        s->keep = false;
-        return;
-    }
-    if (s->datum_count > s->counts_capacity)
-    {
-        const size_t capacity =
-            s->counts_capacity != 0 ? s->counts_capacity * 2 : 1024;
-        unsigned char *grown = x3pio_allocate(s->allocator, capacity);
-        if (grown == NULL)
-        {
-            fail_memory(s);
-            return;
-        }
-        if (s->datum_count > 1)
-        {
-            memcpy(grown, s->counts, s->datum_count - 1);
-        }
-        x3pio_release(s->allocator, s->counts);
-        s->counts = grown;
-        s->counts_capacity = capacity;
-    }
-    if (s->value_count + fields > s->value_capacity)
-    {
-        const size_t capacity =
-            s->value_capacity != 0 ? s->value_capacity * 2 : 4096;
-        double *grown =
-            x3pio_allocate_array(s->allocator, capacity, sizeof *grown);
-        if (grown == NULL)
-        {
-            fail_memory(s);
-            return;
-        }
-        if (s->value_count > 0)
-        {
-            memcpy(grown, s->values, s->value_count * sizeof *grown);
-        }
-        x3pio_release(s->allocator, s->values);
-        s->values = grown;
-        s->value_capacity = capacity;
-    }
-    for (size_t k = 0; k < fields; ++k)
-    {
-        s->values[s->value_count++] = numbers[k];
-    }
-    s->counts[s->datum_count - 1] = (unsigned char)fields;
-}
-
 /* Checks the numbers of a Datum and notes what the others have to agree on:
  * the axes are known only at the end of the document. */
 static void take_datum(state *s)
@@ -568,10 +498,6 @@ static void take_datum(state *s)
     }
     ++s->datum_count;
     s->field_mask |= 1U << fields;
-    if (s->keep)
-    {
-        keep_datum(s, values, fields);
-    }
     if (fields == 0)
     {
         s->any_empty = true;
@@ -900,58 +826,8 @@ static x3pio_status build_metadata(state *s)
     return X3PIO_OK;
 }
 
-/* Moves the numbers that were kept into the document: a row of the stored axes
- * for each point, NaN for an empty Datum, and a byte that tells the points that
- * were measured. */
-static x3pio_status hold_datums(state *s, size_t absolute)
-{
-    x3pio_document *d = s->document;
-    const size_t count = s->datum_count;
-    size_t total = 0;
-    if (!x3pio_multiply(count, absolute, &total))
-    {
-        return x3pio_fail(s->message, X3PIO_ERR_FORMAT,
-                          "The dimensions of the points are too large");
-    }
-    d->text_values = x3pio_allocate_array(&d->allocator, total != 0 ? total : 1,
-                                          sizeof(double));
-    d->text_valid = x3pio_allocate(&d->allocator, count != 0 ? count : 1);
-    if (d->text_values == NULL || d->text_valid == NULL)
-    {
-        return x3pio_fail(s->message, X3PIO_ERR_MEMORY, "Out of memory");
-    }
-    d->text_value_count = total;
-    size_t from = 0;
-    bool all_valid = true;
-    for (size_t i = 0; i < count; ++i)
-    {
-        if (s->counts[i] == 0)
-        {
-            for (size_t k = 0; k < absolute; ++k)
-            {
-                d->text_values[i * absolute + k] = NAN;
-            }
-            d->text_valid[i] = 0;
-            all_valid = false;
-            continue;
-        }
-        for (size_t k = 0; k < absolute; ++k)
-        {
-            d->text_values[i * absolute + k] = s->values[from + k];
-        }
-        from += absolute;
-        d->text_valid[i] = 1;
-    }
-    if (all_valid)
-    {
-        x3pio_release(&d->allocator, d->text_valid);
-        d->text_valid = NULL;
-    }
-    return X3PIO_OK;
-}
-
-/* Checks what the Datum elements showed against the axes. The numbers are kept
- * if they fit the budget, and otherwise read again when the points are read. */
+/* Checks what the Datum elements showed against the axes. The numbers are read
+ * again when the points are read. */
 static x3pio_status check_datums(state *s)
 {
     x3pio_document *d = s->document;
@@ -995,7 +871,7 @@ static x3pio_status check_datums(state *s)
         }
     }
     d->text_has_missing = s->any_empty;
-    return s->keep ? hold_datums(s, absolute) : X3PIO_OK;
+    return X3PIO_OK;
 }
 
 static x3pio_status finish(state *s)
@@ -1194,23 +1070,18 @@ static void release_state(state *s)
     {
         x3pio_release(s->allocator, s->leaves[i]);
     }
-    x3pio_release(s->allocator, s->values);
-    x3pio_release(s->allocator, s->counts);
     x3pio_buffer_free(&s->text);
 }
 
 x3pio_status x3pio_xml_parse(const x3pio_allocator *allocator,
                              x3pio_xml_pull pull, void *user,
-                             size_t text_budget, x3pio_document **document,
-                             const char **message)
+                             x3pio_document **document, const char **message)
 {
     *document = NULL;
     state s = {0};
     s.allocator = allocator;
     s.message = message;
     s.collecting = -1;
-    s.budget = text_budget;
-    s.keep = text_budget != 0;
     s.point = x3pio_decimal_point_now();
     for (size_t k = 0; k < 3; ++k)
     {

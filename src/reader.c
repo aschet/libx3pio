@@ -43,8 +43,7 @@ x3pio_status x3pio_reader_create(const x3pio_allocator *allocator,
     *handle = (x3pio_reader){.allocator = used,
                              .message = "",
                              .verify = true,
-                             .chunk = X3PIO_DEFAULT_CHUNK,
-                             .text_budget = X3PIO_DEFAULT_TEXT_MEMORY};
+                             .chunk = X3PIO_DEFAULT_CHUNK};
     *reader = handle;
     return X3PIO_OK;
 }
@@ -69,16 +68,6 @@ x3pio_status x3pio_reader_set_verify(x3pio_reader *reader, bool verify)
     if (status == X3PIO_OK)
     {
         reader->verify = verify;
-    }
-    return status;
-}
-
-x3pio_status x3pio_reader_set_text_memory(x3pio_reader *reader, size_t bytes)
-{
-    const x3pio_status status = require_new(reader);
-    if (status == X3PIO_OK)
-    {
-        reader->text_budget = bytes;
     }
     return status;
 }
@@ -696,8 +685,7 @@ static x3pio_status open_source(x3pio_reader *reader)
     }
     x3pio_md5_init(&main_data.hash);
     status = x3pio_xml_parse(&reader->allocator, pull_main, &main_data,
-                             reader->text_budget, &reader->document,
-                             &reader->message);
+                             &reader->document, &reader->message);
     x3pio_zip_entry_close(main_data.entry);
     if (status != X3PIO_OK)
     {
