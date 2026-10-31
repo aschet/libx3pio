@@ -459,6 +459,18 @@ x3pio_axis x3pio_document_axis(const x3pio_document *document,
     return document->axes[coordinate];
 }
 
+x3pio_status x3pio_document_get_axis(const x3pio_document *document,
+                                     x3pio_coordinate coordinate,
+                                     x3pio_axis *axis)
+{
+    if (document == NULL || axis == NULL || (unsigned)coordinate > 2U)
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    *axis = document->axes[coordinate];
+    return X3PIO_OK;
+}
+
 x3pio_status x3pio_document_set_axis(x3pio_document *document,
                                      x3pio_coordinate coordinate,
                                      const x3pio_axis *axis)
@@ -481,6 +493,17 @@ x3pio_placement x3pio_document_placement(const x3pio_document *document)
     return document != NULL ? document->placement : x3pio_placement_identity();
 }
 
+x3pio_status x3pio_document_get_placement(const x3pio_document *document,
+                                          x3pio_placement *placement)
+{
+    if (document == NULL || placement == NULL)
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    *placement = document->placement;
+    return X3PIO_OK;
+}
+
 x3pio_status x3pio_document_set_placement(x3pio_document *document,
                                           const x3pio_placement *placement)
 {
@@ -498,6 +521,17 @@ x3pio_dimensions x3pio_document_dimensions(const x3pio_document *document)
 {
     return document != NULL ? document->dims
                             : (x3pio_dimensions){0, 1, 1, false};
+}
+
+x3pio_status x3pio_document_get_dimensions(const x3pio_document *document,
+                                           x3pio_dimensions *dimensions)
+{
+    if (document == NULL || dimensions == NULL)
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    *dimensions = document->dims;
+    return X3PIO_OK;
 }
 
 x3pio_status x3pio_document_set_matrix(x3pio_document *document, size_t size_x,

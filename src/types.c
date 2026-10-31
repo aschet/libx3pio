@@ -81,6 +81,22 @@ x3pio_placement x3pio_placement_identity(void)
     return (x3pio_placement){{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}};
 }
 
+void x3pio_placement_init(x3pio_placement *placement)
+{
+    if (placement != NULL)
+    {
+        *placement = x3pio_placement_identity();
+    }
+}
+
+void x3pio_compression_init(x3pio_compression *compression)
+{
+    if (compression != NULL)
+    {
+        *compression = x3pio_compression_default();
+    }
+}
+
 bool x3pio_placement_has_rotation(const x3pio_placement *placement)
 {
     static const double identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};

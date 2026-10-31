@@ -144,6 +144,20 @@ X3PIO_API x3pio_axis x3pio_document_axis(const x3pio_document *document,
                                          x3pio_coordinate coordinate);
 
 /**
+ * Returns an axis through a pointer, for a language that cannot take a
+ * structure as a return value.
+ *
+ * @param[in] document The document.
+ * @param coordinate The axis.
+ * @param[out] axis Receives the axis.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the coordinate is not an
+ * enumerator.
+ */
+X3PIO_API x3pio_status x3pio_document_get_axis(const x3pio_document *document,
+                                               x3pio_coordinate coordinate,
+                                               x3pio_axis *axis);
+
+/**
  * Sets an axis.
  *
  * @param[in,out] document The document.
@@ -161,6 +175,17 @@ X3PIO_API x3pio_placement
 x3pio_document_placement(const x3pio_document *document);
 
 /**
+ * Returns the placement through a pointer, for a language that cannot take a
+ * structure as a return value.
+ *
+ * @param[in] document The document.
+ * @param[out] placement Receives the placement.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null.
+ */
+X3PIO_API x3pio_status x3pio_document_get_placement(
+    const x3pio_document *document, x3pio_placement *placement);
+
+/**
  * Sets the placement.
  *
  * @param[in,out] document The document.
@@ -174,6 +199,17 @@ X3PIO_API x3pio_status x3pio_document_set_placement(
 /** Returns the dimensions of the points. */
 X3PIO_API x3pio_dimensions
 x3pio_document_dimensions(const x3pio_document *document);
+
+/**
+ * Returns the dimensions through a pointer, for a language that cannot take a
+ * structure as a return value.
+ *
+ * @param[in] document The document.
+ * @param[out] dimensions Receives the dimensions.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null.
+ */
+X3PIO_API x3pio_status x3pio_document_get_dimensions(
+    const x3pio_document *document, x3pio_dimensions *dimensions);
 
 /**
  * Sets the dimensions to a matrix of `size_x` by `size_y` points in `size_z`

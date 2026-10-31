@@ -105,6 +105,16 @@
  * @endcode
  * A static library needs `--static`, which adds minizip-ng and Expat.
  *
+ * @section bindings Other Languages
+ * The interface is plain C: opaque handles, functions that return a status,
+ * structures that are passed by pointer, and no macros that a binding would
+ * have to expand. A function that returns a structure by value has a twin that
+ * takes a pointer, for a language that cannot take a structure as a return
+ * value: x3pio_document_get_axis(), x3pio_document_get_placement(),
+ * x3pio_document_get_dimensions(), x3pio_placement_init() and
+ * x3pio_compression_init(). The program surface.py in `examples/python` writes
+ * and reads a file with ctypes.
+ *
  * @section layers Three Layers
  * The library offers the points on three levels, from which a program takes the
  * one that suits it:

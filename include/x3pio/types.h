@@ -201,6 +201,14 @@ typedef struct x3pio_compression
 X3PIO_API x3pio_compression x3pio_compression_default(void);
 
 /**
+ * Sets a compression to the default, as x3pio_compression_default() returns it,
+ * for a language that cannot take a structure as a return value.
+ *
+ * @param[out] compression The compression. A null pointer is ignored.
+ */
+X3PIO_API void x3pio_compression_init(x3pio_compression *compression);
+
+/**
  * Value of the increment of the z axis of a document that requests the writer
  * to select the increment. It is for a file of integers, whose increment trades
  * range against resolution: x3pio_write_heights() determines the smallest
@@ -261,6 +269,14 @@ typedef struct x3pio_placement
  * offset 0.
  */
 X3PIO_API x3pio_placement x3pio_placement_identity(void);
+
+/**
+ * Sets a placement to the identity, as x3pio_placement_identity() returns it,
+ * for a language that cannot take a structure as a return value.
+ *
+ * @param[out] placement The placement. A null pointer is ignored.
+ */
+X3PIO_API void x3pio_placement_init(x3pio_placement *placement);
 
 /**
  * Tells whether the rotation of a placement is not the identity.

@@ -333,6 +333,71 @@ static void test_copy(void)
     x3pio_document_free(b);
 }
 
+/* The functions that return a structure through a pointer give what the ones
+ * that return it by value give, for a language that cannot take a structure
+ * as a return value. */
+static void test_pointer_getters(void)
+{
+    x3pio_document *d = NULL;
+    CHECK_OK(x3pio_document_create(NULL, &d));
+    CHECK_OK(x3pio_document_set_surface(d, 7, 5, 2e-6, 3e-6, X3PIO_TYPE_INT16,
+                                        1e-9, 2));
+    x3pio_placement place = x3pio_placement_identity();
+    place.offset[0] = 0.25;
+    CHECK_OK(x3pio_document_set_placement(d, &place));
+
+    for (int k = 0; k < 3; ++k)
+    {
+        x3pio_axis by_pointer;
+        CHECK_OK(x3pio_document_get_axis(d, (x3pio_coordinate)k, &by_pointer));
+        const x3pio_axis by_value = x3pio_document_axis(d, (x3pio_coordinate)k);
+        CHECK(by_pointer.type == by_value.type
+              && by_pointer.storage == by_value.storage
+              && by_pointer.increment == by_value.increment);
+    }
+    x3pio_axis axis;
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_get_axis(d, X3PIO_X, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_get_axis(NULL, X3PIO_X, &axis));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_get_axis(d, (x3pio_coordinate)3, &axis));
+
+    x3pio_placement got;
+    CHECK_OK(x3pio_document_get_placement(d, &got));
+    CHECK(got.offset[0] == 0.25 && got.rotation[0] == 1.0);
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_get_placement(d, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_get_placement(NULL, &got));
+
+    x3pio_dimensions dims;
+    CHECK_OK(x3pio_document_get_dimensions(d, &dims));
+    CHECK(dims.size_x == 7 && dims.size_y == 5 && dims.size_z == 2
+          && !dims.list);
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_get_dimensions(d, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_get_dimensions(NULL, &dims));
+    x3pio_document_free(d);
+
+    /* Initialization of the structures in place. */
+    x3pio_placement identity;
+    x3pio_placement_init(&identity);
+    const x3pio_placement expected = x3pio_placement_identity();
+    for (size_t i = 0; i < 9; ++i)
+    {
+        CHECK(identity.rotation[i] == expected.rotation[i]);
+    }
+    for (size_t i = 0; i < 3; ++i)
+    {
+        CHECK(identity.offset[i] == expected.offset[i]);
+    }
+    x3pio_placement_init(NULL);
+    x3pio_compression compression = {X3PIO_COMPRESS_STORE, 9};
+    x3pio_compression_init(&compression);
+    const x3pio_compression by_value = x3pio_compression_default();
+    CHECK(compression.method == by_value.method
+          && compression.level == by_value.level);
+    x3pio_compression_init(NULL);
+}
+
 int main(void)
 {
     test_defaults();
@@ -342,5 +407,6 @@ int main(void)
     test_setters();
     test_software();
     test_copy();
+    test_pointer_getters();
     return finish_tests();
 }
