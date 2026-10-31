@@ -168,9 +168,13 @@
  *
  * @section format_text Text Format
  * The points are `Datum` elements in `DataList` and the values of a point are
- * separated by semicolons. A text file is bound to main.xml and is read with
- * it, so the text format needs the memory of the description. The binary
- * format should be preferred for large files.
+ * separated by semicolons; an empty `Datum` is a point that was not measured.
+ * The text format is meant for small files: store no more than about 10,000
+ * points in the XML itself and use the binary format for more. A text file is
+ * bound to main.xml, so a reader parses it as a whole when the file is opened
+ * and holds the numbers of all points, about 25 bytes for each point of three
+ * axes, and a writer holds them until the file is ended. A reader refuses a
+ * main.xml with more than 64 MiB of text in its elements.
  *
  * @section format_vendor Vendor Files
  * A vendor adds files to the container, and registers each by an identifier in

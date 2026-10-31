@@ -90,7 +90,9 @@ X3PIO_API x3pio_status x3pio_writer_create(const x3pio_allocator *allocator,
 /**
  * Sets how the points are stored: in a binary file of the container, which is
  * compact and fast and the default, or as text in main.xml, which is readable.
- * The text of all points is collected in memory until the file ends.
+ * The text format is meant for small files, of no more than about 10,000
+ * points. The numbers of all points are collected in memory until the file
+ * ends.
  *
  * @param[in,out] writer The writer.
  * @param storage The storage.
