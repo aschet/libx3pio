@@ -39,6 +39,8 @@ struct x3pio_reader
     bool verify;
     /** The number of points converted at a time. */
     size_t chunk;
+    /** The memory that may hold the points of a file in text. */
+    size_t text_budget;
     /** Whether a file is open. */
     bool opened;
 

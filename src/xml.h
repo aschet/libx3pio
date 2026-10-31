@@ -41,6 +41,10 @@ typedef x3pio_status (*x3pio_xml_pull)(void *user, void *buffer,
  * @param allocator The allocator of the document and of the parser.
  * @param pull The supplier of the bytes.
  * @param user The state of the supplier.
+ * @param text_budget The most memory in bytes that the points of a file in text
+ * may take in the document, so that the file is parsed once. A file with more
+ * points is checked and counted, and its points are delivered by
+ * x3pio_xml_datums_open() as they are read. 0 selects that always.
  * @param[out] document Receives the document, which the caller releases with
  * x3pio_document_free().
  * @param[out] message Receives the reason of a failure.
@@ -50,7 +54,8 @@ typedef x3pio_status (*x3pio_xml_pull)(void *user, void *buffer,
  */
 x3pio_status x3pio_xml_parse(const x3pio_allocator *allocator,
                              x3pio_xml_pull pull, void *user,
-                             x3pio_document **document, const char **message);
+                             size_t text_budget, x3pio_document **document,
+                             const char **message);
 
 /** The points of a file in text, which are delivered a part at a time. */
 typedef struct x3pio_xml_datums x3pio_xml_datums;

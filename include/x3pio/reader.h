@@ -11,7 +11,8 @@
  * @par Process
  * A reader reads one file at a time, from the start to the end:
  * -# x3pio_reader_create() creates the reader, and x3pio_reader_set_verify()
- *    and x3pio_reader_set_chunk() set the options.
+ *    x3pio_reader_set_chunk() and x3pio_reader_set_text_memory() set the
+ *    options.
  * -# x3pio_open_file(), x3pio_open_memory() or x3pio_open_stream() opens the
  *    file and reads its description, which x3pio_reader_document() returns.
  * -# x3pio_read_heights() reads the whole matrix of heights, or
@@ -44,8 +45,10 @@
  * their member in parts, and a file of a vendor is read only by
  * x3pio_read_member(). A stream cannot be read from its end, so
  * x3pio_open_stream() collects it in memory first. The points of a file in
- * text are in main.xml, which is checked when the file is opened and parsed
- * again from its start as the rows are read, so they are not held as a whole.
+ * text are in main.xml, which is checked when the file is opened. If their
+ * numbers fit the memory of x3pio_reader_set_text_memory() the reader keeps
+ * them; otherwise main.xml is parsed again from its start as the rows are read,
+ * so that they are not held as a whole.
  */
 
 #ifndef X3PIO_READER_H
@@ -110,6 +113,24 @@ X3PIO_API x3pio_status x3pio_reader_set_verify(x3pio_reader *reader,
  */
 X3PIO_API x3pio_status x3pio_reader_set_chunk(x3pio_reader *reader,
                                               size_t count);
+
+/**
+ * Sets the memory that the reader may use to hold the points of a file in text.
+ * The points are in main.xml, which has to be parsed to open the file. If their
+ * numbers take no more than this, the reader keeps them and parses the file
+ * once. A file with more points is parsed again from its start as the rows are
+ * read, which keeps the memory of the reader independent of the size of the
+ * file and takes about as long again for the large part of the work. The
+ * default is 64 MiB, which holds about 2.5 million points of three axes. The
+ * budget has no effect on a file in the binary format. 0 always parses again.
+ *
+ * @param[in,out] reader The reader.
+ * @param bytes The memory in bytes.
+ * @retval X3PIO_ERR_ARGUMENT The reader is null.
+ * @retval X3PIO_ERR_STATE An attempt to open a file was made earlier.
+ */
+X3PIO_API x3pio_status x3pio_reader_set_text_memory(x3pio_reader *reader,
+                                                    size_t bytes);
 
 /**
  * Releases a reader and closes the file that it has open. A null pointer is
