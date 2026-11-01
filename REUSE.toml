@@ -1,7 +1,7 @@
 version = 1
 
 [[annotations]]
-path = ["README.md", "tests/data/make_expected.py", "tests/data/samples/README.md", "tests/data/expected.txt", "tests/data/xsd/README.md", "vcpkg.json", ".clang-format", ".clang-tidy", "tests/.clang-tidy", ".gitattributes", ".gitignore", "LICENSE"]
+path = ["README.md", "tests/data/create_expected.py", "tests/data/samples/README.md", "tests/data/expected.txt", "tests/data/xsd/README.md", "vcpkg.json", ".clang-format", ".clang-tidy", "tests/.clang-tidy", ".gitattributes", ".gitignore", "LICENSE"]
 SPDX-FileCopyrightText = "2026 Thomas Ascher <thomas.ascher@gmx.at>"
 SPDX-License-Identifier = "MIT"
 

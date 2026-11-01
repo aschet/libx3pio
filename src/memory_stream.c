@@ -12,8 +12,8 @@
 #include "memory_stream.h"
 #include "minizip.h"
 
-/* The object that minizip-ng works on. The stream it is made of comes first, as
- * the interface hands out pointers to it. */
+/* The object that minizip-ng works on. The stream it consists of comes first,
+ * as the interface hands out pointers to it. */
 typedef struct state
 {
     mz_stream base;
@@ -90,7 +90,7 @@ static int32_t stream_write(void *stream, const void *buffer, int32_t size)
         {
             return MZ_MEM_ERROR;
         }
-        /* A gap that a seek past the end made reads as zeros. */
+        /* A gap that a seek past the end created reads as zeros. */
         if (s->position > s->out->size)
         {
             memset(s->out->data + s->out->size, 0, s->position - s->out->size);
@@ -190,8 +190,8 @@ static mz_stream_vtbl vtable = {
     stream_tell,   stream_seek,    stream_close,    stream_error,
     stream_create, stream_destroy, stream_get_prop, stream_set_prop};
 
-static void *make_open_stream(int32_t mode, const void *read_data,
-                              size_t read_size, x3pio_buffer *out)
+static void *create_open_stream(int32_t mode, const void *read_data,
+                                size_t read_size, x3pio_buffer *out)
 {
     void *stream = mz_stream_create(&vtable);
     if (stream == NULL)
@@ -212,13 +212,13 @@ static void *make_open_stream(int32_t mode, const void *read_data,
 
 void *x3pio_memory_stream_reader(const void *data, size_t size)
 {
-    return make_open_stream(MZ_OPEN_MODE_READ, data, size, NULL);
+    return create_open_stream(MZ_OPEN_MODE_READ, data, size, NULL);
 }
 
 void *x3pio_memory_stream_writer(x3pio_buffer *out)
 {
-    return make_open_stream(MZ_OPEN_MODE_WRITE | MZ_OPEN_MODE_CREATE, NULL, 0,
-                            out);
+    return create_open_stream(MZ_OPEN_MODE_WRITE | MZ_OPEN_MODE_CREATE, NULL, 0,
+                              out);
 }
 
 void x3pio_memory_stream_free(void *stream)

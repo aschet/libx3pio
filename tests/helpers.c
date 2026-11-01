@@ -434,7 +434,7 @@ bool read_whole_file(const char *path, x3pio_buffer *out)
     return true;
 }
 
-void make_base_file(const file_spec *spec, x3pio_buffer *out)
+void create_base_file(const file_spec *spec, x3pio_buffer *out)
 {
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
@@ -475,11 +475,11 @@ void make_base_file(const file_spec *spec, x3pio_buffer *out)
     x3pio_document_free(doc);
 }
 
-void make_base_archive(const file_spec *spec, archive *a)
+void create_base_archive(const file_spec *spec, archive *a)
 {
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
-    make_base_file(spec, &bytes);
+    create_base_file(spec, &bytes);
     CHECK(archive_unzip(a, bytes.data, bytes.size));
     x3pio_buffer_free(&bytes);
 }

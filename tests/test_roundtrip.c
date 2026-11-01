@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-/* What the writer makes, the reader reads back: every shape of file in both
+/* What the writer writes, the reader reads back: every shape of file in both
  * revisions and both storages, valid against the schemas, in the three layers
  * and into the memory of the program in the ways a program holds its data. */
 
@@ -840,7 +840,8 @@ static void test_pieces(void)
         }
     }
 
-    /* Writing in pieces of any size makes the same file as writing it at once.
+    /* Writing in pieces of any size creates the same file as writing it at
+     * once.
      */
     x3pio_buffer once;
     x3pio_buffer_init(&once, x3pio_default_allocator());
@@ -1024,7 +1025,7 @@ static bool same_float(float a, float b)
     return isnan(a) ? isnan(b) : a == b;
 }
 
-/* The description of the shape of a scenario, with the points stored as floats.
+/* The definition of the shape of a scenario, with the points stored as floats.
  */
 static x3pio_document *float_document(const scenario *s)
 {

@@ -48,7 +48,7 @@ static void configure(void *writer)
     mz_zip_writer_set_compress_level(writer, MZ_COMPRESS_LEVEL_DEFAULT);
 }
 
-static x3pio_zip_writer *make(const x3pio_allocator *allocator)
+static x3pio_zip_writer *create(const x3pio_allocator *allocator)
 {
     x3pio_zip_writer *w = x3pio_allocate(allocator, sizeof *w);
     if (w == NULL)
@@ -88,13 +88,13 @@ x3pio_status x3pio_zip_writer_open_file(const x3pio_allocator *allocator,
                                         const char **message)
 {
     *writer = NULL;
-    x3pio_zip_writer *w = make(allocator);
+    x3pio_zip_writer *w = create(allocator);
     if (w == NULL)
     {
         return x3pio_fail(message, X3PIO_ERR_MEMORY, "Out of memory");
     }
-    /* minizip-ng makes the folders of a path that are missing; a program
-     * that names a file in a folder that is not there made a mistake. */
+    /* minizip-ng creates the folders of a path that are missing; a program
+     * that names a file in a folder that is not there got it wrong. */
     const char *slash = strrchr(path, '/');
     const char *backslash = strrchr(path, '\\');
     const char *last = slash > backslash ? slash : backslash;
@@ -126,7 +126,7 @@ x3pio_status x3pio_zip_writer_open_memory(const x3pio_allocator *allocator,
                                           const char **message)
 {
     *writer = NULL;
-    x3pio_zip_writer *w = make(allocator);
+    x3pio_zip_writer *w = create(allocator);
     if (w == NULL)
     {
         return x3pio_fail(message, X3PIO_ERR_MEMORY, "Out of memory");

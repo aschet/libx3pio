@@ -6,7 +6,7 @@
 
 /* What the tests share: zip files taken apart and put together with minizip-ng
  * on its own, so that the tests do not trust the zip code of the library, the
- * check of what the writer makes against the schemas of the standard, and
+ * check of what the writer creates against the schemas of the standard, and
  * builders of files. */
 
 #ifndef X3PIO_TESTS_HELPERS_H
@@ -77,7 +77,7 @@ unsigned char *read_test_file(const char *relative, size_t *size);
 /* The path of a file of the test data. */
 const char *test_path(const char *relative);
 
-/* How a file is made. */
+/* How a file is created. */
 typedef struct file_spec
 {
     x3pio_revision revision;
@@ -90,10 +90,10 @@ typedef struct file_spec
 
 /* A valid file of 4 x 3 points in memory: the heights 1e-7 * (i + 1), with
  * the point 5 missing if asked. The bytes are in the buffer. */
-void make_base_file(const file_spec *spec, x3pio_buffer *out);
+void create_base_file(const file_spec *spec, x3pio_buffer *out);
 
 /* The same as a set of members. */
-void make_base_archive(const file_spec *spec, archive *a);
+void create_base_archive(const file_spec *spec, archive *a);
 
 /* The defaults of a file spec. */
 file_spec default_spec(void);

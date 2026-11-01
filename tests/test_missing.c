@@ -347,7 +347,8 @@ static void test_integers_stay_integers(void)
     x3pio_document_free(doc);
 }
 
-/* Absolute axes: a coordinate that is not a number makes the point missing. */
+/* Absolute axes: a coordinate that is not a number marks the point as missing.
+ */
 static void test_absolute_axes(void)
 {
     x3pio_document *doc = NULL;

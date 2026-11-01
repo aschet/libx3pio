@@ -59,7 +59,7 @@ struct x3pio_writer
     /** Whether an error ended the writing. */
     bool failed;
 
-    /** The description of the file, copied. */
+    /** The document of the file, copied. */
     x3pio_document *document;
     /** The number of points of the file. */
     size_t count;
@@ -106,8 +106,9 @@ struct x3pio_writer
 };
 
 /**
- * Makes the room for the conversion of a chunk, and for the points of a file of
- * text. It is made when a file is created, so that writing allocates nothing.
+ * Allocates the room for the conversion of a chunk, and for the points of a
+ * file of text. It is allocated when a file is created, so that writing
+ * allocates nothing.
  *
  * @param writer The writer, with a document.
  */
@@ -132,7 +133,7 @@ x3pio_status x3pio_writer_create_with(const x3pio_allocator *allocator,
  * writer is alive. The buffer is not released with the writer.
  *
  * @param[in,out] writer The writer.
- * @param[in] document The description of the file.
+ * @param[in] document The document of the file.
  * @param[in,out] sink The buffer, which is emptied first.
  * @return The result of x3pio_create_memory().
  */

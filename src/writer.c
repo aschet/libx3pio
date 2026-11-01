@@ -208,7 +208,7 @@ static x3pio_status prepare(x3pio_writer *writer,
     {
         return x3pio_fail(&writer->message, X3PIO_ERR_MEMORY, "Out of memory");
     }
-    /* The points, the links and the vendors of the description are not used. */
+    /* The points, the links and the vendors of the document are not used. */
     x3pio_document_clear_data(writer->document);
     writer->count = x3pio_document_point_count(writer->document);
     x3pio_md5_init(&writer->hash);

@@ -120,7 +120,7 @@ static void shape_of(const x3pio_document *doc, char *text, size_t capacity)
 {
     const x3pio_dimensions dims = x3pio_document_dimensions(doc);
     size_t sizes[3] = {dims.size_z, dims.size_y, dims.size_x};
-    /* The reference describes the first layer. */
+    /* The reference states the first layer. */
     char out[64] = "";
     size_t used = 0;
     for (size_t i = 1; i < 3; ++i)
@@ -511,7 +511,7 @@ int main(void)
     test_standard_example();
 
     /* Larger files of the developer, if the environment names a folder with an
-     * expected.txt made by make_expected.py. */
+     * expected.txt created by create_expected.py. */
     const char *local = getenv("X3PIO_LOCAL_SAMPLES");
     if (local != NULL && local[0] != '\0')
     {

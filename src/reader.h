@@ -47,7 +47,7 @@ struct x3pio_reader
     x3pio_zip_source source;
     /** The members of the container. */
     x3pio_member_index index;
-    /** The description of the file. */
+    /** The document of the file. */
     x3pio_document *document;
     /** The files of vendors. */
     x3pio_vendor_file *vendors;
@@ -78,15 +78,16 @@ struct x3pio_reader
 };
 
 /**
- * Releases everything a reader holds for an open file, and makes it new again.
+ * Releases everything a reader holds for an open file, and returns it to the
+ * state new.
  *
  * @param reader The reader.
  */
 void x3pio_reader_reset(x3pio_reader *reader);
 
 /**
- * Makes the room for the conversion of a chunk. It is made when a file is
- * opened, so that reading allocates nothing.
+ * Allocates the room for the conversion of a chunk. It is allocated when a file
+ * is opened, so that reading allocates nothing.
  *
  * @param reader The reader, with a document.
  */

@@ -22,7 +22,7 @@ static void base(archive *a, x3pio_storage storage, x3pio_type z_type,
     spec.storage = storage;
     spec.z_type = z_type;
     spec.missing = missing;
-    make_base_archive(&spec, a);
+    create_base_archive(&spec, a);
 }
 
 static void base_binary(archive *a)
@@ -785,7 +785,7 @@ static void test_vendor_tolerance(void)
     x3pio_reader_free(r);
     archive_free(&a);
 
-    /* Several ids make a file one of Amd 1 whatever the revision says. */
+    /* Several ids turn a file into one of Amd 1 whatever the revision says. */
     base_binary(&a);
     replace_first(&a, "ISO25178-72:2017/DAM1", "ISO5436 - 2000");
     replace_first(&a, "</Record4>",
@@ -1250,7 +1250,7 @@ static void test_damaged_zip(void)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     file_spec spec = default_spec();
-    make_base_file(&spec, &bytes);
+    create_base_file(&spec, &bytes);
     unsigned long long state = 0x9E3779B97F4A7C15ULL;
     for (size_t length = 0; length < bytes.size; length += 7)
     {

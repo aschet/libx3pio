@@ -46,7 +46,7 @@ void x3pio_buffer_init(x3pio_buffer *buffer, const x3pio_allocator *allocator);
 void x3pio_buffer_free(x3pio_buffer *buffer);
 
 /**
- * Makes room for more bytes.
+ * Reserves room for more bytes.
  *
  * @param buffer The buffer.
  * @param extra The number of bytes to add to the ones in use.

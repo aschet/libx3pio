@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-/* The description of a file: setters and getters, checks, copies. */
+/* The document of a file: setters and getters, checks, copies. */
 
 #include "check.h"
 #include "document.h"

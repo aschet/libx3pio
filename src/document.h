@@ -80,8 +80,8 @@ struct x3pio_document
 };
 
 /**
- * Makes a document with the defaults, as x3pio_document_create() does, with an
- * allocator that has been taken.
+ * Creates a document with the defaults, as x3pio_document_create() does, with
+ * an allocator that has been taken.
  *
  * @param allocator The allocator, which is copied.
  * @return The document, or null if there is no memory.

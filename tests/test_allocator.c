@@ -126,7 +126,7 @@ static x3pio_buffer sample(x3pio_storage storage, bool vendor)
 }
 
 /* One reading with an allocator of the program. The number of allocations that
- * the transfer of rows made is returned in `during`. */
+ * the transfer of points is returned in `during`. */
 static x3pio_status read_cycle(counter *c, const x3pio_buffer *bytes,
                                size_t *during)
 {

@@ -487,7 +487,7 @@ static void test_reader_states(void)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     file_spec spec = default_spec();
-    make_base_file(&spec, &bytes);
+    create_base_file(&spec, &bytes);
     x3pio_reader *reader = NULL;
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_reader_create(NULL));
     CHECK_OK(x3pio_reader_create(&reader));
@@ -638,7 +638,7 @@ static void test_damage(void)
     spec.compression = (x3pio_compression){X3PIO_COMPRESS_STORE, 0};
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
-    make_base_file(&spec, &bytes);
+    create_base_file(&spec, &bytes);
     archive a = {0};
     CHECK(archive_unzip(&a, bytes.data, bytes.size));
 

@@ -68,7 +68,7 @@ void x3pio_trim(const char **text, size_t *size);
 bool x3pio_equals_nocase(const char *text, size_t size, const char *other);
 
 /**
- * Makes a copy of a text, terminated by a null character.
+ * Creates a copy of a text, terminated by a null character.
  *
  * @param allocator The allocator of the copy. Release the copy with it.
  * @param text The text.
@@ -79,7 +79,7 @@ char *x3pio_copy_text(const x3pio_allocator *allocator, const char *text,
                       size_t size);
 
 /**
- * Makes a copy of a null-terminated string.
+ * Creates a copy of a null-terminated string.
  *
  * @param allocator The allocator of the copy. Release the copy with it.
  * @param text The string.

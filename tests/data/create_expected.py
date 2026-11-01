@@ -5,8 +5,8 @@
 """Dump what the x3pio reference implementation reads from the fixtures.
 
 Run it with an interpreter that has x3pio installed:
-``python make_expected.py > expected.txt`` for the fixtures of this folder, or
-``python make_expected.py FOLDER > FOLDER/expected.txt`` for any other folder,
+``python create_expected.py > expected.txt`` for the fixtures of this folder, or
+``python create_expected.py FOLDER > FOLDER/expected.txt`` for any other folder,
 such as one of larger files that the tests use when ``X3PIO_LOCAL_SAMPLES``
 names it. The C tests read the
 same files with libx3pio and compare, so the two implementations check each

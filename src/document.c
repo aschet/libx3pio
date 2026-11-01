@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief The description of a file.
+ * @brief The document of a file.
  */
 
 #include "document.h"
@@ -237,7 +237,7 @@ x3pio_status x3pio_document_copy(x3pio_document *dst, const x3pio_document *src)
         return X3PIO_ERR_MEMORY;
     }
     /* The content of the copy replaces the content of the destination, which
-     * keeps its structure and its allocator. The copy was made with that
+     * keeps its structure and its allocator. The copy was created with that
      * allocator, so its memory can be released with it. */
     x3pio_document old = *dst;
     *dst = *copy;
@@ -568,7 +568,7 @@ x3pio_status x3pio_document_set_point_list(x3pio_document *document,
     return X3PIO_OK;
 }
 
-/* ---- ready-made descriptions ------------------------------------------- */
+/* ---- feature type, size and axes ---------------------------------------- */
 
 static bool step_valid(double step)
 {
@@ -691,7 +691,7 @@ void x3pio_document_clear_metadata(x3pio_document *document)
     document->probing = X3PIO_PROBING_UNKNOWN;
 }
 
-/* Sets one text of the metadata and makes the document carry metadata. */
+/* Sets one text of the metadata and creates the metadata in the document. */
 static x3pio_status set_text(x3pio_document *document, char **field,
                              const char *text)
 {

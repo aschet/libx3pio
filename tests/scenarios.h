@@ -5,7 +5,7 @@
  */
 
 /* The shapes of files that the tests write and read back: what the points are,
- * how they are described, and what a reader must give back. */
+ * how they are defined, and what a reader must give back. */
 
 #ifndef X3PIO_TESTS_SCENARIOS_H
 #define X3PIO_TESTS_SCENARIOS_H
