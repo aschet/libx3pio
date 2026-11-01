@@ -89,7 +89,7 @@ static void test_cloud(x3pio_type type, double increment, double tolerance)
     }
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_point_cloud(doc, COUNT, type, increment));
+    CHECK_OK(x3pio_document_describe_point_cloud(doc, COUNT, type, increment));
     CHECK_OK(x3pio_document_set_transformation(doc, &p));
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
@@ -142,7 +142,8 @@ static void test_float_buffers(void)
     const x3pio_transformation p = transformation();
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_point_cloud(doc, 2, X3PIO_TYPE_DOUBLE, 1.0));
+    CHECK_OK(
+        x3pio_document_describe_point_cloud(doc, 2, X3PIO_TYPE_DOUBLE, 1.0));
     CHECK_OK(x3pio_document_set_transformation(doc, &p));
     const double vx[2] = {1.234567e-3, 2.5e-3};
     const double vy[2] = {-7.654321e-3, 1e-3};
@@ -188,8 +189,8 @@ static void test_grid(void)
     const x3pio_transformation p = transformation();
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_surface(doc, COLUMNS, ROWS, 1e-3, 2e-3,
-                                        X3PIO_TYPE_FLOAT, 1.0, 1));
+    CHECK_OK(x3pio_document_describe_surface(doc, COLUMNS, ROWS, 1e-3, 2e-3,
+                                             X3PIO_TYPE_FLOAT, 1.0, 1));
     CHECK_OK(x3pio_document_set_transformation(doc, &p));
     double gx[COUNT];
     double gy[COUNT];
@@ -265,7 +266,8 @@ static void test_arguments(void)
 {
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_point_cloud(doc, 2, X3PIO_TYPE_DOUBLE, 1.0));
+    CHECK_OK(
+        x3pio_document_describe_point_cloud(doc, 2, X3PIO_TYPE_DOUBLE, 1.0));
     double a[2] = {0, 0};
     double b[2] = {0, 0};
     double c[2] = {0, 0};
@@ -320,8 +322,8 @@ static void test_translated(void)
     const x3pio_transformation p = transformation();
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_surface(doc, COLUMNS, ROWS, 1e-3, 2e-3,
-                                        X3PIO_TYPE_DOUBLE, 1.0, 1));
+    CHECK_OK(x3pio_document_describe_surface(doc, COLUMNS, ROWS, 1e-3, 2e-3,
+                                             X3PIO_TYPE_DOUBLE, 1.0, 1));
     CHECK_OK(x3pio_document_set_transformation(doc, &p));
     double z[COUNT];
     for (size_t i = 0; i < COUNT; ++i)
@@ -392,8 +394,8 @@ static void test_layers_in_separate_buffers(void)
     };
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_surface(doc, COLUMNS, ROWS, 1e-3, 1e-3,
-                                        X3PIO_TYPE_DOUBLE, 1.0, LAYERS));
+    CHECK_OK(x3pio_document_describe_surface(doc, COLUMNS, ROWS, 1e-3, 1e-3,
+                                             X3PIO_TYPE_DOUBLE, 1.0, LAYERS));
     double images[LAYERS][PIXELS];
     for (size_t l = 0; l < LAYERS; ++l)
     {

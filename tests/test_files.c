@@ -19,8 +19,8 @@ static x3pio_document *base_document(x3pio_revision revision)
     x3pio_document *d = NULL;
     CHECK_OK(x3pio_document_create(&d));
     CHECK_OK(x3pio_document_set_revision(d, revision));
-    CHECK_OK(x3pio_document_set_surface(d, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
-                                        1.0, 1));
+    CHECK_OK(x3pio_document_describe_surface(d, 4, 3, 1e-6, 1e-6,
+                                             X3PIO_TYPE_FLOAT, 1.0, 1));
     return d;
 }
 
@@ -402,8 +402,8 @@ static size_t file_size_with(const x3pio_compression *compression, archive *a)
 {
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_surface(doc, 200, 200, 1e-6, 1e-6,
-                                        X3PIO_TYPE_DOUBLE, 1.0, 1));
+    CHECK_OK(x3pio_document_describe_surface(doc, 200, 200, 1e-6, 1e-6,
+                                             X3PIO_TYPE_DOUBLE, 1.0, 1));
     double *z = malloc(200 * 200 * sizeof *z);
     for (size_t i = 0; i < 200 * 200; ++i)
     {
@@ -588,8 +588,8 @@ static void test_writer_states(void)
     CHECK_STATUS(X3PIO_ERR_STATE,
                  x3pio_writer_set_storage(writer, X3PIO_STORAGE_TEXT));
     /* The document was copied: a change of it has no effect. */
-    CHECK_OK(x3pio_document_set_surface(doc, 9, 9, 1.0, 1.0, X3PIO_TYPE_DOUBLE,
-                                        1.0, 1));
+    CHECK_OK(x3pio_document_describe_surface(doc, 9, 9, 1.0, 1.0,
+                                             X3PIO_TYPE_DOUBLE, 1.0, 1));
 
     /* Rows are missing. */
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_end_file(writer));

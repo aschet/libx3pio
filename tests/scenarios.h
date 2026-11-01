@@ -195,13 +195,13 @@ static inline x3pio_document *scenario_document(const scenario *s,
     CHECK_OK(x3pio_document_set_revision(d, revision));
     if (s->feature == X3PIO_POINT_CLOUD)
     {
-        CHECK_OK(x3pio_document_set_point_cloud(d, s->columns, s->type,
-                                                s->increment));
+        CHECK_OK(x3pio_document_describe_point_cloud(d, s->columns, s->type,
+                                                     s->increment));
     }
     else if (!s->regular && s->feature == X3PIO_PROFILE)
     {
-        CHECK_OK(x3pio_document_set_irregular_profile(d, s->columns, s->type,
-                                                      s->increment, s->layers));
+        CHECK_OK(x3pio_document_describe_irregular_profile(
+            d, s->columns, s->type, s->increment, s->layers));
     }
     else if (!s->regular)
     {
@@ -210,14 +210,14 @@ static inline x3pio_document *scenario_document(const scenario *s,
     }
     else if (s->feature == X3PIO_PROFILE)
     {
-        CHECK_OK(x3pio_document_set_profile(d, s->columns, GRID_STEP, s->type,
-                                            s->increment, s->layers));
+        CHECK_OK(x3pio_document_describe_profile(
+            d, s->columns, GRID_STEP, s->type, s->increment, s->layers));
     }
     else
     {
-        CHECK_OK(x3pio_document_set_surface(d, s->columns, s->rows, GRID_STEP,
-                                            GRID_STEP, s->type, s->increment,
-                                            s->layers));
+        CHECK_OK(x3pio_document_describe_surface(d, s->columns, s->rows,
+                                                 GRID_STEP, GRID_STEP, s->type,
+                                                 s->increment, s->layers));
     }
     const x3pio_transformation place = scenario_transformation(s);
     CHECK_OK(x3pio_document_set_transformation(d, &place));

@@ -273,7 +273,7 @@ X3PIO_API bool x3pio_document_has_validity(const x3pio_document *document);
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_set_surface(
+X3PIO_API x3pio_status x3pio_document_describe_surface(
     x3pio_document *document, size_t columns, size_t rows, double x_step,
     double y_step, x3pio_type z_type, double z_increment, size_t layers);
 
@@ -283,11 +283,9 @@ X3PIO_API x3pio_status x3pio_document_set_surface(
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_set_profile(x3pio_document *document,
-                                                  size_t points, double x_step,
-                                                  x3pio_type z_type,
-                                                  double z_increment,
-                                                  size_t layers);
+X3PIO_API x3pio_status x3pio_document_describe_profile(
+    x3pio_document *document, size_t points, double x_step, x3pio_type z_type,
+    double z_increment, size_t layers);
 
 /**
  * Describes a point cloud of `count` points whose three coordinates are stored
@@ -295,10 +293,8 @@ X3PIO_API x3pio_status x3pio_document_set_profile(x3pio_document *document,
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_set_point_cloud(x3pio_document *document,
-                                                      size_t count,
-                                                      x3pio_type type,
-                                                      double increment);
+X3PIO_API x3pio_status x3pio_document_describe_point_cloud(
+    x3pio_document *document, size_t count, x3pio_type type, double increment);
 
 /**
  * Describes an irregular grid: a surface whose points are free in x, y and z,
@@ -318,7 +314,7 @@ X3PIO_API x3pio_status x3pio_document_set_irregular_surface(
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_set_irregular_profile(
+X3PIO_API x3pio_status x3pio_document_describe_irregular_profile(
     x3pio_document *document, size_t points, x3pio_type type, double increment,
     size_t layers);
 

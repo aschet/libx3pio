@@ -15,8 +15,8 @@ int main(int argc, char **argv)
     static const char settings[] = "exposure=12ms\nobjective=50x\n";
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
-    x3pio_document_set_surface(document, 4, 3, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
-                               1.0, 1);
+    x3pio_document_describe_surface(document, 4, 3, 1e-6, 1e-6,
+                                    X3PIO_TYPE_FLOAT, 1.0, 1);
     x3pio_document_set_software_metadata(document, "vendor_files", "1.0");
     const double heights[12] = {0};
 

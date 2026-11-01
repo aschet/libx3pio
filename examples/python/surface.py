@@ -77,7 +77,7 @@ def load_library(argument):
     declare("x3pio_document_create", c_int, POINTER(handle))
     declare("x3pio_document_free", None, handle)
     declare(
-        "x3pio_document_set_surface",
+        "x3pio_document_describe_surface",
         c_int,
         handle,
         c_size_t,
@@ -119,7 +119,7 @@ def write_surface(lib, path, columns, rows, heights):
     try:
         # A surface of floats: the points lie 1 micrometre apart.
         check(
-            lib.x3pio_document_set_surface(
+            lib.x3pio_document_describe_surface(
                 document, columns, rows, 1e-6, 1e-6, X3PIO_TYPE_FLOAT, 1.0, 1
             )
         )

@@ -575,11 +575,11 @@ static bool step_valid(double step)
     return isfinite(step) && step > 0.0;
 }
 
-x3pio_status x3pio_document_set_surface(x3pio_document *document,
-                                        size_t columns, size_t rows,
-                                        double x_step, double y_step,
-                                        x3pio_type z_type, double z_increment,
-                                        size_t layers)
+x3pio_status x3pio_document_describe_surface(x3pio_document *document,
+                                             size_t columns, size_t rows,
+                                             double x_step, double y_step,
+                                             x3pio_type z_type,
+                                             double z_increment, size_t layers)
 {
     if (document == NULL || !step_valid(x_step) || !step_valid(y_step)
         || !x3pio_type_is_stored(z_type)
@@ -600,11 +600,12 @@ x3pio_status x3pio_document_set_surface(x3pio_document *document,
     return X3PIO_OK;
 }
 
-x3pio_status x3pio_document_set_profile(x3pio_document *document, size_t points,
-                                        double x_step, x3pio_type z_type,
-                                        double z_increment, size_t layers)
+x3pio_status x3pio_document_describe_profile(x3pio_document *document,
+                                             size_t points, double x_step,
+                                             x3pio_type z_type,
+                                             double z_increment, size_t layers)
 {
-    const x3pio_status status = x3pio_document_set_surface(
+    const x3pio_status status = x3pio_document_describe_surface(
         document, points, 1, x_step, x_step, z_type, z_increment, layers);
     if (status == X3PIO_OK)
     {
@@ -613,9 +614,9 @@ x3pio_status x3pio_document_set_profile(x3pio_document *document, size_t points,
     return status;
 }
 
-x3pio_status x3pio_document_set_point_cloud(x3pio_document *document,
-                                            size_t count, x3pio_type type,
-                                            double increment)
+x3pio_status x3pio_document_describe_point_cloud(x3pio_document *document,
+                                                 size_t count, x3pio_type type,
+                                                 double increment)
 {
     if (document == NULL || !x3pio_type_is_stored(type)
         || !step_valid(increment))
@@ -638,7 +639,7 @@ x3pio_status x3pio_document_set_irregular_surface(x3pio_document *document,
                                                   size_t layers)
 {
     const x3pio_status status =
-        x3pio_document_set_point_cloud(document, 0, type, increment);
+        x3pio_document_describe_point_cloud(document, 0, type, increment);
     if (status == X3PIO_OK)
     {
         document->feature = X3PIO_SURFACE;
@@ -647,17 +648,17 @@ x3pio_status x3pio_document_set_irregular_surface(x3pio_document *document,
     return status;
 }
 
-x3pio_status x3pio_document_set_irregular_profile(x3pio_document *document,
-                                                  size_t points,
-                                                  x3pio_type type,
-                                                  double increment,
-                                                  size_t layers)
+x3pio_status x3pio_document_describe_irregular_profile(x3pio_document *document,
+                                                       size_t points,
+                                                       x3pio_type type,
+                                                       double increment,
+                                                       size_t layers)
 {
     if (!step_valid(increment))
     {
         return X3PIO_ERR_ARGUMENT;
     }
-    const x3pio_status status = x3pio_document_set_profile(
+    const x3pio_status status = x3pio_document_describe_profile(
         document, points, 1.0, type, increment, layers);
     if (status == X3PIO_OK)
     {

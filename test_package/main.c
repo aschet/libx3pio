@@ -42,7 +42,7 @@ int main(void)
     x3pio_status described = x3pio_document_create(&document);
     if (described == X3PIO_OK)
     {
-        described = x3pio_document_set_surface(
+        described = x3pio_document_describe_surface(
             document, COLUMNS, ROWS, 1.0e-6, 1.0e-6, X3PIO_TYPE_FLOAT, 1.0, 1);
     }
     failed |= check(described, "document");

@@ -33,8 +33,8 @@ int main(int argc, char **argv)
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
     /* One count is 2.5 nanometres. */
-    x3pio_document_set_surface(document, COLUMNS, ROWS, 1e-6, 1e-6,
-                               X3PIO_TYPE_INT16, 2.5e-9, 1);
+    x3pio_document_describe_surface(document, COLUMNS, ROWS, 1e-6, 1e-6,
+                                    X3PIO_TYPE_INT16, 2.5e-9, 1);
     x3pio_document_set_software_metadata(document, "write_data", "1.0");
 
     x3pio_writer *writer = NULL;

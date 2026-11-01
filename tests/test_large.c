@@ -40,8 +40,8 @@ int main(void)
 
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_surface(doc, COLUMNS, ROWS, 1e-6, 1e-6,
-                                        X3PIO_TYPE_FLOAT, 1.0, 1));
+    CHECK_OK(x3pio_document_describe_surface(doc, COLUMNS, ROWS, 1e-6, 1e-6,
+                                             X3PIO_TYPE_FLOAT, 1.0, 1));
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(x3pio_create_file(writer, path, doc));

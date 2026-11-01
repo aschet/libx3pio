@@ -108,8 +108,8 @@ void write_cloud(const char *path, const Cloud &cloud)
     x3pio_document *created = nullptr;
     x3pio_document_create(&created);
     Document document{created, x3pio_document_free};
-    x3pio_document_set_point_cloud(document.get(), cloud.points.size(),
-                                   X3PIO_TYPE_FLOAT, 1.0);
+    x3pio_document_describe_point_cloud(document.get(), cloud.points.size(),
+                                        X3PIO_TYPE_FLOAT, 1.0);
     x3pio_document_set_software_metadata(document.get(), "pcl", "1.0");
     // The points are in the global coordinate system and the transformation of
     // the new file is the identity, so they are stored as they are. A file with

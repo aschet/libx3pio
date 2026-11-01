@@ -33,7 +33,7 @@ static int write_cloud(const char *path)
     }
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
-    x3pio_document_set_point_cloud(document, COUNT, X3PIO_TYPE_FLOAT, 1.0);
+    x3pio_document_describe_point_cloud(document, COUNT, X3PIO_TYPE_FLOAT, 1.0);
     x3pio_document_set_software_metadata(document, "points", "1.0");
     x3pio_writer *writer = NULL;
     x3pio_writer_create(&writer);
