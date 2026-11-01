@@ -18,6 +18,9 @@
 #include "members.h"
 #include "zip.h"
 
+/** The largest member that is read whole: the validity bits and a checksum. */
+#define X3PIO_MAX_SMALL_MEMBER ((size_t)1 << 30U)
+
 /** A file of a vendor in the container. */
 typedef struct x3pio_vendor_file
 {
@@ -105,5 +108,32 @@ x3pio_status x3pio_reader_prepare(x3pio_reader *reader);
  */
 x3pio_status x3pio_reader_create_with(const x3pio_allocator *allocator,
                                       x3pio_reader **reader);
+
+/**
+ * Reads main.xml of the opened container into the document of the reader and
+ * checks its checksum if the reader verifies.
+ *
+ * @param[in,out] reader The reader, whose members are listed.
+ * @retval X3PIO_ERR_FORMAT main.xml is damaged or not what the standard
+ * allows.
+ * @retval X3PIO_ERR_CHECKSUM The checksum of main.xml does not match.
+ */
+x3pio_status x3pio_reader_load_document(x3pio_reader *reader);
+
+/**
+ * Finds the binary files of the points and of their validity, and opens the
+ * member of the points.
+ *
+ * @param[in,out] reader The reader, whose document is read.
+ */
+x3pio_status x3pio_reader_open_binary_files(x3pio_reader *reader);
+
+/**
+ * Lists the files of vendors that the document registers and the container
+ * holds.
+ *
+ * @param[in,out] reader The reader, whose document is read.
+ */
+x3pio_status x3pio_reader_find_vendor_files(x3pio_reader *reader);
 
 #endif /* X3PIO_SRC_READER_H */

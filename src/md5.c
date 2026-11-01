@@ -10,6 +10,7 @@
  */
 
 #include "md5.h"
+#include "text.h"
 
 static const unsigned shifts[64] = {
     7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
@@ -161,4 +162,21 @@ void x3pio_md5_of(const void *data, size_t size, char out[X3PIO_MD5_HEX_SIZE])
     x3pio_md5_init(&md5);
     x3pio_md5_update(&md5, data, size);
     x3pio_md5_hex(&md5, out);
+}
+
+bool x3pio_md5_hex_equal(const char *stated,
+                         const char computed[X3PIO_MD5_HEX_SIZE])
+{
+    if (strlen(stated) != 32)
+    {
+        return false;
+    }
+    for (size_t i = 0; i < 32; ++i)
+    {
+        if (x3pio_to_lower(stated[i]) != computed[i])
+        {
+            return false;
+        }
+    }
+    return true;
 }

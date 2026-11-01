@@ -149,4 +149,12 @@ x3pio_status x3pio_create_memory_into(x3pio_writer *writer,
  */
 x3pio_status x3pio_writer_finish(x3pio_writer *writer);
 
+/**
+ * Tells whether a compression can be used: a known method and a level of -1
+ * (the default) or 0 to 9.
+ *
+ * @param[in] compression The compression.
+ */
+bool x3pio_compression_valid(const x3pio_compression *compression);
+
 #endif /* X3PIO_SRC_WRITER_H */

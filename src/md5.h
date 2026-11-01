@@ -55,6 +55,17 @@ void x3pio_md5_update(x3pio_md5 *md5, const void *data, size_t size);
 void x3pio_md5_hex(const x3pio_md5 *md5, char out[X3PIO_MD5_HEX_SIZE]);
 
 /**
+ * Compares a digest that a file states, in upper or lower case, with one that
+ * x3pio_md5_hex() computed.
+ *
+ * @param[in] stated The stated digest, null-terminated.
+ * @param[in] computed The computed digest in lower case.
+ * @return True if the stated digest has 32 characters and is the same.
+ */
+bool x3pio_md5_hex_equal(const char *stated,
+                         const char computed[X3PIO_MD5_HEX_SIZE]);
+
+/**
  * Gives the digest of a block of memory.
  *
  * @param data The bytes.

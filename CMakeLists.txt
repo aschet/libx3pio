@@ -72,6 +72,9 @@ set(X3PIO_SOURCES
     src/memory_stream.h
     src/minizip.h
     src/reader.c
+    src/reader_binary.c
+    src/reader_main.c
+    src/reader_vendor.c
     src/reader.h
     src/reader_points.c
     src/text.c
@@ -82,10 +85,17 @@ set(X3PIO_SOURCES
     src/vendor.c
     src/vendor.h
     src/writer.c
+    src/writer_end.c
+    src/writer_vendor.c
     src/writer.h
     src/writer_points.c
     src/xml.h
+    src/expat_memory.c
+    src/expat_memory.h
+    src/xml_build.c
     src/xml_read.c
+    src/xml_scan.c
+    src/xml_state.h
     src/xml_write.c
     src/zip.h
     src/zip_read.c
