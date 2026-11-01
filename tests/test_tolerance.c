@@ -551,7 +551,8 @@ static void test_damaged_data_files(void)
     CHECK(bits != NULL);
     if (bits != NULL)
     {
-        x3pio_buffer_append_char(&bits->data, (char)0xFF);
+        const unsigned char full = 0xFF;
+        x3pio_buffer_append_char(&bits->data, (char)full);
         CHECK_STATUS(X3PIO_ERR_FORMAT, try_open(&m, false));
     }
     archive_free(&m);
@@ -892,8 +893,9 @@ static void test_rotation(void)
     x3pio_buffer keep;
     x3pio_buffer_init(&keep, x3pio_default_allocator());
     x3pio_reader *r = open_for(&a, &keep, true);
-    CHECK(x3pio_document_transformation(x3pio_reader_document(r)).rotation[0]
-          == 1.0);
+    const x3pio_transformation placed =
+        x3pio_document_transformation(x3pio_reader_document(r));
+    CHECK(placed.rotation[0] == 1.0);
     x3pio_reader_free(r);
     archive_free(&a);
 

@@ -254,7 +254,8 @@ static void test_setters(void)
     place.offset[2] = NAN;
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_document_set_transformation(d, &place));
-    CHECK(x3pio_document_transformation(d).offset[1] == 0.5);
+    const x3pio_transformation placed = x3pio_document_transformation(d);
+    CHECK(placed.offset[1] == 0.5);
 
     x3pio_timestamp date = {2026, 2, 30, 0, 0, 0, 0, false, 0};
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_date(d, &date));
@@ -328,7 +329,8 @@ static void test_copy(void)
     CHECK_STRING(x3pio_document_creator(b), "me");
     CHECK_STRING(x3pio_document_comment(b), "");
     CHECK_STRING(x3pio_document_model(b), "tool");
-    CHECK(x3pio_document_transformation(b).offset[0] == 3.0);
+    const x3pio_transformation copied = x3pio_document_transformation(b);
+    CHECK(copied.offset[0] == 3.0);
     CHECK(x3pio_document_axis(b, X3PIO_X).storage == X3PIO_TYPE_INT16);
     /* The copy is independent. */
     CHECK_OK(x3pio_document_set_creator(a, "someone else"));
