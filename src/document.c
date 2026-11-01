@@ -6,7 +6,8 @@
 
 /**
  * @file
- * @brief The document of a file.
+ * @brief The document of a file: its fields, the axes, the transformation, the
+ * dimensions, the vendors and the record of the binary file.
  */
 
 #include "document.h"
@@ -21,7 +22,7 @@ static x3pio_axis default_axis(x3pio_axis_type type)
     return (x3pio_axis){type, X3PIO_TYPE_DOUBLE, 1.0};
 }
 
-x3pio_document *x3pio_document_make(const x3pio_allocator *allocator)
+x3pio_document *x3pio_document_allocate(const x3pio_allocator *allocator)
 {
     x3pio_document *document = x3pio_allocate(allocator, sizeof *document);
     if (document == NULL)
@@ -58,11 +59,11 @@ x3pio_status x3pio_document_create_with(const x3pio_allocator *allocator,
     {
         return X3PIO_ERR_ARGUMENT;
     }
-    *document = x3pio_document_make(&used);
+    *document = x3pio_document_allocate(&used);
     return *document != NULL ? X3PIO_OK : X3PIO_ERR_MEMORY;
 }
 
-static void release_text(x3pio_document *document, char **field)
+void x3pio_document_release_text(x3pio_document *document, char **field)
 {
     x3pio_release(&document->allocator, *field);
     *field = NULL;
@@ -70,11 +71,11 @@ static void release_text(x3pio_document *document, char **field)
 
 void x3pio_document_clear_data(x3pio_document *document)
 {
-    release_text(document, &document->point_path);
-    release_text(document, &document->point_md5);
-    release_text(document, &document->valid_path);
-    release_text(document, &document->valid_md5);
-    release_text(document, &document->checksum_file);
+    x3pio_document_release_text(document, &document->point_path);
+    x3pio_document_release_text(document, &document->point_md5);
+    x3pio_document_release_text(document, &document->valid_path);
+    x3pio_document_release_text(document, &document->valid_md5);
+    x3pio_document_release_text(document, &document->checksum_file);
     x3pio_release(&document->allocator, document->text_values);
     x3pio_release(&document->allocator, document->text_valid);
     document->text_values = NULL;
@@ -94,13 +95,13 @@ void x3pio_document_clear_data(x3pio_document *document)
 static void release_content(x3pio_document *document)
 {
     x3pio_document_clear_data(document);
-    release_text(document, &document->creator);
-    release_text(document, &document->manufacturer);
-    release_text(document, &document->model);
-    release_text(document, &document->serial);
-    release_text(document, &document->version);
-    release_text(document, &document->probing_identification);
-    release_text(document, &document->comment);
+    x3pio_document_release_text(document, &document->creator);
+    x3pio_document_release_text(document, &document->manufacturer);
+    x3pio_document_release_text(document, &document->model);
+    x3pio_document_release_text(document, &document->serial);
+    x3pio_document_release_text(document, &document->version);
+    x3pio_document_release_text(document, &document->probing_identification);
+    x3pio_document_release_text(document, &document->comment);
 }
 
 void x3pio_document_free(x3pio_document *document)
@@ -174,7 +175,7 @@ x3pio_status x3pio_document_copy(x3pio_document *dst, const x3pio_document *src)
     }
     /* The copy is built in a document of its own first, so that a failure
      * leaves the destination as it was. */
-    x3pio_document *copy = x3pio_document_make(&dst->allocator);
+    x3pio_document *copy = x3pio_document_allocate(&dst->allocator);
     if (copy == NULL)
     {
         return X3PIO_ERR_MEMORY;
@@ -246,84 +247,6 @@ x3pio_status x3pio_document_copy(x3pio_document *dst, const x3pio_document *src)
     return X3PIO_OK;
 }
 
-/* ---- checks ----------------------------------------------------------- */
-
-static bool rotation_valid(const x3pio_transformation *p, const char **message)
-{
-    const double tolerance = 1e-6;
-    const double *r = p->rotation;
-    for (size_t i = 0; i < 9; ++i)
-    {
-        if (!isfinite(r[i]) || r[i] < -1.0 - tolerance
-            || r[i] > 1.0 + tolerance)
-        {
-            *message = "The rotation must be finite and within [-1, 1]";
-            return false;
-        }
-    }
-    for (size_t i = 0; i < 3; ++i)
-    {
-        for (size_t j = 0; j < 3; ++j)
-        {
-            double dot = 0.0;
-            for (size_t k = 0; k < 3; ++k)
-            {
-                dot += r[3 * i + k] * r[3 * j + k];
-            }
-            if (fabs(dot - (i == j ? 1.0 : 0.0)) > tolerance)
-            {
-                *message = "The rotation matrix must be orthonormal";
-                return false;
-            }
-        }
-    }
-    const double det = r[0] * (r[4] * r[8] - r[5] * r[7])
-                       - r[1] * (r[3] * r[8] - r[5] * r[6])
-                       + r[2] * (r[3] * r[7] - r[4] * r[6]);
-    if (fabs(det - 1.0) > tolerance)
-    {
-        *message = "The rotation matrix must not mirror (determinant 1)";
-        return false;
-    }
-    return true;
-}
-
-static bool transformation_valid(const x3pio_transformation *p,
-                                 const char **message)
-{
-    for (size_t i = 0; i < 3; ++i)
-    {
-        if (!isfinite(p->offset[i]))
-        {
-            *message = "The offset of an axis must be finite";
-            return false;
-        }
-    }
-    return rotation_valid(p, message);
-}
-
-/* The increment of an axis: positive and finite; and for the z axis of integers
- * it can be left to the writer. */
-static bool increment_valid(const x3pio_axis *axis, bool may_be_auto)
-{
-    if (isfinite(axis->increment) && axis->increment > 0.0)
-    {
-        return true;
-    }
-    return may_be_auto && axis->increment == X3PIO_AUTO_INCREMENT
-           && (axis->storage == X3PIO_TYPE_INT16
-               || axis->storage == X3PIO_TYPE_INT32);
-}
-
-static bool axis_valid(const x3pio_axis *axis, bool may_be_auto)
-{
-    return (axis->type == X3PIO_AXIS_INCREMENTAL
-            || axis->type == X3PIO_AXIS_ABSOLUTE)
-           && increment_valid(axis, may_be_auto)
-           && (axis->type == X3PIO_AXIS_INCREMENTAL
-               || x3pio_type_is_stored(axis->storage));
-}
-
 size_t x3pio_document_point_count(const x3pio_document *document)
 {
     size_t count = 0;
@@ -334,89 +257,6 @@ size_t x3pio_document_point_count(const x3pio_document *document)
         return 0;
     }
     return count;
-}
-
-x3pio_status x3pio_document_validate(const x3pio_document *d,
-                                     const char **message)
-{
-    const char *text = "";
-    if (message != NULL)
-    {
-        *message = text;
-    }
-    if (d == NULL)
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-#define FAIL(reason)                                                           \
-    do                                                                         \
-    {                                                                          \
-        text = (reason);                                                       \
-        if (message != NULL)                                                   \
-        {                                                                      \
-            *message = text;                                                   \
-        }                                                                      \
-        return X3PIO_ERR_ARGUMENT;                                             \
-    } while (0)
-    if (d->axes[2].type != X3PIO_AXIS_ABSOLUTE)
-    {
-        FAIL("The z axis must be absolute");
-    }
-    for (size_t k = 0; k < 3; ++k)
-    {
-        if (!axis_valid(&d->axes[k], k == 2))
-        {
-            FAIL("The increment of an axis must be finite and positive, and "
-                 "an absolute axis needs a type that files store");
-        }
-    }
-    if (!transformation_valid(&d->transformation, &text))
-    {
-        if (message != NULL)
-        {
-            *message = text;
-        }
-        return X3PIO_ERR_ARGUMENT;
-    }
-    const bool cloud = d->feature == X3PIO_POINT_CLOUD;
-    if (cloud != d->dims.list)
-    {
-        FAIL("A point cloud is stored as a list, a profile or surface as a "
-             "matrix");
-    }
-    if (cloud
-        && (d->axes[0].type != X3PIO_AXIS_ABSOLUTE
-            || d->axes[1].type != X3PIO_AXIS_ABSOLUTE))
-    {
-        FAIL("All axes of a point cloud must be absolute");
-    }
-    if (d->feature == X3PIO_PROFILE && d->dims.size_y != 1)
-    {
-        FAIL("A profile has a matrix with one row (size_y of 1)");
-    }
-    size_t count = 0;
-    if (!x3pio_multiply(d->dims.size_x, d->dims.size_y, &count)
-        || !x3pio_multiply(count, d->dims.size_z, &count))
-    {
-        FAIL("The dimensions of the points are too large");
-    }
-    if (count == 0)
-    {
-        FAIL("The dimensions of the point data must not be zero");
-    }
-    if (d->has_metadata)
-    {
-        if (!d->has_date)
-        {
-            FAIL("The metadata needs a date");
-        }
-        if (d->probing == X3PIO_PROBING_UNKNOWN)
-        {
-            FAIL("The metadata needs the type of the probing system");
-        }
-    }
-#undef FAIL
-    return X3PIO_OK;
 }
 
 /* ---- revision, feature, axes, transformation, dimensions --------------------
@@ -484,7 +324,7 @@ x3pio_status x3pio_document_set_axis(x3pio_document *document,
                                      const x3pio_axis *axis)
 {
     if (document == NULL || axis == NULL || (unsigned)coordinate > 2U
-        || !axis_valid(axis, coordinate == X3PIO_Z))
+        || !x3pio_axis_valid(axis, coordinate == X3PIO_Z))
     {
         return X3PIO_ERR_ARGUMENT;
     }
@@ -521,7 +361,7 @@ x3pio_document_set_transformation(x3pio_document *document,
 {
     const char *message = "";
     if (document == NULL || transformation == NULL
-        || !transformation_valid(transformation, &message))
+        || !x3pio_transformation_valid(transformation, &message))
     {
         return X3PIO_ERR_ARGUMENT;
     }
@@ -566,306 +406,6 @@ x3pio_status x3pio_document_set_point_list(x3pio_document *document,
     }
     document->dims = (x3pio_dimensions){count, 1, 1, true};
     return X3PIO_OK;
-}
-
-/* ---- feature type, size and axes ---------------------------------------- */
-
-static bool step_valid(double step)
-{
-    return isfinite(step) && step > 0.0;
-}
-
-x3pio_status x3pio_document_set_feature_surface(
-    x3pio_document *document, size_t columns, size_t rows, double x_step,
-    double y_step, x3pio_type z_type, double z_increment, size_t layers)
-{
-    if (document == NULL || !step_valid(x_step) || !step_valid(y_step)
-        || !x3pio_type_is_stored(z_type)
-        || !(
-            step_valid(z_increment)
-            || (z_increment == X3PIO_AUTO_INCREMENT
-                && (z_type == X3PIO_TYPE_INT16 || z_type == X3PIO_TYPE_INT32))))
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    document->feature = X3PIO_SURFACE;
-    document->axes[0] =
-        (x3pio_axis){X3PIO_AXIS_INCREMENTAL, X3PIO_TYPE_DOUBLE, x_step};
-    document->axes[1] =
-        (x3pio_axis){X3PIO_AXIS_INCREMENTAL, X3PIO_TYPE_DOUBLE, y_step};
-    document->axes[2] = (x3pio_axis){X3PIO_AXIS_ABSOLUTE, z_type, z_increment};
-    document->dims = (x3pio_dimensions){columns, rows, layers, false};
-    return X3PIO_OK;
-}
-
-x3pio_status x3pio_document_set_feature_profile(x3pio_document *document,
-                                                size_t points, double x_step,
-                                                x3pio_type z_type,
-                                                double z_increment,
-                                                size_t layers)
-{
-    const x3pio_status status = x3pio_document_set_feature_surface(
-        document, points, 1, x_step, x_step, z_type, z_increment, layers);
-    if (status == X3PIO_OK)
-    {
-        document->feature = X3PIO_PROFILE;
-    }
-    return status;
-}
-
-x3pio_status x3pio_document_set_feature_point_cloud(x3pio_document *document,
-                                                    size_t count,
-                                                    x3pio_type type,
-                                                    double increment)
-{
-    if (document == NULL || !x3pio_type_is_stored(type)
-        || !step_valid(increment))
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    document->feature = X3PIO_POINT_CLOUD;
-    for (size_t k = 0; k < 3; ++k)
-    {
-        document->axes[k] = (x3pio_axis){X3PIO_AXIS_ABSOLUTE, type, increment};
-    }
-    document->dims = (x3pio_dimensions){count, 1, 1, true};
-    return X3PIO_OK;
-}
-
-x3pio_status x3pio_document_set_feature_irregular_surface(
-    x3pio_document *document, size_t columns, size_t rows, x3pio_type type,
-    double increment, size_t layers)
-{
-    const x3pio_status status =
-        x3pio_document_set_feature_point_cloud(document, 0, type, increment);
-    if (status == X3PIO_OK)
-    {
-        document->feature = X3PIO_SURFACE;
-        document->dims = (x3pio_dimensions){columns, rows, layers, false};
-    }
-    return status;
-}
-
-x3pio_status
-x3pio_document_set_feature_irregular_profile(x3pio_document *document,
-                                             size_t points, x3pio_type type,
-                                             double increment, size_t layers)
-{
-    if (!step_valid(increment))
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    const x3pio_status status = x3pio_document_set_feature_profile(
-        document, points, 1.0, type, increment, layers);
-    if (status == X3PIO_OK)
-    {
-        document->axes[X3PIO_X] =
-            (x3pio_axis){X3PIO_AXIS_ABSOLUTE, type, increment};
-    }
-    return status;
-}
-
-/* ---- metadata ----------------------------------------------------------- */
-
-bool x3pio_document_has_metadata(const x3pio_document *document)
-{
-    return document != NULL && document->has_metadata;
-}
-
-void x3pio_document_clear_metadata(x3pio_document *document)
-{
-    if (document == NULL)
-    {
-        return;
-    }
-    release_text(document, &document->creator);
-    release_text(document, &document->manufacturer);
-    release_text(document, &document->model);
-    release_text(document, &document->serial);
-    release_text(document, &document->version);
-    release_text(document, &document->probing_identification);
-    release_text(document, &document->comment);
-    document->has_metadata = false;
-    document->has_date = false;
-    document->has_calibration = false;
-    document->probing = X3PIO_PROBING_UNKNOWN;
-}
-
-/* Sets one text of the metadata and creates the metadata in the document. */
-static x3pio_status set_text(x3pio_document *document, char **field,
-                             const char *text)
-{
-    if (document == NULL || text == NULL)
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    if (!x3pio_document_assign(document, field, text, strlen(text)))
-    {
-        return X3PIO_ERR_MEMORY;
-    }
-    document->has_metadata = true;
-    return X3PIO_OK;
-}
-
-static const char *get_text(const x3pio_document *document, char *const *field)
-{
-    (void)document;
-    return *field != NULL ? *field : "";
-}
-
-#define TEXT_ACCESSORS(name, member)                                           \
-    const char *x3pio_document_##name(const x3pio_document *document)          \
-    {                                                                          \
-        return document != NULL ? get_text(document, &document->member) : "";  \
-    }                                                                          \
-    x3pio_status x3pio_document_set_##name(x3pio_document *document,           \
-                                           const char *(name))                 \
-    {                                                                          \
-        return set_text(document, document != NULL ? &document->member : NULL, \
-                        (name));                                               \
-    }
-
-TEXT_ACCESSORS(creator, creator)
-TEXT_ACCESSORS(manufacturer, manufacturer)
-TEXT_ACCESSORS(model, model)
-TEXT_ACCESSORS(serial, serial)
-TEXT_ACCESSORS(version, version)
-TEXT_ACCESSORS(comment, comment)
-
-const char *
-x3pio_document_probing_identification(const x3pio_document *document)
-{
-    return document != NULL
-               ? get_text(document, &document->probing_identification)
-               : "";
-}
-
-x3pio_status
-x3pio_document_set_probing_identification(x3pio_document *document,
-                                          const char *identification)
-{
-    return set_text(document,
-                    document != NULL ? &document->probing_identification : NULL,
-                    identification);
-}
-
-bool x3pio_document_date(const x3pio_document *document, x3pio_timestamp *date)
-{
-    if (document == NULL || !document->has_date)
-    {
-        return false;
-    }
-    if (date != NULL)
-    {
-        *date = document->date;
-    }
-    return true;
-}
-
-x3pio_status x3pio_document_set_date(x3pio_document *document,
-                                     const x3pio_timestamp *date)
-{
-    if (document == NULL || (date != NULL && !x3pio_timestamp_valid(date)))
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    document->has_date = date != NULL;
-    if (date != NULL)
-    {
-        document->date = *date;
-    }
-    document->has_metadata = true;
-    return X3PIO_OK;
-}
-
-bool x3pio_document_calibration_date(const x3pio_document *document,
-                                     x3pio_timestamp *date)
-{
-    if (document == NULL || !document->has_calibration)
-    {
-        return false;
-    }
-    if (date != NULL)
-    {
-        *date = document->calibration;
-    }
-    return true;
-}
-
-x3pio_status x3pio_document_set_calibration_date(x3pio_document *document,
-                                                 const x3pio_timestamp *date)
-{
-    if (document == NULL || (date != NULL && !x3pio_timestamp_valid(date)))
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    document->has_calibration = date != NULL;
-    if (date != NULL)
-    {
-        document->calibration = *date;
-    }
-    document->has_metadata = true;
-    return X3PIO_OK;
-}
-
-x3pio_probing x3pio_document_probing_type(const x3pio_document *document)
-{
-    return document != NULL ? document->probing : X3PIO_PROBING_UNKNOWN;
-}
-
-x3pio_status x3pio_document_set_probing_type(x3pio_document *document,
-                                             x3pio_probing type)
-{
-    if (document == NULL
-        || (type != X3PIO_PROBING_UNKNOWN && type != X3PIO_PROBING_CONTACTING
-            && type != X3PIO_PROBING_NON_CONTACTING
-            && type != X3PIO_PROBING_SOFTWARE))
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    document->probing = type;
-    document->has_metadata = true;
-    return X3PIO_OK;
-}
-
-x3pio_status x3pio_document_set_software_metadata(x3pio_document *document,
-                                                  const char *name,
-                                                  const char *version)
-{
-    if (document == NULL || name == NULL || version == NULL)
-    {
-        return X3PIO_ERR_ARGUMENT;
-    }
-    x3pio_timestamp now;
-    const x3pio_status clock = x3pio_timestamp_now(&now);
-    if (clock != X3PIO_OK)
-    {
-        return clock;
-    }
-    x3pio_document_clear_metadata(document);
-    x3pio_status status = x3pio_document_set_date(document, &now);
-    if (status == X3PIO_OK)
-    {
-        status = x3pio_document_set_model(document, name);
-    }
-    if (status == X3PIO_OK)
-    {
-        status = x3pio_document_set_version(document, version);
-    }
-    if (status == X3PIO_OK)
-    {
-        status =
-            x3pio_document_set_probing_type(document, X3PIO_PROBING_SOFTWARE);
-    }
-    if (status == X3PIO_OK)
-    {
-        status = x3pio_document_set_probing_identification(document, name);
-    }
-    if (status != X3PIO_OK)
-    {
-        x3pio_document_clear_metadata(document);
-    }
-    return status;
 }
 
 /* ---- vendors ------------------------------------------------------------ */

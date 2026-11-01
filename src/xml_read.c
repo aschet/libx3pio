@@ -1100,7 +1100,7 @@ x3pio_status x3pio_xml_parse(const x3pio_allocator *allocator,
     s.collecting = -1;
     s.point = x3pio_decimal_point_now();
     x3pio_buffer_init(&s.text, allocator);
-    s.document = x3pio_document_make(allocator);
+    s.document = x3pio_document_allocate(allocator);
     unsigned char *chunk = x3pio_allocate(allocator, PARSE_CHUNK);
     if (s.document == NULL || chunk == NULL)
     {

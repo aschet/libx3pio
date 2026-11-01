@@ -86,7 +86,27 @@ struct x3pio_document
  * @param allocator The allocator, which is copied.
  * @return The document, or null if there is no memory.
  */
-x3pio_document *x3pio_document_make(const x3pio_allocator *allocator);
+x3pio_document *x3pio_document_allocate(const x3pio_allocator *allocator);
+
+/**
+ * Checks a transformation: finite numbers and a rotation matrix.
+ *
+ * @param[in] transformation The transformation.
+ * @param[out] message Receives the reason if it is invalid; may be null.
+ */
+bool x3pio_transformation_valid(const x3pio_transformation *transformation,
+                                const char **message);
+
+/**
+ * Checks an axis: the increment, and for a stored axis the type.
+ *
+ * @param[in] axis The axis.
+ * @param may_be_auto Whether the increment may be X3PIO_AUTO_INCREMENT.
+ */
+bool x3pio_axis_valid(const x3pio_axis *axis, bool may_be_auto);
+
+/** Releases a text of the document and sets the field to null. */
+void x3pio_document_release_text(x3pio_document *document, char **field);
 
 /**
  * Creates a document that takes its memory from an allocator, which the tests

@@ -58,6 +58,9 @@ set(X3PIO_SOURCES
     src/samples.h
     src/common.h
     src/document.c
+    src/document_check.c
+    src/document_feature.c
+    src/document_metadata.c
     src/document.h
     src/convert.c
     src/layout.c
