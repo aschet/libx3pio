@@ -47,7 +47,9 @@ static void *counting_allocate(void *user, size_t size)
         free(block);
         return NULL;
     }
-    if ((uintptr_t)block % 16 != 0)
+    /* The alignment that malloc() gives for any type: twice the size of a
+     * pointer (8 bytes on 32-bit systems, 16 on 64-bit ones). */
+    if ((uintptr_t)block % (2 * sizeof(void *)) != 0)
     {
         ++c->misaligned;
     }
@@ -344,7 +346,7 @@ static void test_failures(void)
 static void test_arguments(void)
 {
     /* Both callbacks are required, and null selects malloc and free. */
-    counter c;
+    static counter c;
     reset(&c, 0);
     x3pio_allocator allocator = allocator_of(&c);
     x3pio_reader *reader = NULL;

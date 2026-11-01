@@ -12,6 +12,11 @@
 #include <libxml/xmlschemas.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 const char *test_path(const char *relative)
 {
     static char path[4][1024];
@@ -441,7 +446,17 @@ x3pio_status create_in_buffer(x3pio_writer *writer, const x3pio_document *doc,
 
 bool read_whole_file(const char *path, x3pio_buffer *out)
 {
+#ifdef _WIN32
+    /* The path is in UTF-8, and that of fopen() is in the code page. */
+    wchar_t wide[MAX_PATH];
+    FILE *file = NULL;
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide, MAX_PATH) > 0)
+    {
+        file = _wfopen(wide, L"rb");
+    }
+#else
     FILE *file = fopen(path, "rb");
+#endif
     if (file == NULL)
     {
         return false;

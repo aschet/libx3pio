@@ -200,7 +200,8 @@ static void test_timestamp_text(void)
 
     char text[64];
     x3pio_timestamp t = {2026, 3, 4, 12, 30, 15, 500000, true, 60};
-    CHECK(x3pio_timestamp_format(&t, text, sizeof text) == strlen(text));
+    const size_t written = x3pio_timestamp_format(&t, text, sizeof text);
+    CHECK(written == strlen(text));
     CHECK_STRING(text, "2026-03-04T12:30:15.5+01:00");
     t = (x3pio_timestamp){2026, 3, 4, 1, 2, 3, 0, false, 0};
     x3pio_timestamp_format(&t, text, sizeof text);
