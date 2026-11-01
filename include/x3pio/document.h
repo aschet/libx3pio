@@ -6,7 +6,7 @@
 
 /**
  * @file
- * The description of a file: what main.xml says about the points and the
+ * The document of a file: what main.xml states about the points and the
  * measurement.
  *
  * @par Content
@@ -33,11 +33,11 @@ extern "C"
 #endif
 
 /**
- * Description of a file, with the names of the elements of main.xml.
+ * The content of main.xml, with the names of its elements.
  *
  * Setters check what depends on their field alone. x3pio_document_validate()
- * and the creation of a file check the rest, for example that a profile has one
- * row.
+ * and the creation of a file check the rest, for example that a profile has a
+ * `size_y` of 1.
  */
 typedef struct x3pio_document x3pio_document;
 
@@ -231,21 +231,6 @@ X3PIO_API x3pio_status x3pio_document_set_point_list(x3pio_document *document,
 X3PIO_API size_t x3pio_document_point_count(const x3pio_document *document);
 
 /**
- * Returns the number of columns of the matrix that the functions transfer: the
- * points of a row, `size_x`, and 1 for a list of points, which is a single
- * column.
- */
-X3PIO_API size_t x3pio_document_columns(const x3pio_document *document);
-
-/**
- * Returns the number of rows of that matrix: `size_y` times `size_z`, the rows
- * of the first layer, then those of the second layer, and so on; and the number
- * of points for a list of points, which can be read and written in any number
- * of parts. It is 0 if the product does not fit a size_t.
- */
-X3PIO_API size_t x3pio_document_rows(const x3pio_document *document);
-
-/**
  * Tells whether a file carries a mask of the points that were measured: a file
  * of validity bits, or in a file of text the points without a value. The
  * document of a program has none. Floats mark the points that were not measured
@@ -256,7 +241,7 @@ X3PIO_API bool x3pio_document_has_validity(const x3pio_document *document);
 /** @} */
 
 /**
- * @name Ready-made descriptions
+ * @name Feature type, size and axes
  *
  * Each function resets the feature type, the axes and the dimensions, and
  * keeps the rest, the metadata and the transformation.
@@ -266,10 +251,10 @@ X3PIO_API bool x3pio_document_has_validity(const x3pio_document *document);
 /**
  * Sets the feature to a surface on a regular grid: `columns` points along x and
  * `rows` along y, `x_step` and `y_step` metres apart, in `layers` layers. Only
- * the heights are stored, as `z_type`. A float type stores the metres, with the
- * z increment 1. An integer type needs an increment in metres that fits the
- * heights, or X3PIO_AUTO_INCREMENT, which x3pio_write_heights() resolves, see
- * x3pio_suggest_increment_for_range().
+ * the z coordinates are stored, as `z_type`. A float type stores the metres,
+ * with the z increment 1. An integer type needs an increment in metres that
+ * fits the z coordinates, or X3PIO_AUTO_INCREMENT, which x3pio_write_z()
+ * resolves, see x3pio_suggest_increment_for_range().
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
@@ -324,8 +309,8 @@ X3PIO_API x3pio_status x3pio_document_set_feature_irregular_profile(
 /**
  * @name Metadata
  *
- * The record of the measurement. It is optional. Every setter makes the
- * document carry it, and a file that has it needs the date and the type of the
+ * The record of the measurement. It is optional. Every setter creates it in
+ * the document, and a file that has it needs the date and the type of the
  * probing system. The strings are UTF-8, and a getter returns an empty string
  * for a text that is not set. The pointer of a getter is valid until the text
  * is set again or the document is freed.
@@ -343,9 +328,9 @@ X3PIO_API bool x3pio_document_has_metadata(const x3pio_document *document);
 X3PIO_API void x3pio_document_clear_metadata(x3pio_document *document);
 
 /**
- * Sets the metadata of data that software made, for example a filter or a
- * simulation: made now, with the software as the instrument and as the probing
- * system. The previous metadata is replaced.
+ * Sets the metadata of data that software created, for example a filter or a
+ * simulation: created now, with the software as the instrument and as the
+ * probing system. The previous metadata is replaced.
  *
  * @param[in,out] document The document.
  * @param[in] name The name of the software.
@@ -397,11 +382,11 @@ X3PIO_API bool x3pio_document_calibration_date(const x3pio_document *document,
 X3PIO_API x3pio_status x3pio_document_set_calibration_date(
     x3pio_document *document, const x3pio_timestamp *date);
 
-/** Returns who made the data set. */
+/** Returns who created the data set. */
 X3PIO_API const char *x3pio_document_creator(const x3pio_document *document);
 
 /**
- * Sets who made the data set.
+ * Sets who created the data set.
  *
  * @retval X3PIO_ERR_ARGUMENT A pointer is null.
  * @retval X3PIO_ERR_MEMORY An allocation failed.
@@ -452,12 +437,13 @@ x3pio_document_probing_type(const x3pio_document *document);
 X3PIO_API x3pio_status x3pio_document_set_probing_type(x3pio_document *document,
                                                        x3pio_probing type);
 
-/** Returns the description of the probing system. */
+/** Returns the identification of the probing system. */
 X3PIO_API const char *
 x3pio_document_probing_identification(const x3pio_document *document);
 
 /**
- * Sets the description of the probing system, as x3pio_document_set_creator().
+ * Sets the identification of the probing system, as
+ * x3pio_document_set_creator().
  */
 X3PIO_API x3pio_status x3pio_document_set_probing_identification(
     x3pio_document *document, const char *identification);

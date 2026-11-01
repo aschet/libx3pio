@@ -63,9 +63,8 @@ static x3pio_status try_read(archive *a, bool verify, double *z)
     if (status == X3PIO_OK)
     {
         double local[12];
-        status =
-            x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                               z != NULL ? z : local);
+        status = x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
+                              z != NULL ? z : local);
     }
     x3pio_reader_free(reader);
     x3pio_buffer_free(&keep);
@@ -395,7 +394,7 @@ static void test_numbers_in_text(void)
     x3pio_fields_init(&into);
     into.z = (x3pio_field){metres, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
     into.valid = (x3pio_field){flags, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_read_data(r, &into, 3));
+    CHECK_OK(x3pio_read_data(r, &into, 12));
     CHECK(flags[0] == 0 && flags[1] == 0 && flags[2] == 0 && flags[3] == 1);
     CHECK(isinf(metres[0]) || isnan(metres[0]));
     x3pio_reader_free(r);
@@ -513,9 +512,9 @@ static void test_point_checksum(void)
     x3pio_fields into;
     x3pio_fields_init(&into);
     into.z = (x3pio_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
-    CHECK_OK(x3pio_read_points(r, &into, 1));
-    CHECK_OK(x3pio_read_points(r, &into, 1));
-    CHECK_STATUS(X3PIO_ERR_CHECKSUM, x3pio_read_points(r, &into, 1));
+    CHECK_OK(x3pio_read_points(r, &into, 4));
+    CHECK_OK(x3pio_read_points(r, &into, 4));
+    CHECK_STATUS(X3PIO_ERR_CHECKSUM, x3pio_read_points(r, &into, 4));
     CHECK_STRING(x3pio_reader_error_message(r),
                  "The checksum of the point data does not match");
     /* An error ends the reading. */
@@ -595,7 +594,7 @@ static void test_infinite_value(void)
     x3pio_fields_init(&into);
     into.z = (x3pio_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
     into.valid = (x3pio_field){flags, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_read_data(r, &into, 3));
+    CHECK_OK(x3pio_read_data(r, &into, 12));
     CHECK(flags[3] == 0 && flags[4] == 1 && isinf(z[3]));
     x3pio_reader_free(r);
     x3pio_buffer_free(&keep);
@@ -1280,8 +1279,8 @@ static void test_damaged_zip(void)
         if (status == X3PIO_OK)
         {
             double z[12];
-            (void)x3pio_read_heights(reader,
-                                     x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z);
+            (void)x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
+                               z);
         }
         x3pio_reader_free(reader);
         x3pio_buffer_free(&damaged);

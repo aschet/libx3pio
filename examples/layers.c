@@ -9,10 +9,11 @@
 #define COLUMNS 64
 #define ROWS 48
 
-/* A file can hold several layers of a surface. They are rows that follow each
- * other, so an image is written or read by as many rows as it has, and each
- * call can name another array: the images of an application are separate
- * arrays. The layers come in the order of the file. */
+/* A file can hold several layers of a surface. The layer, w, is the slowest
+ * index of the points, so the layers follow each other in the file. A layer is
+ * written or read by as many points as it has, and each call can name another
+ * array: the images of an application are separate arrays. The layers come in
+ * the order of the file. */
 int main(int argc, char **argv)
 {
     const char *path = argc > 1 ? argv[1] : "layers.x3p";
@@ -40,7 +41,7 @@ int main(int argc, char **argv)
         x3pio_const_fields_init(&from);
         from.z = (x3pio_const_field){images[l],
                                      *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
-        status = x3pio_write_points(writer, &from, ROWS);
+        status = x3pio_write_points(writer, &from, (size_t)ROWS * COLUMNS);
     }
     if (status == X3PIO_OK)
     {
@@ -62,10 +63,10 @@ int main(int argc, char **argv)
         x3pio_fields into;
         x3pio_fields_init(&into);
         into.z = (x3pio_field){back[l], *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
-        status = x3pio_read_points(reader, &into, ROWS);
+        status = x3pio_read_points(reader, &into, (size_t)ROWS * COLUMNS);
         if (status == X3PIO_OK)
         {
-            printf("layer %zu: first height %g m\n", l, (double)back[l][1]);
+            printf("layer %zu: first z %g m\n", l, (double)back[l][1]);
         }
     }
     x3pio_reader_free(reader);

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-/** @example write_heights.c */
+/** @example write_z.c */
 
-/** @example read_heights.c */
+/** @example read_z.c */
 
 /** @example read_stream.c */
 

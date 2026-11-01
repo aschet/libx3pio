@@ -147,6 +147,18 @@ size_t x3pio_document_absolute_count(const x3pio_document *document);
 size_t x3pio_document_record_size(const x3pio_document *document);
 
 /**
+ * The number of points in a run along u, the unit in which a matrix is
+ * transferred: `size_x`, and 1 for a list of points.
+ */
+size_t x3pio_document_columns(const x3pio_document *document);
+
+/**
+ * The number of runs along u in the whole document: `size_y` times `size_z`,
+ * and the number of points for a list. 0 if the product does not fit a size_t.
+ */
+size_t x3pio_document_rows(const x3pio_document *document);
+
+/**
  * Returns the position of the value of an absolute axis in a record of the
  * binary data file.
  *

@@ -6,12 +6,13 @@
 
 /**
  * @file
- * @brief Reading of the rows of points into the buffers of the program.
+ * @brief Reading of the points into the buffers of the program.
  */
 
 #include "allocator.h"
-#include "codec.h"
+#include "matrix.h"
 #include "reader.h"
+#include "samples.h"
 #include "text.h"
 #include <math.h>
 
@@ -250,7 +251,7 @@ static x3pio_status check_fields(x3pio_reader *reader, const x3pio_fields *into,
                               "The mask of the points is read as bytes by "
                               "x3pio_read_data()");
         }
-        if (!x3pio_matrix_make(&b->matrix[i], fields[i]->data,
+        if (!x3pio_matrix_init(&b->matrix[i], fields[i]->data,
                                &fields[i]->layout, columns, rows, true))
         {
             return x3pio_fail(
@@ -337,7 +338,7 @@ static void convert(x3pio_reader *reader, const bound *b, mode m, size_t first,
 }
 
 static x3pio_status read_rows(x3pio_reader *reader, const x3pio_fields *into,
-                              size_t rows, mode m)
+                              size_t points, mode m)
 {
     if (reader == NULL || into == NULL)
     {
@@ -349,11 +350,18 @@ static x3pio_status read_rows(x3pio_reader *reader, const x3pio_fields *into,
                           reader->opened ? "An earlier error ended the reading"
                                          : "No file is open");
     }
+    const size_t columns = x3pio_document_columns(reader->document);
+    if (points % columns != 0)
+    {
+        return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
+                          "A matrix is read in runs of SizeX points along u");
+    }
+    const size_t rows = points / columns;
     const size_t total_rows = x3pio_document_rows(reader->document);
     if (rows > total_rows - reader->rows_read)
     {
         return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
-                          "More rows than the file has left");
+                          "More points than the file has left");
     }
     bound b;
     x3pio_status status =
@@ -362,9 +370,8 @@ static x3pio_status read_rows(x3pio_reader *reader, const x3pio_fields *into,
     {
         return status;
     }
-    const size_t columns = x3pio_document_columns(reader->document);
     const size_t first_point = reader->rows_read * columns;
-    const size_t count = rows * columns;
+    const size_t count = points;
     for (size_t done = 0; done < count; done += reader->chunk)
     {
         const size_t n =
@@ -425,37 +432,37 @@ static x3pio_status read_rows(x3pio_reader *reader, const x3pio_fields *into,
 }
 
 x3pio_status x3pio_read_data(x3pio_reader *reader, const x3pio_fields *into,
-                             size_t rows)
+                             size_t points)
 {
-    return read_rows(reader, into, rows, MODE_DATA);
+    return read_rows(reader, into, points, MODE_DATA);
 }
 
 x3pio_status x3pio_read_points(x3pio_reader *reader, const x3pio_fields *into,
-                               size_t rows)
+                               size_t points)
 {
-    return read_rows(reader, into, rows, MODE_POINTS);
+    return read_rows(reader, into, points, MODE_POINTS);
 }
 
 x3pio_status x3pio_read_points_in(x3pio_reader *reader,
                                   x3pio_coordinate_system system,
-                                  const x3pio_fields *into, size_t rows)
+                                  const x3pio_fields *into, size_t points)
 {
     switch (system)
     {
     case X3PIO_COORDINATES_VIEW:
-        return read_rows(reader, into, rows, MODE_POINTS);
+        return read_rows(reader, into, points, MODE_POINTS);
     case X3PIO_COORDINATES_VIEW_OFFSET:
-        return read_rows(reader, into, rows, MODE_TRANSLATED);
+        return read_rows(reader, into, points, MODE_TRANSLATED);
     case X3PIO_COORDINATES_GLOBAL:
-        return read_rows(reader, into, rows, MODE_GLOBAL);
+        return read_rows(reader, into, points, MODE_GLOBAL);
     }
     return reader != NULL ? x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
                                        "The coordinate system is not defined")
                           : X3PIO_ERR_ARGUMENT;
 }
 
-x3pio_status x3pio_read_heights(x3pio_reader *reader,
-                                const x3pio_layout *layout, void *dst)
+x3pio_status x3pio_read_z(x3pio_reader *reader, const x3pio_layout *layout,
+                          void *dst)
 {
     if (reader == NULL || layout == NULL || dst == NULL)
     {
@@ -464,11 +471,11 @@ x3pio_status x3pio_read_heights(x3pio_reader *reader,
     if (reader->opened && !reader->failed && reader->rows_read != 0)
     {
         return x3pio_fail(&reader->message, X3PIO_ERR_STATE,
-                          "Rows were read already");
+                          "Points were read already");
     }
     x3pio_fields into;
     x3pio_fields_init(&into);
     into.z = (x3pio_field){dst, *layout};
-    return read_rows(reader, &into, x3pio_document_rows(reader->document),
-                     MODE_POINTS);
+    return read_rows(reader, &into,
+                     x3pio_document_point_count(reader->document), MODE_POINTS);
 }

@@ -10,8 +10,8 @@
 
 static float heights[ROWS * COLUMNS];
 
-/* Generates a ripple of heights in metres, with a region of points that are not
- * measured, which are NaN. */
+/* Generates a ripple of z coordinates in metres, with a region of points that
+ * are not measured, which are NaN. */
 static void generate_heights(void)
 {
     for (size_t row = 0; row < ROWS; ++row)
@@ -29,9 +29,10 @@ static void generate_heights(void)
     }
 }
 
-/* Describes the file: a surface of 256 by 192 points 1 micrometre apart, whose
- * heights are stored as `type`. An integer type with X3PIO_AUTO_INCREMENT
- * leaves the increment to the writer, which selects it from the heights. */
+/* Defines the document: a surface of 256 by 192 points 1 micrometre apart,
+ * whose z coordinates are stored as `type`. An integer type with
+ * X3PIO_AUTO_INCREMENT leaves the increment to the writer, which selects it
+ * from the z coordinates. */
 static int write_surface(const char *path, x3pio_revision revision,
                          x3pio_type type)
 {
@@ -43,8 +44,9 @@ static int write_surface(const char *path, x3pio_revision revision,
         type == X3PIO_TYPE_FLOAT ? 1.0 : X3PIO_AUTO_INCREMENT, 1);
 
     /* The metadata is optional. A file that has it needs a date and the kind of
-     * the probing system. This is the shortcut for data that software made. */
-    x3pio_document_set_software_metadata(document, "write_heights", "1.0");
+     * the probing system. This is the shortcut for data that software created.
+     */
+    x3pio_document_set_software_metadata(document, "write_z", "1.0");
     x3pio_document_set_creator(document, "Jane Doe");
 
     x3pio_writer *writer = NULL;
@@ -52,10 +54,10 @@ static int write_surface(const char *path, x3pio_revision revision,
     x3pio_status status = x3pio_create_file(writer, path, document);
     if (status == X3PIO_OK)
     {
-        /* The layout says how the heights lie in memory: here, floats that
-         * follow each other. */
-        status = x3pio_write_heights(
-            writer, x3pio_layout_packed(X3PIO_TYPE_FLOAT), heights);
+        /* The layout says how the z coordinates lie in memory: here, floats
+         * that follow each other. */
+        status = x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_FLOAT),
+                               heights);
     }
     if (status == X3PIO_OK)
     {

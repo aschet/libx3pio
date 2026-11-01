@@ -30,15 +30,16 @@ void check(x3pio_status status, const char *message)
     }
 }
 
-// The description of the surface as float metres, with the metadata of the
+// The document of the surface as float metres, with the metadata of the
 // source.
 Document copy_document(const x3pio_document *source)
 {
     x3pio_document *document = nullptr;
     x3pio_document_create(&document);
     x3pio_document_copy(document, source);
+    const x3pio_dimensions size = x3pio_document_dimensions(source);
     x3pio_document_set_feature_surface(
-        document, x3pio_document_columns(source), x3pio_document_rows(source),
+        document, size.size_x, size.size_y,
         x3pio_document_axis(source, X3PIO_X).increment,
         x3pio_document_axis(source, X3PIO_Y).increment, X3PIO_TYPE_FLOAT, 1.0,
         1);
@@ -79,13 +80,14 @@ x3pio_layout bottom_up(const cv::Mat &image)
     return layout;
 }
 
-cv::Mat read_heights(x3pio_reader *reader)
+cv::Mat read_z(x3pio_reader *reader)
 {
     const x3pio_document *document = x3pio_reader_document(reader);
-    cv::Mat heights(static_cast<int>(x3pio_document_rows(document)),
-                    static_cast<int>(x3pio_document_columns(document)), CV_32F);
+    const x3pio_dimensions size = x3pio_document_dimensions(document);
+    cv::Mat heights(static_cast<int>(size.size_y),
+                    static_cast<int>(size.size_x), CV_32F);
     const x3pio_layout layout = bottom_up(heights);
-    check(x3pio_read_heights(reader, &layout, heights.ptr(heights.rows - 1)),
+    check(x3pio_read_z(reader, &layout, heights.ptr(heights.rows - 1)),
           x3pio_reader_error_message(reader));
     return heights;
 }
@@ -109,16 +111,15 @@ cv::Mat smooth(const cv::Mat &heights)
     return smoothed;
 }
 
-void write_heights(const char *path, const x3pio_document *source,
-                   const cv::Mat &heights)
+void write_z(const char *path, const x3pio_document *source,
+             const cv::Mat &heights)
 {
     Document document = copy_document(source);
     Writer writer = create_writer();
     check(x3pio_create_file(writer.get(), path, document.get()),
           x3pio_writer_error_message(writer.get()));
     const x3pio_layout layout = bottom_up(heights);
-    check(x3pio_write_heights(writer.get(), &layout,
-                              heights.ptr(heights.rows - 1)),
+    check(x3pio_write_z(writer.get(), &layout, heights.ptr(heights.rows - 1)),
           x3pio_writer_error_message(writer.get()));
     check(x3pio_end_file(writer.get()),
           x3pio_writer_error_message(writer.get()));
@@ -128,14 +129,14 @@ cv::Mat read_into_region(const char *path)
 {
     const Reader reader = open(path);
     const x3pio_document *document = x3pio_reader_document(reader.get());
-    const int columns = static_cast<int>(x3pio_document_columns(document));
-    const int rows = static_cast<int>(x3pio_document_rows(document));
+    const x3pio_dimensions size = x3pio_document_dimensions(document);
+    const int columns = static_cast<int>(size.size_x);
+    const int rows = static_cast<int>(size.size_y);
     cv::Mat canvas = cv::Mat::zeros(rows + 100, columns + 200, CV_32F);
     cv::Mat region = canvas(cv::Rect(100, 50, columns, rows));
     const x3pio_layout layout = bottom_up(region);
-    check(
-        x3pio_read_heights(reader.get(), &layout, region.ptr(region.rows - 1)),
-        x3pio_reader_error_message(reader.get()));
+    check(x3pio_read_z(reader.get(), &layout, region.ptr(region.rows - 1)),
+          x3pio_reader_error_message(reader.get()));
     return canvas;
 }
 
@@ -153,8 +154,8 @@ int main(int argc, char **argv)
     try
     {
         const Reader reader = open(input);
-        const cv::Mat smoothed = smooth(read_heights(reader.get()));
-        write_heights(output, x3pio_reader_document(reader.get()), smoothed);
+        const cv::Mat smoothed = smooth(read_z(reader.get()));
+        write_z(output, x3pio_reader_document(reader.get()), smoothed);
         read_into_region(input);
     }
     catch (const std::exception &error)

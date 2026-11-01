@@ -469,8 +469,7 @@ void make_base_file(const file_spec *spec, x3pio_buffer *out)
     CHECK_OK(x3pio_writer_set_storage(writer, spec->storage));
     CHECK_OK(x3pio_writer_set_compression(writer, &spec->compression));
     CHECK_OK(create_in_buffer(writer, doc, out));
-    CHECK_OK(
-        x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+    CHECK_OK(x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
     x3pio_document_free(doc);
@@ -501,7 +500,6 @@ double *read_heights_of(x3pio_reader *reader)
     const size_t count =
         x3pio_document_point_count(x3pio_reader_document(reader));
     double *z = malloc(count * sizeof *z);
-    CHECK_OK(
-        x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+    CHECK_OK(x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     return z;
 }

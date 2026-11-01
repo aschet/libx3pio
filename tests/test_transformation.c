@@ -217,14 +217,14 @@ static void test_grid(void)
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     const x3pio_const_fields from = const_fields_of(gx, gy, gz);
     CHECK_OK(
-        x3pio_write_points_in(writer, X3PIO_COORDINATES_GLOBAL, &from, ROWS));
+        x3pio_write_points_in(writer, X3PIO_COORDINATES_GLOBAL, &from, COUNT));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
 
     /* The heights of the file are the z of the view system. */
     x3pio_reader *reader = open_bytes(&bytes);
     double back[COUNT];
-    CHECK_OK(x3pio_read_heights(reader, packed(X3PIO_TYPE_DOUBLE), back));
+    CHECK_OK(x3pio_read_z(reader, packed(X3PIO_TYPE_DOUBLE), back));
     for (size_t i = 0; i < COUNT; ++i)
     {
         if (i == 5)
@@ -244,7 +244,7 @@ static void test_grid(void)
     x3pio_fields into = fields_of(x, y, z);
     reader = open_bytes(&bytes);
     CHECK_OK(
-        x3pio_read_points_in(reader, X3PIO_COORDINATES_GLOBAL, &into, ROWS));
+        x3pio_read_points_in(reader, X3PIO_COORDINATES_GLOBAL, &into, COUNT));
     for (size_t i = 0; i < COUNT; ++i)
     {
         if (i == 5)
@@ -338,7 +338,7 @@ static void test_translated(void)
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     x3pio_const_fields from = const_fields_of(NULL, NULL, z);
     CHECK_OK(x3pio_write_points_in(writer, X3PIO_COORDINATES_VIEW_OFFSET, &from,
-                                   ROWS));
+                                   COUNT));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
 
@@ -348,12 +348,12 @@ static void test_translated(void)
     double y[COUNT];
     x3pio_fields into = fields_of(NULL, NULL, view_z);
     x3pio_reader *reader = open_bytes(&bytes);
-    CHECK_OK(x3pio_read_points(reader, &into, ROWS));
+    CHECK_OK(x3pio_read_points(reader, &into, COUNT));
     x3pio_reader_free(reader);
     into = fields_of(x, y, translated_z);
     reader = open_bytes(&bytes);
     CHECK_OK(x3pio_read_points_in(reader, X3PIO_COORDINATES_VIEW_OFFSET, &into,
-                                  ROWS));
+                                  COUNT));
     x3pio_reader_free(reader);
     for (size_t i = 0; i < COUNT; ++i)
     {
@@ -374,11 +374,11 @@ static void test_translated(void)
     reader = open_bytes(&bytes);
     CHECK_STATUS(
         X3PIO_ERR_ARGUMENT,
-        x3pio_read_points_in(reader, (x3pio_coordinate_system)7, &into, ROWS));
+        x3pio_read_points_in(reader, (x3pio_coordinate_system)7, &into, COUNT));
     x3pio_reader_free(reader);
     CHECK_STATUS(
         X3PIO_ERR_ARGUMENT,
-        x3pio_read_points_in(NULL, (x3pio_coordinate_system)7, &into, ROWS));
+        x3pio_read_points_in(NULL, (x3pio_coordinate_system)7, &into, COUNT));
     x3pio_reader_free(NULL);
     x3pio_buffer_free(&bytes);
     x3pio_document_free(doc);
@@ -413,7 +413,7 @@ static void test_layers_in_separate_buffers(void)
     for (size_t l = 0; l < LAYERS; ++l)
     {
         const x3pio_const_fields from = const_fields_of(NULL, NULL, images[l]);
-        CHECK_OK(x3pio_write_points(writer, &from, ROWS));
+        CHECK_OK(x3pio_write_points(writer, &from, PIXELS));
     }
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
@@ -423,7 +423,7 @@ static void test_layers_in_separate_buffers(void)
     for (size_t l = 0; l < LAYERS; ++l)
     {
         const x3pio_fields into = fields_of(NULL, NULL, back[l]);
-        CHECK_OK(x3pio_read_points(reader, &into, ROWS));
+        CHECK_OK(x3pio_read_points(reader, &into, PIXELS));
     }
     for (size_t l = 0; l < LAYERS; ++l)
     {
@@ -434,7 +434,7 @@ static void test_layers_in_separate_buffers(void)
     }
     /* All rows are used up. */
     const x3pio_fields more = fields_of(NULL, NULL, back[0]);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &more, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &more, COLUMNS));
     x3pio_reader_free(reader);
     x3pio_buffer_free(&bytes);
     x3pio_document_free(doc);

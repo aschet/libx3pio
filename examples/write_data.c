@@ -50,7 +50,7 @@ int main(int argc, char **argv)
             (x3pio_const_field){counts, *x3pio_layout_packed(X3PIO_TYPE_INT16)};
         from.valid =
             (x3pio_const_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-        status = x3pio_write_data(writer, &from, ROWS);
+        status = x3pio_write_data(writer, &from, (size_t)ROWS * COLUMNS);
     }
     if (status == X3PIO_OK)
     {

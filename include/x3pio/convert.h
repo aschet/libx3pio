@@ -18,9 +18,9 @@
  *   were measured.
  * - x3pio_decode_values() and x3pio_encode_values() convert between stored
  *   values and metres. They need a document and no reader or writer.
- * - x3pio_read_points() and x3pio_write_points() transfer rows of points in
- *   metres, and x3pio_read_heights() and x3pio_write_heights() transfer the
- *   whole matrix of heights.
+ * - x3pio_read_points() and x3pio_write_points() transfer 3-d points in metres,
+ *   and x3pio_read_z() and x3pio_write_z() transfer the z coordinates of all
+ *   points.
  *
  * @par Points That Were Not Measured
  * A file of floats marks a point that was not measured by NaN in z. A file of
@@ -37,7 +37,7 @@
  * @par Increment
  * A file of integers trades range against resolution by the increment of its
  * axis. x3pio_suggest_increment_for_range() and x3pio_suggest_increment() give
- * the smallest increment that fits the values, and x3pio_write_heights() uses
+ * the smallest increment that fits the values, and x3pio_write_z() uses
  * it if the z axis of the document has X3PIO_AUTO_INCREMENT.
  */
 
@@ -64,7 +64,7 @@ extern "C"
  * NaN. The function needs no handle, so it works on data from any source. The
  * axis has to be an absolute one.
  *
- * @param[in] document The document that describes the values.
+ * @param[in] document The document with the axes of the values.
  * @param coordinate The axis.
  * @param[in] stored The values, which follow each other.
  * @param count The number of values.
@@ -89,7 +89,7 @@ X3PIO_API x3pio_status x3pio_decode_values(const x3pio_document *document,
  * an integer type and stays NaN for a float type. Integer results are rounded
  * to the nearest value, a tie to the even one.
  *
- * @param[in] document The document that describes the values.
+ * @param[in] document The document with the axes of the values.
  * @param coordinate The axis.
  * @param[in] metres The coordinates.
  * @param count The number of coordinates.
@@ -107,34 +107,35 @@ X3PIO_API x3pio_status x3pio_encode_values(const x3pio_document *document,
                                            void *stored);
 
 /**
- * Returns the increment that uses the range of an integer type best for heights
- * between `lowest` and `highest` metres, or 1 for a floating point type.
+ * Returns the increment that uses the range of an integer type best for z
+ * coordinates between `lowest` and `highest` metres, or 1 for a floating point
+ * type.
  *
  * @param type The type of the axis.
- * @param lowest The lowest height in metres.
- * @param highest The highest height in metres.
+ * @param lowest The lowest z coordinate in metres.
+ * @param highest The highest z coordinate in metres.
  */
 X3PIO_API double x3pio_suggest_increment_for_range(x3pio_type type,
                                                    double lowest,
                                                    double highest);
 
 /**
- * Determines the increment for a matrix of heights in metres, as
- * x3pio_write_heights() does: the range of the finite heights is determined and
+ * Determines the increment for a matrix of z coordinates in metres, as
+ * x3pio_write_z() does: the range of the finite z coordinates is determined and
  * passed to x3pio_suggest_increment_for_range(). It is for x3pio_write_data()
  * with an integer type.
  *
  * @param type The type of the axis.
  * @param[in] layout The layout of the buffer.
- * @param[in] heights The heights.
- * @param rows The number of rows.
- * @param columns The number of columns.
+ * @param[in] z The z coordinates.
+ * @param rows The number of rows of the matrix of the program.
+ * @param columns The number of columns of the matrix of the program.
  * @param[out] increment Receives the increment.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null or the layout is invalid.
  */
 X3PIO_API x3pio_status x3pio_suggest_increment(x3pio_type type,
                                                const x3pio_layout *layout,
-                                               const void *heights, size_t rows,
+                                               const void *z, size_t rows,
                                                size_t columns,
                                                double *increment);
 

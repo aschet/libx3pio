@@ -23,24 +23,24 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    /* The description is read when the file is opened, before any point. The
+    /* The document is read when the file is opened, before any point. The
      * program learns the size from it and allocates the buffer itself. */
     const x3pio_document *document = x3pio_reader_document(reader);
-    const size_t columns = x3pio_document_columns(document);
-    const size_t rows = x3pio_document_rows(document);
-    printf("%zu columns, %zu rows, x step %g m, y step %g m\n", columns, rows,
+    const x3pio_dimensions size = x3pio_document_dimensions(document);
+    const size_t count = x3pio_document_point_count(document);
+    printf("%zu by %zu points in %zu layers, x step %g m, y step %g m\n",
+           size.size_x, size.size_y, size.size_z,
            x3pio_document_axis(document, X3PIO_X).increment,
            x3pio_document_axis(document, X3PIO_Y).increment);
     printf("created by %s\n", x3pio_document_creator(document));
 
-    double *heights = malloc(columns * rows * sizeof *heights);
-    if (heights == NULL)
+    double *z = malloc(count * sizeof *z);
+    if (z == NULL)
     {
         x3pio_reader_free(reader);
         return EXIT_FAILURE;
     }
-    status = x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                                heights);
+    status = x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z);
     if (status != X3PIO_OK)
     {
         fprintf(stderr, "%s\n", x3pio_reader_error_message(reader));
@@ -50,18 +50,18 @@ int main(int argc, char **argv)
         /* A point that was not measured is NaN. */
         size_t measured = 0;
         double sum = 0.0;
-        for (size_t i = 0; i < columns * rows; ++i)
+        for (size_t i = 0; i < count; ++i)
         {
-            if (!isnan(heights[i]))
+            if (!isnan(z[i]))
             {
                 ++measured;
-                sum += heights[i];
+                sum += z[i];
             }
         }
-        printf("%zu points measured, mean height %g m\n", measured,
+        printf("%zu points measured, mean z %g m\n", measured,
                measured > 0 ? sum / (double)measured : 0.0);
     }
-    free(heights);
+    free(z);
     x3pio_reader_free(reader);
     return status == X3PIO_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }

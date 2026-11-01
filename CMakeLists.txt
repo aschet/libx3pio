@@ -48,8 +48,14 @@ set(X3PIO_SOURCES
     src/allocator.h
     src/buffer.c
     src/buffer.h
-    src/codec.c
-    src/codec.h
+    src/byte_order.c
+    src/byte_order.h
+    src/data_type.c
+    src/data_type.h
+    src/matrix.c
+    src/matrix.h
+    src/samples.c
+    src/samples.h
     src/common.h
     src/document.c
     src/document.h

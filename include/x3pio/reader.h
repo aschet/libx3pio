@@ -13,18 +13,17 @@
  * -# x3pio_reader_create() creates the reader, and x3pio_reader_set_verify()
  *    and x3pio_reader_set_chunk() set the options.
  * -# x3pio_open_file() or x3pio_open_memory() opens the
- *    file and reads its description, which x3pio_reader_document() returns.
- * -# x3pio_read_heights() reads the whole matrix of heights, or
- *    x3pio_read_points() or x3pio_read_data() reads the rows of points in
- *    metres or as the file stores them, in parts of one row or more, in the
- *    order of the file.
+ *    file and reads its document, which x3pio_reader_document() returns.
+ * -# x3pio_read_z() reads the z coordinates of all points, or
+ *    x3pio_read_points() or x3pio_read_data() reads 3-d points in metres or
+ *    as the file stores them, in parts, in the order of the file.
  * -# x3pio_reader_free() releases the reader.
  *
  * @par States
  * A reader is new until a file is opened, then in the state data. An error that
  * loses the position in the file moves it to failed: X3PIO_ERR_IO,
  * X3PIO_ERR_FORMAT, X3PIO_ERR_CHECKSUM or X3PIO_ERR_RANGE in a call that reads.
- * The description stays available in every state after the opening.
+ * The document stays available in every state after the opening.
  * - The options can be set in the state new only. The first attempt to open a
  *   file fixes them.
  * - A call that the state does not allow returns X3PIO_ERR_STATE, and an
@@ -35,7 +34,7 @@
  * @par Checksums
  * A file states the MD5 checksums of main.xml, of the point data and of the
  * validity bits. By default a reader checks main.xml and the validity bits when
- * the file is opened and the point data when its last row has been read, and
+ * the file is opened and the point data when its last point has been read, and
  * fails with X3PIO_ERR_CHECKSUM on a mismatch.
  *
  * @par Selective Reading
@@ -86,7 +85,7 @@ X3PIO_API x3pio_status x3pio_reader_create(x3pio_reader **reader);
  * @param[in,out] reader The reader.
  * @param verify Whether to check.
  * @retval X3PIO_ERR_ARGUMENT The reader is null.
- * @retval X3PIO_ERR_STATE An attempt to open a file was made earlier.
+ * @retval X3PIO_ERR_STATE The reader tried to open a file earlier.
  */
 X3PIO_API x3pio_status x3pio_reader_set_verify(x3pio_reader *reader,
                                                bool verify);
@@ -100,7 +99,7 @@ X3PIO_API x3pio_status x3pio_reader_set_verify(x3pio_reader *reader,
  * @param count The number of points, not 0 and not so large that the chunk
  * cannot be counted in bytes.
  * @retval X3PIO_ERR_ARGUMENT The reader is null or the number is not valid.
- * @retval X3PIO_ERR_STATE An attempt to open a file was made earlier.
+ * @retval X3PIO_ERR_STATE The reader tried to open a file earlier.
  */
 X3PIO_API x3pio_status x3pio_reader_set_chunk(x3pio_reader *reader,
                                               size_t count);
@@ -114,7 +113,7 @@ X3PIO_API x3pio_status x3pio_reader_set_chunk(x3pio_reader *reader,
 X3PIO_API void x3pio_reader_free(x3pio_reader *reader);
 
 /**
- * Opens a block of memory as the source and reads the description. The memory
+ * Opens a block of memory as the source and reads the document. The memory
  * is not copied: it must remain valid and unchanged while the reader is in use.
  *
  * @param[in,out] reader The reader.
@@ -131,7 +130,7 @@ X3PIO_API x3pio_status x3pio_open_memory(x3pio_reader *reader, const void *data,
                                          size_t size);
 
 /**
- * Returns the description of the opened file, or null if no file is open. The
+ * Returns the document of the opened file, or null if no file is open. The
  * pointer remains valid until the reader is freed.
  *
  * @param[in] reader The reader.
@@ -140,15 +139,19 @@ X3PIO_API const x3pio_document *
 x3pio_reader_document(const x3pio_reader *reader);
 
 /**
- * Reads the next rows of points as the file stores them.
+ * Reads the next 3-d points as the file stores them.
  *
- * Each field that is bound receives `rows` times `x3pio_document_columns()`
- * values, in the order of the file, in the byte order of the machine and
- * without conversion. The buffer lies in memory as its layout describes, and
- * the type of the layout has to be the type in which the file stores the axis.
- * The element (y, x) is stored at `data + y * layout.row_stride + x *
- * layout.element_stride`, where y counts the rows from the first row that is
- * read. x3pio_layout_packed() describes values that follow each other.
+ * Each field that is bound receives `points` values, in the order of the file,
+ * in the byte order of the machine and without conversion. The order is that
+ * of the standard: u is the fastest index, v the second and w, the layer, the
+ * slowest. A list of points takes any number of points. A matrix is read in
+ * whole runs along u, so `points` is a multiple of `size_x`.
+ *
+ * The buffer lies in memory as its layout specifies, and the type of the layout
+ * has to be the type in which the file stores the axis. With n the size along
+ * u of a matrix, and 1 for a list, the k-th point of the call is stored at
+ * `data + (k / n) * layout.row_stride + (k % n) * layout.element_stride`.
+ * x3pio_layout_packed() specifies values that follow each other.
  *
  * - An axis that the file does not store, an incremental one, cannot be bound.
  * - `valid` receives the mask of the points: 1 for a point that was measured
@@ -159,28 +162,28 @@ x3pio_reader_document(const x3pio_reader *reader);
  * also not measured when a coordinate is not a number.
  * - The values of a point that was not measured are those of the file.
  *
- * The first rows read are the first rows stored in the file. After an error the
- * reader rejects further reads.
+ * The first points read are the first points stored in the file. After an error
+ * the reader rejects further reads.
  *
  * @param[in,out] reader The reader.
  * @param[in] into The buffers to fill.
- * @param rows The number of rows to read. A list of points has a row for each
- * point.
- * @retval X3PIO_ERR_ARGUMENT A pointer is null, no field is bound, `rows`
- * exceeds the rows remaining, the type or the strides of a layout are invalid,
- * or an axis that the file does not store is bound.
+ * @param points The number of 3-d points to read.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, no field is bound, `points`
+ * exceeds the points remaining or is not a multiple of `size_x` for a matrix,
+ * the type or the strides of a layout are invalid, or an axis that the file
+ * does not store is bound.
  * @retval X3PIO_ERR_STATE No file is open, or an earlier error ended the
  * reading.
  * @retval X3PIO_ERR_IO The file could not be read.
  * @retval X3PIO_ERR_FORMAT The point data is damaged or truncated.
  * @retval X3PIO_ERR_CHECKSUM The checksum of the point data, checked after the
- * last row, does not match.
+ * last point, does not match.
  */
 X3PIO_API x3pio_status x3pio_read_data(x3pio_reader *reader,
-                                       const x3pio_fields *into, size_t rows);
+                                       const x3pio_fields *into, size_t points);
 
 /**
- * Reads the next rows of points as coordinates in metres in the view coordinate
+ * Reads the next 3-d points as coordinates in metres in the view coordinate
  * system of the file, into buffers of floats or doubles. A coordinate is a
  * stored value times the increment of its axis. An incremental axis gives the
  * index of the point times its increment, so x and y of a regular grid can be
@@ -194,17 +197,17 @@ X3PIO_API x3pio_status x3pio_read_data(x3pio_reader *reader,
  *
  * @param[in,out] reader The reader.
  * @param[in] into The buffers to fill.
- * @param rows The number of rows to read. A list of points has a row for each
- * point.
+ * @param points The number of 3-d points to read.
  * @retval X3PIO_ERR_ARGUMENT As for x3pio_read_data(), and `valid` is bound.
  * @retval X3PIO_ERR_RANGE A coordinate does not fit the type of its buffer.
  * @return Otherwise the errors of x3pio_read_data().
  */
 X3PIO_API x3pio_status x3pio_read_points(x3pio_reader *reader,
-                                         const x3pio_fields *into, size_t rows);
+                                         const x3pio_fields *into,
+                                         size_t points);
 
 /**
- * Reads the next rows of points as coordinates in metres in a coordinate system
+ * Reads the next 3-d points as coordinates in metres in a coordinate system
  * that the program chooses, see x3pio_coordinate_system. With
  * X3PIO_COORDINATES_VIEW it is x3pio_read_points().
  * X3PIO_COORDINATES_VIEW_OFFSET adds the offset of each axis, and
@@ -224,8 +227,7 @@ X3PIO_API x3pio_status x3pio_read_points(x3pio_reader *reader,
  * @param[in,out] reader The reader.
  * @param system The coordinate system of the buffers.
  * @param[in] into The buffers to fill.
- * @param rows The number of rows to read. A list of points has a row for each
- * point.
+ * @param points The number of 3-d points to read.
  * @retval X3PIO_ERR_ARGUMENT As for x3pio_read_points(), `system` is not a
  * coordinate system, or x, y or z is not bound with X3PIO_COORDINATES_GLOBAL.
  * @return Otherwise the errors of x3pio_read_points().
@@ -233,34 +235,33 @@ X3PIO_API x3pio_status x3pio_read_points(x3pio_reader *reader,
 X3PIO_API x3pio_status x3pio_read_points_in(x3pio_reader *reader,
                                             x3pio_coordinate_system system,
                                             const x3pio_fields *into,
-                                            size_t rows);
+                                            size_t points);
 
 /**
- * Reads the remaining rows as heights in metres into a buffer that lies in
- * memory as the layout describes. x3pio_layout_packed() describes a plain
- * array. It is x3pio_read_points() for z alone, for all rows: the rows of the
- * layers follow each other.
+ * Reads the z coordinates of all points in metres into a buffer that lies in
+ * memory as the layout specifies. x3pio_layout_packed() specifies a plain
+ * array. It is x3pio_read_points() for z alone, for all points: the layers
+ * follow each other.
  *
- * The element (y, x) is stored at `dst + y * layout.row_stride + x *
- * layout.element_stride`. The row y = 0 is the first row. A negative row
- * stride, with `dst` at the first element of the row y = 0, which is the last
- * row in memory, stores the matrix upside down. A point that was not measured
- * becomes NaN.
+ * The point (u, v) of the first layer is stored at `dst + v * layout.row_stride
+ * + u * layout.element_stride`, and the next layer follows the runs of the
+ * first one. A negative row stride, with `dst` at the first element of v = 0,
+ * which is the last run in memory, stores the matrix upside down. A point that
+ * was not measured becomes NaN.
  *
- * The function reads from the first row of the data, so no rows may have been
- * read before.
+ * The function reads from the first point of the data, so no points may have
+ * been read before.
  *
  * @param[in,out] reader The reader.
  * @param[in] layout The layout of the buffer, of floats or doubles.
- * @param[out] dst The buffer for the heights.
+ * @param[out] dst The buffer for the z coordinates.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null or the layout is invalid.
  * @retval X3PIO_ERR_STATE No file is open, an earlier error ended the reading,
- * or rows were read already.
+ * or points were read already.
  * @return Otherwise the errors of x3pio_read_points().
  */
-X3PIO_API x3pio_status x3pio_read_heights(x3pio_reader *reader,
-                                          const x3pio_layout *layout,
-                                          void *dst);
+X3PIO_API x3pio_status x3pio_read_z(x3pio_reader *reader,
+                                    const x3pio_layout *layout, void *dst);
 
 /**
  * Returns the number of files of vendors that the container holds.
@@ -322,7 +323,7 @@ X3PIO_API x3pio_status x3pio_read_member(x3pio_reader *reader,
                                          size_t capacity, size_t *size);
 
 /**
- * Returns a description of the most recent failure of the reader, or an empty
+ * Returns the text of the most recent failure of the reader, or an empty
  * string if none occurred. The result is never null, and a string of the
  * library, valid for the life of the program.
  *

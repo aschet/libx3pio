@@ -6,196 +6,13 @@
 
 /**
  * @file
- * @brief Encoding and decoding of the raw values of a file, and the transfer of
- * values from and to the views of the program.
+ * @brief The buffers of the program as matrices, and the transfer of values
+ * from and to them.
  */
 
-#include "codec.h"
-#include <float.h>
-#include <math.h>
+#include "matrix.h"
+#include "data_type.h"
 #include <stddef.h>
-
-/* ---- the little-endian values of a file ------------------------------- */
-
-static uint32_t load_u32(const unsigned char *p)
-{
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8U) | ((uint32_t)p[2] << 16U)
-           | ((uint32_t)p[3] << 24U);
-}
-
-static uint64_t load_u64(const unsigned char *p)
-{
-    return (uint64_t)load_u32(p) | ((uint64_t)load_u32(p + 4) << 32U);
-}
-
-static void store_u32(unsigned char *p, uint32_t v)
-{
-    p[0] = (unsigned char)(v & 0xFFU);
-    p[1] = (unsigned char)((v >> 8U) & 0xFFU);
-    p[2] = (unsigned char)((v >> 16U) & 0xFFU);
-    p[3] = (unsigned char)((v >> 24U) & 0xFFU);
-}
-
-static void store_u64(unsigned char *p, uint64_t v)
-{
-    store_u32(p, (uint32_t)(v & 0xFFFFFFFFU));
-    store_u32(p + 4, (uint32_t)(v >> 32U));
-}
-
-/* The number that a pattern of bits stands for. */
-static float float_of_bits(uint32_t bits)
-{
-    float value = 0;
-    memcpy(&value, &bits, sizeof value);
-    return value;
-}
-
-static double double_of_bits(uint64_t bits)
-{
-    double value = 0;
-    memcpy(&value, &bits, sizeof value);
-    return value;
-}
-
-static uint32_t bits_of_float(float value)
-{
-    uint32_t bits = 0;
-    memcpy(&bits, &value, sizeof bits);
-    return bits;
-}
-
-static uint64_t bits_of_double(double value)
-{
-    uint64_t bits = 0;
-    memcpy(&bits, &value, sizeof bits);
-    return bits;
-}
-
-/* ---- conversion of a double to a type ---------------------------------- */
-
-/* Converts a double to an integer with rounding to nearest, ties to even. A NaN
- * becomes 0. */
-static bool to_integer(double value, double low, double high, double *out)
-{
-    if (isnan(value))
-    {
-        *out = 0.0;
-        return true;
-    }
-    const double rounded = nearbyint(value);
-    if (!(rounded >= low && rounded <= high))
-    {
-        return false;
-    }
-    *out = rounded;
-    return true;
-}
-
-/* The bounds of the integer types, as doubles. */
-#define BOUNDS(type, low, high)                                                \
-    case type:                                                                 \
-        *l = (low);                                                            \
-        *h = (high);                                                           \
-        return true
-
-static bool integer_bounds(x3pio_type type, double *l, double *h)
-{
-    switch (type)
-    {
-        BOUNDS(X3PIO_TYPE_INT8, -128.0, 127.0);
-        BOUNDS(X3PIO_TYPE_UINT8, 0.0, 255.0);
-        BOUNDS(X3PIO_TYPE_INT16, -32768.0, 32767.0);
-        BOUNDS(X3PIO_TYPE_UINT16, 0.0, 65535.0);
-        BOUNDS(X3PIO_TYPE_INT32, -2147483648.0, 2147483647.0);
-        BOUNDS(X3PIO_TYPE_UINT32, 0.0, 4294967295.0);
-    case X3PIO_TYPE_FLOAT:
-    case X3PIO_TYPE_DOUBLE:
-        break;
-    }
-    return false;
-}
-
-/* ---- the values of a file ---------------------------------------------- */
-
-void x3pio_decode_samples(x3pio_type type, const unsigned char *src,
-                          size_t stride, double *out, size_t count)
-{
-    for (size_t i = 0; i < count; ++i)
-    {
-        const unsigned char *p = src + i * stride;
-        switch (type)
-        {
-        case X3PIO_TYPE_INT16:
-            out[i] =
-                (double)(int16_t)(uint16_t)((uint16_t)p[0]
-                                            | (uint16_t)((uint16_t)p[1] << 8U));
-            break;
-        case X3PIO_TYPE_INT32:
-            out[i] = (double)(int32_t)load_u32(p);
-            break;
-        case X3PIO_TYPE_FLOAT:
-            out[i] = (double)float_of_bits(load_u32(p));
-            break;
-        case X3PIO_TYPE_DOUBLE:
-            out[i] = double_of_bits(load_u64(p));
-            break;
-        default:
-            out[i] = 0.0;
-            break;
-        }
-    }
-}
-
-x3pio_status x3pio_encode_samples(x3pio_type type, const double *values,
-                                  size_t count, unsigned char *dst,
-                                  size_t stride)
-{
-    for (size_t i = 0; i < count; ++i)
-    {
-        unsigned char *p = dst + i * stride;
-        const double value = values[i];
-        switch (type)
-        {
-        case X3PIO_TYPE_INT16:
-        {
-            double r = 0;
-            if (!to_integer(value, -32768.0, 32767.0, &r))
-            {
-                return X3PIO_ERR_RANGE;
-            }
-            const uint16_t v = (uint16_t)(int16_t)r;
-            p[0] = (unsigned char)(v & 0xFFU);
-            p[1] = (unsigned char)(v >> 8U);
-            break;
-        }
-        case X3PIO_TYPE_INT32:
-        {
-            double r = 0;
-            if (!to_integer(value, -2147483648.0, 2147483647.0, &r))
-            {
-                return X3PIO_ERR_RANGE;
-            }
-            store_u32(p, (uint32_t)(int32_t)r);
-            break;
-        }
-        case X3PIO_TYPE_FLOAT:
-            if (isfinite(value) && fabs(value) > (double)FLT_MAX)
-            {
-                return X3PIO_ERR_RANGE;
-            }
-            store_u32(p, bits_of_float((float)value));
-            break;
-        case X3PIO_TYPE_DOUBLE:
-            store_u64(p, bits_of_double(value));
-            break;
-        default:
-            return X3PIO_ERR_ARGUMENT;
-        }
-    }
-    return X3PIO_OK;
-}
-
-/* ---- the elements of a view -------------------------------------------- */
 
 /* Reads one element of a view, in the byte order of the machine. */
 static double load_element(x3pio_type type, const unsigned char *p)
@@ -257,7 +74,7 @@ static bool store_element(x3pio_type type, unsigned char *p, double value)
     {
     case X3PIO_TYPE_FLOAT:
     {
-        if (isfinite(value) && fabs(value) > (double)FLT_MAX)
+        if (!x3pio_fits_float(value))
         {
             return false;
         }
@@ -271,11 +88,8 @@ static bool store_element(x3pio_type type, unsigned char *p, double value)
     default:
         break;
     }
-    double low = 0;
-    double high = 0;
     double rounded = 0;
-    if (!integer_bounds(type, &low, &high)
-        || !to_integer(value, low, high, &rounded))
+    if (!x3pio_round_to_integer(type, value, &rounded))
     {
         return false;
     }
@@ -320,7 +134,7 @@ static bool store_element(x3pio_type type, unsigned char *p, double value)
     return true;
 }
 
-bool x3pio_matrix_make(x3pio_matrix *matrix, const void *data,
+bool x3pio_matrix_init(x3pio_matrix *matrix, const void *data,
                        const x3pio_layout *layout, size_t columns, size_t rows,
                        bool writable)
 {

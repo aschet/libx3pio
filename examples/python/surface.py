@@ -10,7 +10,7 @@ libx3pio is needed.
     surface.py [path/to/libx3pio.so] [file.x3p]
 
 The library is also found through the environment variable X3PIO_LIBRARY, or
-by name if it is installed. The program writes a surface of 64 by 48 heights
+by name if it is installed. The program writes a surface of 64 by 48 z coordinates
 as floats, reads it back, and prints what it finds.
 """
 
@@ -93,14 +93,14 @@ def load_library(argument):
     declare("x3pio_writer_create", c_int, POINTER(handle))
     declare("x3pio_writer_free", None, handle)
     declare("x3pio_create_file", c_int, handle, c_char_p, handle)
-    declare("x3pio_write_heights", c_int, handle, POINTER(Layout), c_void_p)
+    declare("x3pio_write_z", c_int, handle, POINTER(Layout), c_void_p)
     declare("x3pio_end_file", c_int, handle)
     declare("x3pio_writer_error_message", c_char_p, handle)
     declare("x3pio_reader_create", c_int, POINTER(handle))
     declare("x3pio_reader_free", None, handle)
     declare("x3pio_open_file", c_int, handle, c_char_p)
     declare("x3pio_reader_document", handle, handle)
-    declare("x3pio_read_heights", c_int, handle, POINTER(Layout), c_void_p)
+    declare("x3pio_read_z", c_int, handle, POINTER(Layout), c_void_p)
     declare("x3pio_reader_error_message", c_char_p, handle)
     return lib
 
@@ -112,7 +112,7 @@ def check(status, message=b""):
 
 
 def write_surface(lib, path, columns, rows, heights):
-    """Writes the heights, a row after the other, in metres."""
+    """Writes the z coordinates, a run along u after the other, in metres."""
     document = c_void_p()
     check(lib.x3pio_document_create(byref(document)))
     writer = c_void_p()
@@ -132,7 +132,7 @@ def write_surface(lib, path, columns, rows, heights):
         address, _ = heights.buffer_info()
         layout = lib.x3pio_layout_packed(X3PIO_TYPE_FLOAT)
         check(
-            lib.x3pio_write_heights(writer, layout, address),
+            lib.x3pio_write_z(writer, layout, address),
             lib.x3pio_writer_error_message(writer),
         )
         check(lib.x3pio_end_file(writer), lib.x3pio_writer_error_message(writer))
@@ -143,7 +143,7 @@ def write_surface(lib, path, columns, rows, heights):
 
 
 def read_surface(lib, path):
-    """Returns the columns, the rows and the heights as an array of doubles."""
+    """Returns size_x, size_y and the z coordinates as an array of doubles."""
     reader = c_void_p()
     check(lib.x3pio_reader_create(byref(reader)))
     try:
@@ -151,7 +151,7 @@ def read_surface(lib, path):
             lib.x3pio_open_file(reader, path.encode()),
             lib.x3pio_reader_error_message(reader),
         )
-        # The description is available when the file is open: the program
+        # The document is available when the file is open: the program
         # allocates the buffer and the library fills it.
         dimensions = Dimensions()
         document = lib.x3pio_reader_document(reader)
@@ -161,7 +161,7 @@ def read_surface(lib, path):
         address, _ = heights.buffer_info()
         layout = lib.x3pio_layout_packed(X3PIO_TYPE_DOUBLE)
         check(
-            lib.x3pio_read_heights(reader, layout, address),
+            lib.x3pio_read_z(reader, layout, address),
             lib.x3pio_reader_error_message(reader),
         )
         return dimensions.size_x, dimensions.size_y, heights
@@ -185,7 +185,7 @@ def main(arguments):
     read_columns, read_rows, read = read_surface(lib, path)
     print(f"{read_columns} x {read_rows} points, z from {min(read):g} m to {max(read):g} m")
     same = read_columns == columns and read_rows == rows and list(read) == list(heights)
-    print("the heights are the ones that were written" if same else "the heights differ")
+    print("the z coordinates are the ones that were written" if same else "the z coordinates differ")
     return 0 if same else 1
 
 

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Makes a file in memory, for example to send it over a network, and reads it
+/* Creates a file in memory, for example to send it over a network, and reads it
  * back from memory. The writer holds the bytes until it is freed. */
 int main(void)
 {
@@ -20,8 +20,8 @@ int main(void)
     x3pio_status status = x3pio_create_memory(writer, document);
     if (status == X3PIO_OK)
     {
-        status = x3pio_write_heights(
-            writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), heights);
+        status = x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
+                               heights);
     }
     if (status == X3PIO_OK)
     {
@@ -49,12 +49,12 @@ int main(void)
     double back[12];
     if (status == X3PIO_OK)
     {
-        status = x3pio_read_heights(
-            reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back);
+        status =
+            x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back);
     }
     if (status == X3PIO_OK)
     {
-        printf("the last height is %g m\n", back[11]);
+        printf("the last z is %g m\n", back[11]);
     }
     x3pio_reader_free(reader);
     x3pio_writer_free(writer);

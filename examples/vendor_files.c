@@ -31,8 +31,8 @@ int main(int argc, char **argv)
     }
     if (status == X3PIO_OK)
     {
-        status = x3pio_write_heights(
-            writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), heights);
+        status = x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
+                               heights);
     }
     if (status == X3PIO_OK)
     {

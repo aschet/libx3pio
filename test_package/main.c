@@ -39,22 +39,22 @@ int main(void)
 
     int failed = 0;
     x3pio_document *document = NULL;
-    x3pio_status described = x3pio_document_create(&document);
-    if (described == X3PIO_OK)
+    x3pio_status document_status = x3pio_document_create(&document);
+    if (document_status == X3PIO_OK)
     {
-        described = x3pio_document_set_feature_surface(
+        document_status = x3pio_document_set_feature_surface(
             document, COLUMNS, ROWS, 1.0e-6, 1.0e-6, X3PIO_TYPE_FLOAT, 1.0, 1);
     }
-    failed |= check(described, "document");
+    failed |= check(document_status, "document");
     x3pio_writer *writer = NULL;
-    x3pio_status made_writer = x3pio_writer_create(&writer);
-    failed |= check(made_writer, "writer");
-    if (made_writer == X3PIO_OK && described == X3PIO_OK)
+    x3pio_status writer_status = x3pio_writer_create(&writer);
+    failed |= check(writer_status, "writer");
+    if (writer_status == X3PIO_OK && document_status == X3PIO_OK)
     {
         failed |= check(x3pio_create_file(writer, path, document), "create");
         failed |=
-            check(x3pio_write_heights(
-                      writer, x3pio_layout_packed(X3PIO_TYPE_FLOAT), heights),
+            check(x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_FLOAT),
+                                heights),
                   "write");
         failed |= check(x3pio_end_file(writer), "end");
     }
@@ -62,15 +62,14 @@ int main(void)
     x3pio_document_free(document);
 
     x3pio_reader *reader = NULL;
-    x3pio_status made_reader = x3pio_reader_create(&reader);
-    failed |= check(made_reader, "reader");
-    if (made_reader == X3PIO_OK)
+    x3pio_status reader_status = x3pio_reader_create(&reader);
+    failed |= check(reader_status, "reader");
+    if (reader_status == X3PIO_OK)
     {
         failed |= check(x3pio_open_file(reader, path), "open");
-        failed |=
-            check(x3pio_read_heights(
-                      reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), read),
-                  "read");
+        failed |= check(
+            x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), read),
+            "read");
     }
     x3pio_reader_free(reader);
     remove(path);

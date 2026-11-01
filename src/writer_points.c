@@ -6,11 +6,12 @@
 
 /**
  * @file
- * @brief Writing of the rows of points from the buffers of the program.
+ * @brief Writing of the points from the buffers of the program.
  */
 
 #include "allocator.h"
-#include "codec.h"
+#include "matrix.h"
+#include "samples.h"
 #include "text.h"
 #include "vendor.h"
 #include "writer.h"
@@ -152,7 +153,7 @@ static x3pio_status check_fields(x3pio_writer *writer,
             {
                 return x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
                                   "The increment is not set; "
-                                  "x3pio_write_heights selects it");
+                                  "x3pio_write_z selects it");
             }
         }
         else if (b->is_bound[i]
@@ -166,7 +167,7 @@ static x3pio_status check_fields(x3pio_writer *writer,
         if (b->is_bound[i])
         {
             any = true;
-            if (!x3pio_matrix_make(&b->matrix[i], fields[i]->data,
+            if (!x3pio_matrix_init(&b->matrix[i], fields[i]->data,
                                    &fields[i]->layout, columns, rows, false))
             {
                 return x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
@@ -370,7 +371,7 @@ static x3pio_status write_chunk(x3pio_writer *writer, const bound *b, mode m,
 }
 
 static x3pio_status write_rows(x3pio_writer *writer,
-                               const x3pio_const_fields *from, size_t rows,
+                               const x3pio_const_fields *from, size_t points,
                                mode m)
 {
     if (writer == NULL || from == NULL)
@@ -384,11 +385,17 @@ static x3pio_status write_rows(x3pio_writer *writer,
                           "earlier error ended the writing");
     }
     const size_t columns = x3pio_document_columns(writer->document);
-    const size_t rows_left = (writer->count - writer->written) / columns;
-    if (rows > rows_left)
+    if (points % columns != 0)
     {
         return x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
-                          "More rows than the file has room for");
+                          "A matrix is written in runs of SizeX points along "
+                          "u");
+    }
+    const size_t rows = points / columns;
+    if (points > writer->count - writer->written)
+    {
+        return x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
+                          "More points than the file has room for");
     }
     bound b;
     x3pio_status status =
@@ -397,7 +404,7 @@ static x3pio_status write_rows(x3pio_writer *writer,
     {
         return status;
     }
-    const size_t count = rows * columns;
+    const size_t count = points;
     for (size_t done = 0; done < count; done += writer->chunk)
     {
         const size_t n =
@@ -414,37 +421,38 @@ static x3pio_status write_rows(x3pio_writer *writer,
 }
 
 x3pio_status x3pio_write_data(x3pio_writer *writer,
-                              const x3pio_const_fields *from, size_t rows)
+                              const x3pio_const_fields *from, size_t points)
 {
-    return write_rows(writer, from, rows, MODE_DATA);
+    return write_rows(writer, from, points, MODE_DATA);
 }
 
 x3pio_status x3pio_write_points(x3pio_writer *writer,
-                                const x3pio_const_fields *from, size_t rows)
+                                const x3pio_const_fields *from, size_t points)
 {
-    return write_rows(writer, from, rows, MODE_POINTS);
+    return write_rows(writer, from, points, MODE_POINTS);
 }
 
 x3pio_status x3pio_write_points_in(x3pio_writer *writer,
                                    x3pio_coordinate_system system,
-                                   const x3pio_const_fields *from, size_t rows)
+                                   const x3pio_const_fields *from,
+                                   size_t points)
 {
     switch (system)
     {
     case X3PIO_COORDINATES_VIEW:
-        return write_rows(writer, from, rows, MODE_POINTS);
+        return write_rows(writer, from, points, MODE_POINTS);
     case X3PIO_COORDINATES_VIEW_OFFSET:
-        return write_rows(writer, from, rows, MODE_TRANSLATED);
+        return write_rows(writer, from, points, MODE_TRANSLATED);
     case X3PIO_COORDINATES_GLOBAL:
-        return write_rows(writer, from, rows, MODE_GLOBAL);
+        return write_rows(writer, from, points, MODE_GLOBAL);
     }
     return writer != NULL ? x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
                                        "The coordinate system is not defined")
                           : X3PIO_ERR_ARGUMENT;
 }
 
-x3pio_status x3pio_write_heights(x3pio_writer *writer,
-                                 const x3pio_layout *layout, const void *src)
+x3pio_status x3pio_write_z(x3pio_writer *writer, const x3pio_layout *layout,
+                           const void *src)
 {
     if (writer == NULL || layout == NULL || src == NULL)
     {
@@ -455,7 +463,7 @@ x3pio_status x3pio_write_heights(x3pio_writer *writer,
     {
         return x3pio_fail(&writer->message, X3PIO_ERR_STATE,
                           "No file is created, an earlier error ended the "
-                          "writing, or rows were written already");
+                          "writing, or points were written already");
     }
     x3pio_document *d = writer->document;
     if (d->axes[0].type == X3PIO_AXIS_ABSOLUTE
@@ -488,5 +496,6 @@ x3pio_status x3pio_write_heights(x3pio_writer *writer,
     x3pio_const_fields from;
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){src, *layout};
-    return write_rows(writer, &from, rows, MODE_POINTS);
+    return write_rows(writer, &from, x3pio_document_point_count(d),
+                      MODE_POINTS);
 }

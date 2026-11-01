@@ -9,8 +9,9 @@
  * @brief Conversion between stored values and metres.
  */
 
-#include "codec.h"
 #include "document.h"
+#include "matrix.h"
+#include "samples.h"
 #include <math.h>
 
 /* The values that are converted at a time. */
@@ -38,7 +39,7 @@ x3pio_status x3pio_decode_values(const x3pio_document *document,
         return X3PIO_OK;
     }
     x3pio_matrix out;
-    if (!x3pio_matrix_make(&out, metres, layout, count, 1, true))
+    if (!x3pio_matrix_init(&out, metres, layout, count, 1, true))
     {
         return X3PIO_ERR_ARGUMENT;
     }
@@ -82,7 +83,7 @@ x3pio_status x3pio_encode_values(const x3pio_document *document,
         return X3PIO_OK;
     }
     x3pio_matrix in;
-    if (!x3pio_matrix_make(&in, metres, layout, count, 1, false))
+    if (!x3pio_matrix_init(&in, metres, layout, count, 1, false))
     {
         return X3PIO_ERR_ARGUMENT;
     }
@@ -134,11 +135,11 @@ double x3pio_suggest_increment_for_range(x3pio_type type, double lowest,
 }
 
 x3pio_status x3pio_suggest_increment(x3pio_type type,
-                                     const x3pio_layout *layout,
-                                     const void *heights, size_t rows,
-                                     size_t columns, double *increment)
+                                     const x3pio_layout *layout, const void *z,
+                                     size_t rows, size_t columns,
+                                     double *increment)
 {
-    if (layout == NULL || heights == NULL || increment == NULL
+    if (layout == NULL || z == NULL || increment == NULL
         || !metres_type(layout->type))
     {
         return X3PIO_ERR_ARGUMENT;
@@ -148,7 +149,7 @@ x3pio_status x3pio_suggest_increment(x3pio_type type,
     if (rows > 0 && columns > 0)
     {
         x3pio_matrix in;
-        if (!x3pio_matrix_make(&in, heights, layout, columns, rows, false))
+        if (!x3pio_matrix_init(&in, z, layout, columns, rows, false))
         {
             return X3PIO_ERR_ARGUMENT;
         }

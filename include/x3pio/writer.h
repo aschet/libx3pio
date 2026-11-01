@@ -15,10 +15,10 @@
  *    options.
  * -# x3pio_create_file() (in `<x3pio/file.h>`) or x3pio_create_memory() starts
  *    the file from a document, which fixes the layout of the points.
- * -# x3pio_write_heights() writes the whole matrix of heights, or
- *    x3pio_write_points() or x3pio_write_data() writes the rows of points in
- *    metres or as the file stores them, in parts of one row or more, in the
- *    order of the file, until all rows of the document are written.
+ * -# x3pio_write_z() writes the z coordinates of all points, or
+ *    x3pio_write_points() or x3pio_write_data() writes 3-d points in metres or
+ *    as the file stores them, in parts, in the order of the file, until all
+ *    points of the document are written.
  * -# x3pio_add_vendor_file() adds files of vendors, which is optional.
  * -# x3pio_end_file() writes main.xml and the checksum, and completes the
  *    container. A file is complete only after it.
@@ -26,7 +26,7 @@
  *
  * @par States
  * A writer is in one of four states. It is new until a file is created, then
- * created. x3pio_end_file() moves it to ended, from created if all rows are
+ * created. x3pio_end_file() moves it to ended, from created if all points are
  * written. An error that loses the position in the file moves it to failed: an
  * error of the file, and a value in a call that writes that
  * cannot be written.
@@ -93,7 +93,7 @@ X3PIO_API x3pio_status x3pio_writer_create(x3pio_writer **writer);
  * @param storage The storage.
  * @retval X3PIO_ERR_ARGUMENT The writer is null or the value is not an
  * enumerator.
- * @retval X3PIO_ERR_STATE An attempt to create a file was made earlier.
+ * @retval X3PIO_ERR_STATE The writer tried to create a file earlier.
  */
 X3PIO_API x3pio_status x3pio_writer_set_storage(x3pio_writer *writer,
                                                 x3pio_storage storage);
@@ -109,7 +109,7 @@ X3PIO_API x3pio_status x3pio_writer_set_storage(x3pio_writer *writer,
  * @param[in] compression The compression.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the method or the level is
  * not valid.
- * @retval X3PIO_ERR_STATE An attempt to create a file was made earlier.
+ * @retval X3PIO_ERR_STATE The writer tried to create a file earlier.
  */
 X3PIO_API x3pio_status x3pio_writer_set_compression(
     x3pio_writer *writer, const x3pio_compression *compression);
@@ -122,7 +122,7 @@ X3PIO_API x3pio_status x3pio_writer_set_compression(
  * @param count The number of points, not 0 and not so large that the chunk
  * cannot be counted in bytes.
  * @retval X3PIO_ERR_ARGUMENT The writer is null or the number is not valid.
- * @retval X3PIO_ERR_STATE An attempt to create a file was made earlier.
+ * @retval X3PIO_ERR_STATE The writer tried to create a file earlier.
  */
 X3PIO_API x3pio_status x3pio_writer_set_chunk(x3pio_writer *writer,
                                               size_t count);
@@ -143,7 +143,7 @@ X3PIO_API void x3pio_writer_free(x3pio_writer *writer);
  * wants, for example to a network connection.
  *
  * @param[in,out] writer The writer.
- * @param[in] document The description of the file.
+ * @param[in] document The document of the file.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the document cannot be
  * written. The document is checked and copied, its revision decides the form of
  * the file, and its points, links and vendor identifiers are not used.
@@ -168,11 +168,13 @@ X3PIO_API x3pio_status x3pio_writer_memory(const x3pio_writer *writer,
                                            const void **data, size_t *size);
 
 /**
- * Writes the next rows of points as the file stores them.
+ * Writes the next 3-d points as the file stores them.
  *
- * Each field that is bound holds `rows` times `x3pio_document_columns()`
- * values, in the order of the file and in the byte order of the machine. The
- * buffer lies in memory as its layout describes, and the type of the layout has
+ * Each field that is bound holds `points` values, in the order of the file and
+ * in the byte order of the machine: u is the fastest index, v the second and w,
+ * the layer, the slowest. A list of points takes any number of points. A matrix
+ * is written in whole runs along u, so `points` is a multiple of `size_x`. The
+ * buffer lies in memory as its layout specifies, and the type of the layout has
  * to be the type in which the file stores the axis, as for x3pio_read_data().
  * The numbers are written as they are.
  *
@@ -185,26 +187,26 @@ X3PIO_API x3pio_status x3pio_writer_memory(const x3pio_writer *writer,
  * - The z axis of the document must have its increment set, not
  *   X3PIO_AUTO_INCREMENT.
  *
- * The first rows written are the first rows stored in the file.
+ * The first points written are the first points stored in the file.
  *
  * @param[in,out] writer The writer.
  * @param[in] from The buffers to write.
- * @param rows The number of rows to write. A list of points has a row for each
- * point.
- * @retval X3PIO_ERR_ARGUMENT A pointer is null, no field is bound, `rows`
- * exceeds the rows remaining, the type or the strides of a layout are invalid,
- * an axis that the file stores is not bound or one that it does not is, a point
- * of a cloud was not measured, or the increment is not set.
+ * @param points The number of 3-d points to write.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, no field is bound, `points`
+ * exceeds the points remaining or is not a multiple of `size_x` for a matrix,
+ * the type or the strides of a layout are invalid, an axis that the file stores
+ * is not bound or one that it does not is, a point of a cloud was not measured,
+ * or the increment is not set.
  * @retval X3PIO_ERR_STATE No file is created, or an earlier error ended the
  * writing.
  * @retval X3PIO_ERR_IO The file or the container could not be written.
  */
 X3PIO_API x3pio_status x3pio_write_data(x3pio_writer *writer,
                                         const x3pio_const_fields *from,
-                                        size_t rows);
+                                        size_t points);
 
 /**
- * Writes the next rows of points from coordinates in metres in the view
+ * Writes the next 3-d points from coordinates in metres in the view
  * coordinate system of the file, from buffers of floats or doubles. A stored
  * value is a coordinate divided by the increment of its axis, rounded to the
  * nearest value for an integer type, a tie to the even one. The rules of
@@ -217,8 +219,7 @@ X3PIO_API x3pio_status x3pio_write_data(x3pio_writer *writer,
  *
  * @param[in,out] writer The writer.
  * @param[in] from The buffers to write.
- * @param rows The number of rows to write. A list of points has a row for each
- * point.
+ * @param points The number of 3-d points to write.
  * @retval X3PIO_ERR_ARGUMENT As for x3pio_write_data(), and `valid` is bound.
  * @retval X3PIO_ERR_RANGE A coordinate does not fit the type of its axis. The
  * error ends the writing.
@@ -226,10 +227,10 @@ X3PIO_API x3pio_status x3pio_write_data(x3pio_writer *writer,
  */
 X3PIO_API x3pio_status x3pio_write_points(x3pio_writer *writer,
                                           const x3pio_const_fields *from,
-                                          size_t rows);
+                                          size_t points);
 
 /**
- * Writes the next rows of points from coordinates in metres in a coordinate
+ * Writes the next 3-d points from coordinates in metres in a coordinate
  * system that the program chooses, see x3pio_coordinate_system. With
  * X3PIO_COORDINATES_VIEW it is x3pio_write_points().
  * X3PIO_COORDINATES_VIEW_OFFSET subtracts the offset of each axis, and
@@ -249,8 +250,7 @@ X3PIO_API x3pio_status x3pio_write_points(x3pio_writer *writer,
  * @param[in,out] writer The writer.
  * @param system The coordinate system of the buffers.
  * @param[in] from The buffers to write.
- * @param rows The number of rows to write. A list of points has a row for each
- * point.
+ * @param points The number of 3-d points to write.
  * @retval X3PIO_ERR_ARGUMENT As for x3pio_write_points(), `system` is not a
  * coordinate system, or x, y or z is not bound with X3PIO_COORDINATES_GLOBAL.
  * @return Otherwise the errors of x3pio_write_points().
@@ -258,33 +258,35 @@ X3PIO_API x3pio_status x3pio_write_points(x3pio_writer *writer,
 X3PIO_API x3pio_status x3pio_write_points_in(x3pio_writer *writer,
                                              x3pio_coordinate_system system,
                                              const x3pio_const_fields *from,
-                                             size_t rows);
+                                             size_t points);
 
 /**
- * Writes all rows from a matrix of heights in metres that lies in memory as the
- * layout describes. x3pio_layout_packed() describes a plain array. The file
- * must store heights alone, that is, its x and y axes are incremental.
+ * Writes the z coordinates of all points in metres from a buffer that lies in
+ * memory as the layout specifies. x3pio_layout_packed() specifies a plain
+ * array. The file must store z alone, that is, its x and y axes are
+ * incremental.
  *
- * The layout is that of x3pio_read_heights(): the element (y, x) is at
- * `src + y * layout.row_stride + x * layout.element_stride`, and the row y = 0
- * is the first row. For an integer type with X3PIO_AUTO_INCREMENT the increment
- * is selected from the heights. NaN and infinity label points that were not
- * measured. Call x3pio_end_file() afterwards.
+ * The layout is that of x3pio_read_z(): the point (u, v) of the first layer is
+ * at `src + v * layout.row_stride + u * layout.element_stride`, and the next
+ * layer follows the runs of the first one. For an integer type with
+ * X3PIO_AUTO_INCREMENT the increment is selected from the z coordinates. NaN
+ * and infinity label points that were not measured. Call x3pio_end_file()
+ * afterwards.
  *
  * @param[in,out] writer The writer.
  * @param[in] layout The layout of the buffer, of floats or doubles.
- * @param[in] src The heights.
+ * @param[in] src The z coordinates.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null, the layout is invalid, or the
  * file stores x and y.
  * @retval X3PIO_ERR_STATE No file is created, an earlier error ended the
- * writing, or rows were written already.
- * @retval X3PIO_ERR_RANGE A height does not fit the type of the axis with its
- * increment.
+ * writing, or points were written already.
+ * @retval X3PIO_ERR_RANGE A z coordinate does not fit the type of the axis with
+ * its increment.
  * @retval X3PIO_ERR_IO The file or the container could not be written.
  */
-X3PIO_API x3pio_status x3pio_write_heights(x3pio_writer *writer,
-                                           const x3pio_layout *layout,
-                                           const void *src);
+X3PIO_API x3pio_status x3pio_write_z(x3pio_writer *writer,
+                                     const x3pio_layout *layout,
+                                     const void *src);
 
 /**
  * Adds a file of a vendor to the container.
@@ -314,19 +316,19 @@ X3PIO_API x3pio_status x3pio_add_vendor_file(
 
 /**
  * Ends the file: writes main.xml and the checksum, completes the container, and
- * for a file that x3pio_create_file() created closes the file. All rows of the
- * document must be written. Nothing can be written afterwards.
+ * for a file that x3pio_create_file() created closes the file. All points of
+ * the document must be written. Nothing can be written afterwards.
  *
  * @param[in,out] writer The writer.
  * @retval X3PIO_ERR_ARGUMENT The writer is null.
- * @retval X3PIO_ERR_STATE No file is created, rows are missing, the file is
+ * @retval X3PIO_ERR_STATE No file is created, points are missing, the file is
  * ended already, or an earlier error ended the writing.
  * @retval X3PIO_ERR_IO The file could not be written.
  */
 X3PIO_API x3pio_status x3pio_end_file(x3pio_writer *writer);
 
 /**
- * Returns a description of the most recent failure of the writer, or an empty
+ * Returns the text of the most recent failure of the writer, or an empty
  * string if none occurred. The result is never null, and a string of the
  * library, valid for the life of the program.
  *

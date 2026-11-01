@@ -29,16 +29,16 @@ static const double heights[12] = {1e-7, 2e-7, 3e-7, 4e-7, 5e-7,   6e-7,
 
 static void finish_with_heights(x3pio_writer *writer)
 {
-    CHECK_OK(x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                                 heights));
+    CHECK_OK(
+        x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), heights));
     CHECK_OK(x3pio_end_file(writer));
 }
 
 static void check_heights(x3pio_reader *reader)
 {
     double back[12];
-    CHECK_OK(x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                                back));
+    CHECK_OK(
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back));
     for (size_t i = 0; i < 12; ++i)
     {
         CHECK_NEAR(back[i], heights[i], 1e-12);
@@ -316,7 +316,7 @@ static void test_vendor_files_amd1(void)
                                                        sizeof content, &size));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_read_member(reader, "main.xml", NULL, 5, &size));
-    /* The original main.xml is a member too, and the rows still read. */
+    /* The original main.xml is a member too, and the points still read. */
     CHECK_STATUS(X3PIO_ERR_RANGE,
                  x3pio_read_member(reader, "main.xml", NULL, 0, &size));
     CHECK(size > 500);
@@ -418,8 +418,7 @@ static size_t file_size_with(const x3pio_compression *compression, archive *a)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
-    CHECK_OK(
-        x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+    CHECK_OK(x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
     const size_t size = bytes.size;
@@ -501,16 +500,16 @@ static void test_reader_states(void)
     x3pio_fields_init(&into);
     into.z = (x3pio_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
     CHECK(x3pio_reader_document(reader) == NULL);
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_read_points(reader, &into, 3));
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_read_data(reader, &into, 3));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_read_points(reader, &into, 12));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_read_data(reader, &into, 12));
     CHECK_STATUS(
         X3PIO_ERR_STATE,
-        x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     size_t size = 0;
     CHECK_STATUS(X3PIO_ERR_STATE,
                  x3pio_read_member(reader, "main.xml", NULL, 0, &size));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(NULL, &into, 3));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, NULL, 3));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(NULL, &into, 12));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, NULL, 12));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_open_memory(NULL, bytes.data, bytes.size));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_open_memory(reader, NULL, 5));
@@ -535,16 +534,19 @@ static void test_reader_states(void)
     CHECK_STRING(x3pio_reader_error_message(reader),
                  "The reader has opened a file already");
 
-    /* A mistake of the arguments changes nothing; the rows are read in order.
-     */
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 4));
+    /* A mistake of the arguments changes nothing; the points are read in
+     * order. A matrix is read in whole runs along u, and not beyond its end. */
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 16));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 5));
+    CHECK_STRING(x3pio_reader_error_message(reader),
+                 "A matrix is read in runs of SizeX points along u");
     CHECK_OK(x3pio_read_points(reader, &into, 0));
-    CHECK_OK(x3pio_read_points(reader, &into, 1));
+    CHECK_OK(x3pio_read_points(reader, &into, 4));
     CHECK_STATUS(
         X3PIO_ERR_STATE,
-        x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
-    CHECK_OK(x3pio_read_points(reader, &into, 2));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 1));
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+    CHECK_OK(x3pio_read_points(reader, &into, 8));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 4));
     x3pio_reader_free(reader);
     x3pio_reader_free(NULL);
     x3pio_buffer_free(&bytes);
@@ -564,17 +566,17 @@ static void test_writer_states(void)
     x3pio_const_fields from;
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_write_points(writer, &from, 3));
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_write_data(writer, &from, 3));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_write_points(writer, &from, 12));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_write_data(writer, &from, 12));
     CHECK_STATUS(
         X3PIO_ERR_STATE,
-        x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+        x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_end_file(writer));
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_file(writer, "http://a.b/c",
                                                         NULL, "x", 1, NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_end_file(NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_memory(writer, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(NULL, &from, 3));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(NULL, &from, 12));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_writer_set_chunk(writer, 0));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_writer_set_storage(writer, (x3pio_storage)9));
@@ -591,28 +593,31 @@ static void test_writer_states(void)
     CHECK_OK(x3pio_document_set_feature_surface(doc, 9, 9, 1.0, 1.0,
                                                 X3PIO_TYPE_DOUBLE, 1.0, 1));
 
-    /* Rows are missing. */
+    /* Points are missing. */
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_end_file(writer));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "Not all points of the file were written");
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 4));
-    CHECK_OK(x3pio_write_points(writer, &from, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 16));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 5));
+    CHECK_STRING(x3pio_writer_error_message(writer),
+                 "A matrix is written in runs of SizeX points along u");
+    CHECK_OK(x3pio_write_points(writer, &from, 4));
     CHECK_STATUS(
         X3PIO_ERR_STATE,
-        x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+        x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     /* Fields that do not fit the file. */
     x3pio_const_fields wrong;
     x3pio_const_fields_init(&wrong);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &wrong, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &wrong, 4));
     wrong.z = from.z;
     wrong.x = from.z;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &wrong, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &wrong, 4));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "An axis that the file does not store cannot be bound");
-    CHECK_OK(x3pio_write_points(writer, &from, 2));
+    CHECK_OK(x3pio_write_points(writer, &from, 8));
     CHECK_OK(x3pio_end_file(writer));
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_end_file(writer));
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_write_points(writer, &from, 1));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_write_points(writer, &from, 4));
     x3pio_writer_free(writer);
     x3pio_writer_free(NULL);
 
@@ -620,13 +625,13 @@ static void test_writer_states(void)
     x3pio_reader *reader = NULL;
     CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
-    CHECK(x3pio_document_columns(x3pio_reader_document(reader)) == 4);
+    CHECK(x3pio_document_dimensions(x3pio_reader_document(reader)).size_x == 4);
     x3pio_reader_free(reader);
     x3pio_buffer_free(&bytes);
     x3pio_document_free(doc);
 }
 
-/* The rows of a file that is damaged: an error ends the reading. */
+/* The points of a file that is damaged: an error ends the reading. */
 static void test_damage(void)
 {
     file_spec spec = default_spec();
@@ -709,13 +714,13 @@ static void test_damage(void)
                                    content, sizeof content, &size));
         CHECK(size == sizeof pattern);
         double back[12];
-        const x3pio_status status = x3pio_read_heights(
-            reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back);
+        const x3pio_status status =
+            x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back);
         CHECK(status == X3PIO_ERR_FORMAT || status == X3PIO_ERR_CHECKSUM);
         /* An error ends the reading. */
-        CHECK_STATUS(X3PIO_ERR_STATE,
-                     x3pio_read_heights(
-                         reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back));
+        CHECK_STATUS(
+            X3PIO_ERR_STATE,
+            x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), back));
         x3pio_reader_free(reader);
     }
     x3pio_buffer_free(&damaged);

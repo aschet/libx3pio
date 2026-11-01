@@ -45,32 +45,6 @@ const char *x3pio_status_string(x3pio_status status)
     return "unknown status";
 }
 
-size_t x3pio_type_size(x3pio_type type)
-{
-    switch (type)
-    {
-    case X3PIO_TYPE_INT8:
-    case X3PIO_TYPE_UINT8:
-        return 1;
-    case X3PIO_TYPE_INT16:
-    case X3PIO_TYPE_UINT16:
-        return 2;
-    case X3PIO_TYPE_INT32:
-    case X3PIO_TYPE_UINT32:
-    case X3PIO_TYPE_FLOAT:
-        return 4;
-    case X3PIO_TYPE_DOUBLE:
-        return 8;
-    }
-    return 0;
-}
-
-bool x3pio_type_is_stored(x3pio_type type)
-{
-    return type == X3PIO_TYPE_INT16 || type == X3PIO_TYPE_INT32
-           || type == X3PIO_TYPE_FLOAT || type == X3PIO_TYPE_DOUBLE;
-}
-
 x3pio_compression x3pio_compression_default(void)
 {
     return (x3pio_compression){X3PIO_COMPRESS_DEFLATE, -1};

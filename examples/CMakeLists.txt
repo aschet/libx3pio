@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-foreach(example write_heights read_heights read_stream write_data read_data
+foreach(example write_z read_z read_stream write_data read_data
         points layers coordinates vendor_files write_memory)
     add_executable(${example} ${example}.c)
     target_link_libraries(${example} PRIVATE x3pio)

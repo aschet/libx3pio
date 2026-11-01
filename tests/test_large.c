@@ -50,7 +50,7 @@ int main(void)
     from.z = (x3pio_const_field){line, *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
     for (size_t row = 0; row < ROWS; ++row)
     {
-        CHECK_OK(x3pio_write_points(writer, &from, 1));
+        CHECK_OK(x3pio_write_points(writer, &from, COLUMNS));
     }
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
@@ -78,14 +78,14 @@ int main(void)
     size_t wrong = 0;
     for (size_t row = 0; row < ROWS; ++row)
     {
-        CHECK_OK(x3pio_read_points(reader, &into, 1));
+        CHECK_OK(x3pio_read_points(reader, &into, COLUMNS));
         for (size_t i = 0; i < COLUMNS; ++i)
         {
             wrong += back[i] != 0.0F ? 1U : 0U;
         }
     }
     CHECK(wrong == 0);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, COLUMNS));
     x3pio_reader_free(reader);
     remove(path);
     free(line);

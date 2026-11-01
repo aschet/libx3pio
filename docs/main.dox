@@ -6,7 +6,7 @@
 
 /*
  * The main page of the API reference and the page on the x3p format, which the
- * descriptions of the single functions refer to.
+ * documentation of the single functions refers to.
  */
 
 /**
@@ -14,8 +14,8 @@
  *
  * libx3pio is a portable C library that reads and writes the x3p files of
  * ISO 25178-72. An x3p file is a zip container that holds the points of a
- * profile, of an areal surface measurement or of a point cloud, and a
- * description of them in XML. It is used as an interchange format for
+ * profile, of an areal surface measurement or of a point cloud, and the
+ * records about them in XML. It is used as an interchange format for
  * topography data and as a software measurement standard.
  *
  * @section features Features
@@ -46,8 +46,8 @@
  * - Points can be read only once and in the order of the file; a writer takes
  *   them in the same order.
  * - The number of points must be known before the first one is written, since
- *   the description is part of the file.
- * - A failure while the points are read or written makes the handle refuse
+ *   the document is part of the file.
+ * - After a failure while the points are read or written, the handle refuses
  *   further calls.
  * - The library allocates with `malloc`; it has no custom allocators, since the
  *   zip libraries it builds on could not honor them.
@@ -76,7 +76,7 @@
  * With Visual Studio, configure with `-A x64` (or `Win32`, `ARM64`) and name
  * the configuration in the other commands: `--config Release`, and
  * `-C Release` for `ctest`. The tests need libxml2, which checks the files
- * that the writer makes against the schemas of the standard; `-DBUILD_TESTING=OFF`
+ * that the writer creates against the schemas of the standard; `-DBUILD_TESTING=OFF`
  * leaves them out.
  *
  * These CMake options control which components are built:
@@ -126,37 +126,37 @@
  * - the values as the file stores them, with the functions x3pio_read_data()
  *   and x3pio_write_data();
  * - the conversion of such values to metres and back, which needs no reader
- *   and no writer, only the description: x3pio_decode_values() and
+ *   and no writer, only the document: x3pio_decode_values() and
  *   x3pio_encode_values();
  * - the points in metres, with x3pio_read_points() and x3pio_write_points(),
- *   and the heights of a whole surface in x3pio_read_heights() and
- *   x3pio_write_heights().
+ *   and the z coordinates of all points in x3pio_read_z() and
+ *   x3pio_write_z().
  */
 
 /**
  * @page format x3p Format
  * @details An x3p file is a zip container. The file name extension is `.x3p`.
  * The standard defines these members:
- * - `main.xml` describes the file: the axes, the points and the metadata.
+ * - `main.xml` holds the document of the file: the axes, the points and the metadata.
  * - `md5checksum.hex` holds the MD5 checksum of main.xml, the checksums of
  *   the other members follow in main.xml.
  * - `bindata/data.bin` holds the points in the binary format. The text format
  *   puts them into main.xml instead.
  * - `bindata/valid.bin` holds the mask of the points that were measured, which
  *   integer data needs when a point is missing.
- * - The files of vendors, for which the description names an identifier.
+ * - The files of vendors, for which the document names an identifier.
  *
  * @section format_revisions Revisions
  * The element `Revision` names the schema of main.xml. `ISO5436 - 2000` is the
- * schema of ISO 25178-72:2017, whose description of the calibration has a
- * required date. `ISO25178-72:2017/DAM1` is the schema of Amendment 1, which
+ * schema of ISO 25178-72:2017, whose calibration record has a required
+ * date. `ISO25178-72:2017/DAM1` is the schema of Amendment 1, which
  * requires the data type and the increment of an axis and allows any number of
  * vendor-specific files. A writer writes the revision it is told to and is
- * strict: every file it makes is valid according to the schema of its revision.
+ * strict: every file it creates is valid according to the schema of its revision.
  *
  * @section format_axes Axes and Transformation
  * `Record1` holds the feature type: a profile (`PRF`), a surface (`SUR`) or a
- * point cloud (`PCL`), and one description for each of the axes X, Y and Z. An
+ * point cloud (`PCL`), and one axis element for each of the axes CX, CY and CZ. An
  * axis is incremental (`I`) or absolute (`A`). An incremental axis has no
  * stored values: its coordinate is the index of the point times the increment.
  * The values of an absolute axis are stored, as int16, int32, float or double,
@@ -179,9 +179,10 @@
  *
  * @section format_binary Binary Format
  * `data.bin` holds for each point the values of its absolute axes in the order
- * X, Y, Z, as little-endian numbers without padding. The points of a surface
- * follow in the order of the rows, with the first column varying fastest, then
- * of the layers. The standard contradicts itself on the byte order; the files
+ * X, Y, Z, as little-endian numbers without padding. The points follow in the
+ * order of the standard: u varies fastest, then v, then w, the layer. A matrix
+ * is read and written in whole runs along u of `size_x` points, and a list of
+ * points in any number of points. The standard contradicts itself on the byte order; the files
  * in use are little-endian, and so are those of the library.
  *
  * @section format_text Text Format

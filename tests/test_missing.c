@@ -73,7 +73,7 @@ static void test_floats(void)
         x3pio_const_fields_init(&from);
         from.z = (x3pio_const_field){z, *packed(X3PIO_TYPE_FLOAT)};
         from.valid = (x3pio_const_field){mask, *packed(X3PIO_TYPE_UINT8)};
-        CHECK_OK(x3pio_write_data(writer, &from, ROWS));
+        CHECK_OK(x3pio_write_data(writer, &from, COUNT));
         CHECK_OK(x3pio_end_file(writer));
         x3pio_writer_free(writer);
 
@@ -82,7 +82,7 @@ static void test_floats(void)
         CHECK_OK(create_in_buffer(writer, doc, &by_nan));
         x3pio_const_fields_init(&from);
         from.z = (x3pio_const_field){with_nan, *packed(X3PIO_TYPE_FLOAT)};
-        CHECK_OK(x3pio_write_data(writer, &from, ROWS));
+        CHECK_OK(x3pio_write_data(writer, &from, COUNT));
         CHECK_OK(x3pio_end_file(writer));
         x3pio_writer_free(writer);
         CHECK(by_mask.size == by_nan.size
@@ -93,7 +93,7 @@ static void test_floats(void)
         CHECK(x3pio_document_has_validity(x3pio_reader_document(reader))
               == (storage == X3PIO_STORAGE_TEXT));
         double metres[COUNT];
-        CHECK_OK(x3pio_read_heights(reader, packed(X3PIO_TYPE_DOUBLE), metres));
+        CHECK_OK(x3pio_read_z(reader, packed(X3PIO_TYPE_DOUBLE), metres));
         for (size_t i = 0; i < COUNT; ++i)
         {
             CHECK(isnan(metres[i]) == is_hole(i));
@@ -113,7 +113,7 @@ static void test_floats(void)
         x3pio_fields_init(&into);
         into.z = (x3pio_field){stored, *packed(X3PIO_TYPE_FLOAT)};
         into.valid = (x3pio_field){flags, *packed(X3PIO_TYPE_UINT8)};
-        CHECK_OK(x3pio_read_data(reader, &into, ROWS));
+        CHECK_OK(x3pio_read_data(reader, &into, COUNT));
         for (size_t i = 0; i < COUNT; ++i)
         {
             CHECK(flags[i] == (is_hole(i) ? 0 : 1));
@@ -146,7 +146,7 @@ static void test_integer_value_of_missing_points(void)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
-    CHECK_OK(x3pio_write_heights(writer, packed(X3PIO_TYPE_DOUBLE), heights));
+    CHECK_OK(x3pio_write_z(writer, packed(X3PIO_TYPE_DOUBLE), heights));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
 
@@ -190,7 +190,7 @@ static void test_integer_mask(void)
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){counts, *packed(X3PIO_TYPE_INT16)};
     from.valid = (x3pio_const_field){mask, *packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_write_data(writer, &from, ROWS));
+    CHECK_OK(x3pio_write_data(writer, &from, COUNT));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
 
@@ -233,7 +233,7 @@ static void test_integer_mask(void)
     x3pio_fields_init(&into);
     into.z = (x3pio_field){back, *packed(X3PIO_TYPE_INT16)};
     into.valid = (x3pio_field){flags, *packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_read_data(reader, &into, ROWS));
+    CHECK_OK(x3pio_read_data(reader, &into, COUNT));
     CHECK(memcmp(back, counts, sizeof counts) == 0);
     CHECK(memcmp(flags, mask, sizeof mask) == 0);
     x3pio_reader_free(reader);
@@ -241,7 +241,7 @@ static void test_integer_mask(void)
     /* In metres the points that were not measured are NaN. */
     reader = open_bytes(&bytes);
     float heights[COUNT];
-    CHECK_OK(x3pio_read_heights(reader, packed(X3PIO_TYPE_FLOAT), heights));
+    CHECK_OK(x3pio_read_z(reader, packed(X3PIO_TYPE_FLOAT), heights));
     for (size_t i = 0; i < COUNT; ++i)
     {
         CHECK(isnan(heights[i]) == is_hole(i));
@@ -257,14 +257,14 @@ static void test_integer_mask(void)
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){counts, *packed(X3PIO_TYPE_INT16)};
-    CHECK_OK(x3pio_write_data(writer, &from, ROWS));
+    CHECK_OK(x3pio_write_data(writer, &from, COUNT));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
     reader = open_bytes(&bytes);
     CHECK(!x3pio_document_has_validity(x3pio_reader_document(reader)));
     x3pio_fields_init(&into);
     into.valid = (x3pio_field){flags, *packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_read_data(reader, &into, ROWS));
+    CHECK_OK(x3pio_read_data(reader, &into, COUNT));
     for (size_t i = 0; i < COUNT; ++i)
     {
         CHECK(flags[i] == 1);
@@ -301,7 +301,7 @@ static void test_integers_stay_integers(void)
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){image, *packed(X3PIO_TYPE_INT16)};
     from.valid = (x3pio_const_field){mask, *packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_write_data(writer, &from, ROWS));
+    CHECK_OK(x3pio_write_data(writer, &from, COUNT));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
 
@@ -312,7 +312,7 @@ static void test_integers_stay_integers(void)
     x3pio_fields_init(&into);
     into.z = (x3pio_field){back, *packed(X3PIO_TYPE_INT16)};
     into.valid = (x3pio_field){flags, *packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_read_data(reader, &into, ROWS));
+    CHECK_OK(x3pio_read_data(reader, &into, COUNT));
     CHECK(memcmp(back, image, sizeof image) == 0);
     CHECK(memcmp(flags, mask, sizeof mask) == 0);
     x3pio_reader_free(reader);
@@ -323,7 +323,7 @@ static void test_integers_stay_integers(void)
     uint16_t unsigned_image[COUNT] = {0};
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){unsigned_image, *packed(X3PIO_TYPE_UINT16)};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_data(writer, &from, ROWS));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_data(writer, &from, COUNT));
     CHECK_STRING(
         x3pio_writer_error_message(writer),
         "The type of a layout is not the type in which the file stores "
@@ -331,16 +331,16 @@ static void test_integers_stay_integers(void)
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){image, *packed(X3PIO_TYPE_INT16)};
     from.valid = (x3pio_const_field){mask, *packed(X3PIO_TYPE_INT16)};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_data(writer, &from, ROWS));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_data(writer, &from, COUNT));
     /* A mask is not metres. */
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){image, *packed(X3PIO_TYPE_DOUBLE)};
     from.valid = (x3pio_const_field){mask, *packed(X3PIO_TYPE_UINT8)};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, ROWS));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, COUNT));
     /* The writer is fine after the mistakes. */
     x3pio_const_fields_init(&from);
     from.z = (x3pio_const_field){image, *packed(X3PIO_TYPE_INT16)};
-    CHECK_OK(x3pio_write_data(writer, &from, ROWS));
+    CHECK_OK(x3pio_write_data(writer, &from, COUNT));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
     x3pio_buffer_free(&bytes);
@@ -369,7 +369,7 @@ static void test_absolute_axes(void)
     from.x = (x3pio_const_field){x, *packed(X3PIO_TYPE_DOUBLE)};
     from.y = (x3pio_const_field){y, *packed(X3PIO_TYPE_DOUBLE)};
     from.z = (x3pio_const_field){z, *packed(X3PIO_TYPE_DOUBLE)};
-    CHECK_OK(x3pio_write_points(writer, &from, 2));
+    CHECK_OK(x3pio_write_points(writer, &from, 6));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
 
@@ -382,7 +382,7 @@ static void test_absolute_axes(void)
     into.x = (x3pio_field){bx, *packed(X3PIO_TYPE_DOUBLE)};
     into.y = (x3pio_field){by, *packed(X3PIO_TYPE_DOUBLE)};
     into.z = (x3pio_field){bz, *packed(X3PIO_TYPE_DOUBLE)};
-    CHECK_OK(x3pio_read_points(reader, &into, 2));
+    CHECK_OK(x3pio_read_points(reader, &into, 6));
     for (size_t i = 0; i < 6; ++i)
     {
         const bool hole = i == 1 || i == 4;

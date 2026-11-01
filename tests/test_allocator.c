@@ -113,7 +113,7 @@ static x3pio_buffer sample(x3pio_storage storage, bool vendor)
         (x3pio_const_field){counts, *x3pio_layout_packed(X3PIO_TYPE_INT16)};
     from.valid =
         (x3pio_const_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_write_data(writer, &from, 3));
+    CHECK_OK(x3pio_write_data(writer, &from, 12));
     if (vendor)
     {
         CHECK_OK(x3pio_add_vendor_file(writer, "http://v.org/x", NULL, "data",
@@ -148,7 +148,7 @@ static x3pio_status read_cycle(counter *c, const x3pio_buffer *bytes,
         into.z = (x3pio_field){counts, *x3pio_layout_packed(X3PIO_TYPE_INT16)};
         into.valid =
             (x3pio_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-        status = x3pio_read_data(reader, &into, 1);
+        status = x3pio_read_data(reader, &into, 4);
         if (status == X3PIO_OK)
         {
             status = x3pio_read_data(reader, &into, 0);
@@ -160,7 +160,7 @@ static x3pio_status read_cycle(counter *c, const x3pio_buffer *bytes,
             (x3pio_field){metres, *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
         if (status == X3PIO_OK)
         {
-            status = x3pio_read_points(reader, &in_metres, 2);
+            status = x3pio_read_points(reader, &in_metres, 8);
         }
         *during = c->calls - before;
         if (status == X3PIO_OK && x3pio_reader_vendor_file_count(reader) > 0)
@@ -231,10 +231,10 @@ static x3pio_status write_cycle(counter *c, x3pio_storage storage, bool vendor,
             (x3pio_const_field){counts, *x3pio_layout_packed(X3PIO_TYPE_INT16)};
         from.valid =
             (x3pio_const_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-        status = x3pio_write_data(writer, &from, 2);
+        status = x3pio_write_data(writer, &from, 8);
         if (status == X3PIO_OK)
         {
-            status = x3pio_write_data(writer, &from, 1);
+            status = x3pio_write_data(writer, &from, 4);
         }
         *during = c->calls - before;
     }

@@ -28,21 +28,22 @@ extern "C"
 #endif
 
 /**
- * Description of a buffer of the program for the values of one field of the
- * points: the type of its elements, and how the matrix lies in memory.
+ * A buffer of the program for the values of one field of the points: the type
+ * of its elements, and how the matrix lies in memory.
  *
- * The matrix has the columns and the rows of the file. A file of a matrix has
- * `size_x` columns and `size_y` times `size_z` rows, which are the rows of the
- * first layer, then the rows of the second layer, and so on; a file of a list
- * of points has one column and a row for each point, so an array of points is
- * the matrix at a stride of its size. The element (y, x) of a buffer is at
- * `data + y * row_stride + x * element_stride`. Both strides can be negative.
+ * The points of a call lie in the buffer as a matrix of the program, in the
+ * order of the file. A matrix of the file has runs of `size_x` points along u,
+ * and a list of points has runs of a single point. The element (y, x) of the
+ * buffer is the point number `y * n + x` of the call, where n is `size_x` or 1,
+ * and it is at `data + y * row_stride + x * element_stride`. An array of
+ * points is therefore the matrix at a stride of its size. Both strides can be
+ * negative.
  * They must keep the elements apart: the strides of a dimension of more than
  * one element must not be 0 after the defaults below are applied. This allows
  * values to be read or written in place where they are not contiguous, for
  * example the z member of an array of points, one channel of an interleaved
  * image, a column-major matrix or a matrix upside down. x3pio_layout_packed()
- * describes a plain array. A program that does not use an initializer calls
+ * specifies a plain array. A program that does not use an initializer calls
  * x3pio_layout_init() before it assigns fields.
  *
  * The structure is frozen for the major version: it has these three fields and
@@ -58,13 +59,13 @@ typedef struct x3pio_layout
      */
     x3pio_type type;
     /**
-     * Distance in bytes between consecutive elements within a row. 0 selects
-     * elements that follow each other directly.
+     * Distance in bytes between consecutive elements of a run along u. 0
+     * selects elements that follow each other directly.
      */
     ptrdiff_t element_stride;
     /**
-     * Distance in bytes between consecutive rows. 0 selects rows that follow
-     * each other, each holding the columns of the matrix at `element_stride`.
+     * Distance in bytes between consecutive runs. 0 selects runs that follow
+     * each other, each holding its elements at `element_stride`.
      * A column-major matrix needs an explicit value.
      */
     ptrdiff_t row_stride;
@@ -132,7 +133,7 @@ typedef struct x3pio_fields
     x3pio_field x;
     /** The y coordinates. */
     x3pio_field y;
-    /** The z coordinates, the heights. */
+    /** The z coordinates. */
     x3pio_field z;
     /** The mask of the points: 1 for measured, 0 for missing. */
     x3pio_field valid;
@@ -147,7 +148,7 @@ typedef struct x3pio_const_fields
     x3pio_const_field x;
     /** The y coordinates. */
     x3pio_const_field y;
-    /** The z coordinates, the heights. */
+    /** The z coordinates. */
     x3pio_const_field z;
     /** The mask of the points: nonzero for measured, 0 for missing. */
     x3pio_const_field valid;

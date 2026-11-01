@@ -56,10 +56,10 @@ int main(void)
     x3pio_writer *writer = NULL;
     expect(x3pio_writer_create(&writer) == X3PIO_OK, "writer");
     expect(x3pio_create_file(writer, path, document) == X3PIO_OK, "create");
-    expect(x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                               heights)
-               == X3PIO_OK,
-           "write");
+    expect(
+        x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), heights)
+            == X3PIO_OK,
+        "write");
     expect(x3pio_end_file(writer) == X3PIO_OK, "end");
     x3pio_writer_free(writer);
     x3pio_document_free(document);
@@ -70,16 +70,15 @@ int main(void)
     const x3pio_document *read = x3pio_reader_document(reader);
     expect(read != NULL && x3pio_document_has_validity(read),
            "the file has a mask");
-    expect(read != NULL && x3pio_document_columns(read) == 4
-               && x3pio_document_rows(read) == 3,
-           "the size");
+    const x3pio_dimensions size = x3pio_document_dimensions(read);
+    expect(read != NULL && size.size_x == 4 && size.size_y == 3, "the size");
     int16_t counts[12];
     unsigned char mask[12];
     x3pio_fields into;
     x3pio_fields_init(&into);
     into.z = (x3pio_field){counts, *x3pio_layout_packed(X3PIO_TYPE_INT16)};
     into.valid = (x3pio_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    expect(x3pio_read_data(reader, &into, 3) == X3PIO_OK, "read");
+    expect(x3pio_read_data(reader, &into, 12) == X3PIO_OK, "read");
     expect(mask[5] == 0 && mask[4] == 1, "the mask");
     double metres[12];
     expect(x3pio_decode_values(read, X3PIO_Z, counts, 12,

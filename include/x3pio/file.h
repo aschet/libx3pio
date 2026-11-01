@@ -27,7 +27,7 @@ extern "C"
 #endif
 
 /**
- * Opens the file at a path as the source and reads the description, as
+ * Opens the file at a path as the source and reads the document, as
  * x3pio_open_memory() does for memory. The function does not read the whole
  * file into memory: the reader reads the members that a call needs. The file
  * must remain unchanged while the reader is in use.
@@ -50,7 +50,7 @@ X3PIO_API x3pio_status x3pio_open_file(x3pio_reader *reader, const char *path);
  *
  * @param[in,out] writer The writer.
  * @param[in] path The path of the file, in UTF-8.
- * @param[in] document The description of the file.
+ * @param[in] document The document of the file.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null or the document cannot be
  * written.
  * @retval X3PIO_ERR_STATE The writer has created a file already.

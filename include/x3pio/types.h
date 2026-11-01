@@ -54,9 +54,9 @@ typedef enum x3pio_status
 } x3pio_status;
 
 /**
- * Returns a constant description of a status. The result is never null.
+ * Returns a constant text for a status. The result is never null.
  *
- * @param status The status to describe.
+ * @param status The status.
  */
 X3PIO_API const char *x3pio_status_string(x3pio_status status);
 
@@ -75,7 +75,7 @@ typedef enum x3pio_revision
 /** The class of the 3-D data of a file. */
 typedef enum x3pio_feature
 {
-    /** A linear sequence of points: a matrix of one row. */
+    /** A linear sequence of points: a matrix with a `size_y` of 1. */
     X3PIO_PROFILE = 0,
     /** A matrix of points that have their neighbours. */
     X3PIO_SURFACE = 1,
@@ -231,9 +231,9 @@ X3PIO_API void x3pio_compression_init(x3pio_compression *compression);
 /**
  * Value of the increment of the z axis of a document that requests the writer
  * to select the increment. It is for a file of integers, whose increment trades
- * range against resolution: x3pio_write_heights() determines the smallest
- * increment that fits the heights. A file of floats stores the metres and has
- * the increment 1.
+ * range against resolution: x3pio_write_z() determines the smallest
+ * increment that fits the z coordinates. A file of floats stores the metres and
+ * has the increment 1.
  */
 #define X3PIO_AUTO_INCREMENT 0.0
 
@@ -340,9 +340,9 @@ x3pio_transformation_to_view(const x3pio_transformation *transformation,
  */
 typedef struct x3pio_dimensions
 {
-    /** The size along u, the points of a row. */
+    /** The size along u. */
     size_t size_x;
-    /** The size along v, the rows. */
+    /** The size along v. */
     size_t size_y;
     /** The size along w, the layers. */
     size_t size_z;

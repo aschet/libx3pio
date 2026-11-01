@@ -94,8 +94,9 @@ static inline size_t scenario_points(const scenario *s)
     return s->columns * s->rows * s->layers;
 }
 
-/* The rows of the matrix that the functions transfer: the rows of the layers
- * one after the other, and a row for each point of a list. */
+/* The runs along u of the matrix that the functions transfer: those of the
+ * layers one after the other, and a run of a single point for each point of a
+ * list. */
 static inline size_t scenario_rows(const scenario *s)
 {
     return s->feature == X3PIO_POINT_CLOUD ? s->columns : s->rows * s->layers;

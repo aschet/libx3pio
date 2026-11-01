@@ -168,7 +168,7 @@ static bool read_global(x3pio_reader *reader, points *p)
     into.x = (x3pio_field){p->x, *packed};
     into.y = (x3pio_field){p->y, *packed};
     into.z = (x3pio_field){p->z, *packed};
-    CHECK_OK(x3pio_read_points(reader, &into, x3pio_document_rows(doc)));
+    CHECK_OK(x3pio_read_points(reader, &into, x3pio_document_point_count(doc)));
     const x3pio_transformation place = x3pio_document_transformation(doc);
     for (size_t i = 0; i < p->count; ++i)
     {
@@ -210,7 +210,7 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
     CHECK_OK(x3pio_document_copy(copy, doc));
     CHECK_OK(x3pio_document_set_revision(copy, revision));
     const size_t count = x3pio_document_point_count(doc);
-    const size_t rows = x3pio_document_rows(doc);
+    const size_t total = x3pio_document_point_count(doc);
 
     unsigned char *stored[3] = {NULL, NULL, NULL};
     unsigned char *mask = malloc(count);
@@ -228,7 +228,7 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
         }
     }
     into.valid = (x3pio_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_read_data(reader, &into, rows));
+    CHECK_OK(x3pio_read_data(reader, &into, total));
 
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
@@ -249,7 +249,7 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
     }
     from.valid =
         (x3pio_const_field){mask, *x3pio_layout_packed(X3PIO_TYPE_UINT8)};
-    CHECK_OK(x3pio_write_data(writer, &from, rows));
+    CHECK_OK(x3pio_write_data(writer, &from, total));
     /* The files of vendors travel with the file, in the same revision. */
     if (revision == x3pio_document_revision(doc))
     {
@@ -495,8 +495,7 @@ static void test_standard_example(void)
     x3pio_timestamp_format(&date, text, sizeof text);
     CHECK_STRING(text, "2007-04-30T13:58:02.6+02:00");
     double z[16];
-    CHECK_OK(
-        x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+    CHECK_OK(x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     CHECK(z[0] == 4.86219120804151E-0006);
     CHECK(isnan(z[7]));
     x3pio_reader_free(reader);

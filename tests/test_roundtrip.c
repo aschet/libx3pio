@@ -8,8 +8,9 @@
  * revisions and both storages, valid against the schemas, in the three layers
  * and into the memory of the program in the ways a program holds its data. */
 
-#include "codec.h"
 #include "helpers.h"
+#include "matrix.h"
+#include "samples.h"
 #include "scenarios.h"
 
 #include <stdint.h>
@@ -56,7 +57,7 @@ static void write_scenario(const scenario *s, x3pio_revision revision,
     CHECK_OK(create_in_buffer(writer, doc, out));
     x3pio_const_fields from;
     bind_metres(s, x, y, z, &from);
-    CHECK_OK(x3pio_write_points(writer, &from, scenario_rows(s)));
+    CHECK_OK(x3pio_write_points(writer, &from, scenario_points(s)));
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
     x3pio_document_free(doc);
@@ -76,7 +77,7 @@ static void read_metres(x3pio_reader *reader, double *x, double *y, double *z)
     into.x = (x3pio_field){x, *packed};
     into.y = (x3pio_field){y, *packed};
     into.z = (x3pio_field){z, *packed};
-    CHECK_OK(x3pio_read_points(reader, &into, x3pio_document_rows(doc)));
+    CHECK_OK(x3pio_read_points(reader, &into, x3pio_document_point_count(doc)));
 }
 
 static void check_scenario(const scenario *s, x3pio_revision revision,
@@ -237,7 +238,7 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
     {
         into.y = (x3pio_field){stored_y, *x3pio_layout_packed(s->type)};
     }
-    CHECK_OK(x3pio_read_data(reader, &into, scenario_rows(s)));
+    CHECK_OK(x3pio_read_data(reader, &into, scenario_points(s)));
     for (size_t i = 0; i < count; ++i)
     {
         CHECK(mask[i] == (scenario_is_missing(s, i) ? 0 : 1));
@@ -247,7 +248,7 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
         }
         double got = 0;
         x3pio_matrix m;
-        CHECK(x3pio_matrix_make(&m, stored_z, x3pio_layout_packed(s->type),
+        CHECK(x3pio_matrix_init(&m, stored_z, x3pio_layout_packed(s->type),
                                 count, 1, false));
         x3pio_matrix_load(&m, i, &got, 1);
         const double want = ez[i] / s->increment;
@@ -311,7 +312,6 @@ static void test_rewrite(void)
             CHECK_OK(x3pio_open_memory(reader, first.data, first.size));
             const x3pio_document *doc = x3pio_reader_document(reader);
             const size_t count = x3pio_document_point_count(doc);
-            const size_t rows = x3pio_document_rows(doc);
             unsigned char *sx = malloc(count * 8);
             unsigned char *sy = malloc(count * 8);
             unsigned char *sz = malloc(count * 8);
@@ -329,7 +329,7 @@ static void test_rewrite(void)
             {
                 into.y = (x3pio_field){sy, *x3pio_layout_packed(s->type)};
             }
-            CHECK_OK(x3pio_read_data(reader, &into, rows));
+            CHECK_OK(x3pio_read_data(reader, &into, count));
 
             x3pio_writer *writer = NULL;
             CHECK_OK(x3pio_writer_create(&writer));
@@ -350,7 +350,7 @@ static void test_rewrite(void)
             {
                 from.y = (x3pio_const_field){sy, *x3pio_layout_packed(s->type)};
             }
-            CHECK_OK(x3pio_write_data(writer, &from, rows));
+            CHECK_OK(x3pio_write_data(writer, &from, count));
             CHECK_OK(x3pio_end_file(writer));
             /* Nothing changed: the same bytes. */
             const bool same =
@@ -416,8 +416,8 @@ static void test_image_layouts(void)
 
     /* A depth image of floats: the heights of the matrix as they are. */
     float *image = malloc(count * sizeof *image);
-    CHECK_OK(x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT),
-                                image));
+    CHECK_OK(
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), image));
     for (size_t i = 0; i < count; ++i)
     {
         if (scenario_is_missing(s, i))
@@ -443,7 +443,7 @@ static void test_image_layouts(void)
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     x3pio_layout layout = {X3PIO_TYPE_FLOAT, 0,
                            (ptrdiff_t)(pitch * sizeof(float))};
-    CHECK_OK(x3pio_read_heights(reader, &layout, padded));
+    CHECK_OK(x3pio_read_z(reader, &layout, padded));
     for (size_t r = 0; r < rows; ++r)
     {
         for (size_t col = 0; col < columns; ++col)
@@ -463,8 +463,7 @@ static void test_image_layouts(void)
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     layout = (x3pio_layout){X3PIO_TYPE_FLOAT, 0,
                             -(ptrdiff_t)(columns * sizeof(float))};
-    CHECK_OK(
-        x3pio_read_heights(reader, &layout, flipped + (rows - 1) * columns));
+    CHECK_OK(x3pio_read_z(reader, &layout, flipped + (rows - 1) * columns));
     for (size_t r = 0; r < rows; ++r)
     {
         for (size_t col = 0; col < columns; ++col)
@@ -481,7 +480,7 @@ static void test_image_layouts(void)
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     layout = (x3pio_layout){X3PIO_TYPE_FLOAT, (ptrdiff_t)(rows * sizeof(float)),
                             (ptrdiff_t)sizeof(float)};
-    CHECK_OK(x3pio_read_heights(reader, &layout, transposed));
+    CHECK_OK(x3pio_read_z(reader, &layout, transposed));
     for (size_t r = 0; r < rows; ++r)
     {
         for (size_t col = 0; col < columns; ++col)
@@ -496,43 +495,43 @@ static void test_image_layouts(void)
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     x3pio_fields into;
     x3pio_fields_init(&into);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, rows));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, count));
     CHECK_STRING(x3pio_reader_error_message(reader),
                  "No field is bound to read into");
     into.z = (x3pio_field){image, {X3PIO_TYPE_INT32, 0, 0}};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, rows));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, count));
     into.z = (x3pio_field){image, {(x3pio_type)42, 0, 0}};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, rows));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, count));
     into.z = (x3pio_field){image, {X3PIO_TYPE_FLOAT, 0, 0}};
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_read_points(reader, &into, rows + 1));
+                 x3pio_read_points(reader, &into, count + columns));
     CHECK_STRING(x3pio_reader_error_message(reader),
-                 "More rows than the file has left");
+                 "More points than the file has left");
     unsigned char spare[1];
     into.valid = (x3pio_field){spare, {X3PIO_TYPE_UINT8, 0, 0}};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, rows));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, count));
     x3pio_fields_init(&into);
     /* The stored values are read in the type of the axis, and only the axes the
      * file stores are bound. */
     into.z = (x3pio_field){image, {X3PIO_TYPE_DOUBLE, 0, 0}};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_data(reader, &into, rows));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_data(reader, &into, count));
     into.z = (x3pio_field){image, {X3PIO_TYPE_FLOAT, 0, 0}};
     into.x = (x3pio_field){image, {X3PIO_TYPE_FLOAT, 0, 0}};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_data(reader, &into, rows));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_data(reader, &into, count));
     /* Strides that put the elements on top of each other. */
     into.x = (x3pio_field){NULL, {X3PIO_TYPE_FLOAT, 0, 0}};
     x3pio_layout_init(&layout);
     layout.type = X3PIO_TYPE_FLOAT;
     layout.element_stride = 0;
     /* The reader works after these mistakes. */
-    CHECK_OK(x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT),
-                                image));
+    CHECK_OK(
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), image));
     /* The rows of a file are read once: a second read has nothing left. */
-    CHECK_STATUS(X3PIO_ERR_STATE,
-                 x3pio_read_heights(
-                     reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), image));
+    CHECK_STATUS(
+        X3PIO_ERR_STATE,
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), image));
     into.z = (x3pio_field){image, {X3PIO_TYPE_FLOAT, 0, 0}};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &into, columns));
     CHECK_OK(x3pio_read_points(reader, &into, 0));
     x3pio_reader_free(reader);
 
@@ -704,14 +703,14 @@ static void test_layers(void)
         x3pio_fields_init(&into);
         into.z =
             (x3pio_field){images[l], *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
-        CHECK_OK(x3pio_read_points(reader, &into, rows));
+        CHECK_OK(x3pio_read_points(reader, &into, layer_points));
     }
     /* All the rows are read. */
     float spare[4];
     x3pio_fields more;
     x3pio_fields_init(&more);
     more.z = (x3pio_field){spare, *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &more, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_read_points(reader, &more, columns));
     for (size_t l = 0; l < 3; ++l)
     {
         for (size_t i = 0; i < layer_points; ++i)
@@ -735,8 +734,8 @@ static void test_layers(void)
     CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     float *stack = malloc(count * sizeof *stack);
-    CHECK_OK(x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT),
-                                stack));
+    CHECK_OK(
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), stack));
     for (size_t l = 0; l < 3; ++l)
     {
         for (size_t i = 0; i < layer_points; ++i)
@@ -761,20 +760,20 @@ static void test_layers(void)
         x3pio_const_fields_init(&from);
         from.z = (x3pio_const_field){images[l],
                                      *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
-        CHECK_OK(x3pio_write_points(writer, &from, rows));
+        CHECK_OK(x3pio_write_points(writer, &from, layer_points));
     }
     /* All rows are written. */
     x3pio_const_fields extra;
     x3pio_const_fields_init(&extra);
     extra.z =
         (x3pio_const_field){images[0], *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &extra, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_write_points(writer, &extra, columns));
     CHECK_OK(x3pio_end_file(writer));
     CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, second.data, second.size));
     float *back = malloc(count * sizeof *back);
-    CHECK_OK(x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT),
-                                back));
+    CHECK_OK(x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_FLOAT), back));
     for (size_t i = 0; i < count; ++i)
     {
         CHECK_SAME(back[i], stack[i]);
@@ -808,8 +807,8 @@ static void test_pieces(void)
     x3pio_reader *reader =
         open_scenario(s, X3PIO_REVISION_AMD1, X3PIO_STORAGE_BINARY, &bytes);
     double *whole = malloc(count * sizeof *whole);
-    CHECK_OK(x3pio_read_heights(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE),
-                                whole));
+    CHECK_OK(
+        x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), whole));
     x3pio_reader_free(reader);
 
     const size_t chunks[] = {1, 2, 3, 7, 64, 299, 300, 1000};
@@ -830,7 +829,7 @@ static void test_pieces(void)
                 x3pio_fields_init(&into);
                 into.z = (x3pio_field){joined + row * columns,
                                        *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
-                CHECK_OK(x3pio_read_points(reader, &into, n));
+                CHECK_OK(x3pio_read_points(reader, &into, n * columns));
             }
             for (size_t i = 0; i < count; ++i)
             {
@@ -868,7 +867,7 @@ static void test_pieces(void)
             x3pio_const_fields_init(&from);
             from.z = (x3pio_const_field){
                 z + row * columns, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
-            CHECK_OK(x3pio_write_points(writer, &from, n));
+            CHECK_OK(x3pio_write_points(writer, &from, n * columns));
         }
         CHECK_OK(x3pio_end_file(writer));
         archive a = {0};
@@ -934,11 +933,11 @@ static void test_heights_and_automatic_increment(void)
             wrong.z =
                 (x3pio_const_field){z, *x3pio_layout_packed(X3PIO_TYPE_DOUBLE)};
             CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                         x3pio_write_points(writer, &wrong, rows));
+                         x3pio_write_points(writer, &wrong, rows * columns));
             CHECK(strstr(x3pio_writer_error_message(writer), "increment")
                   != NULL);
-            CHECK_OK(x3pio_write_heights(
-                writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+            CHECK_OK(x3pio_write_z(writer,
+                                   x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
             CHECK_OK(x3pio_end_file(writer));
 
             x3pio_reader *reader = NULL;
@@ -999,7 +998,7 @@ static void test_heights_and_automatic_increment(void)
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     CHECK_STATUS(
         X3PIO_ERR_ARGUMENT,
-        x3pio_write_heights(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+        x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     CHECK(strstr(x3pio_writer_error_message(writer), "stores x and y") != NULL);
     x3pio_writer_free(writer);
     x3pio_document_free(doc);
@@ -1088,7 +1087,7 @@ static void test_structures_of_every_shape(void)
             into.x = (x3pio_field){&first->x, {X3PIO_TYPE_FLOAT, stride, 0}};
             into.y = (x3pio_field){&first->y, {X3PIO_TYPE_FLOAT, stride, 0}};
             into.z = (x3pio_field){&first->z, {X3PIO_TYPE_FLOAT, stride, 0}};
-            CHECK_OK(x3pio_read_points(reader, &into, piece));
+            CHECK_OK(x3pio_read_points(reader, &into, piece * columns));
         }
         x3pio_reader_free(reader);
 
@@ -1131,7 +1130,7 @@ static void test_structures_of_every_shape(void)
             from.y = (x3pio_const_field){&vertices->y,
                                          {X3PIO_TYPE_FLOAT, stride, 0}};
         }
-        CHECK_OK(x3pio_write_points(writer, &from, rows));
+        CHECK_OK(x3pio_write_points(writer, &from, count));
         CHECK_OK(x3pio_end_file(writer));
         CHECK_OK(x3pio_reader_create(&reader));
         CHECK_OK(x3pio_open_memory(reader, second.data, second.size));

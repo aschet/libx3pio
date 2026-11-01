@@ -8,7 +8,8 @@
  * strided, negative, members of structures, and every type a view can hold. */
 
 #include "check.h"
-#include "codec.h"
+#include "matrix.h"
+#include "samples.h"
 
 #include <float.h>
 #include <stddef.h>
@@ -162,7 +163,7 @@ static x3pio_matrix matrix_of(const void *data, x3pio_type type,
 {
     x3pio_matrix matrix;
     const x3pio_layout layout = {type, element_stride, row_stride};
-    CHECK(x3pio_matrix_make(&matrix, data, &layout, columns, rows, true));
+    CHECK(x3pio_matrix_init(&matrix, data, &layout, columns, rows, true));
     return matrix;
 }
 
@@ -280,14 +281,14 @@ static void test_layout_checks(void)
     double d[4] = {0};
     x3pio_matrix m;
     const x3pio_layout packed = {X3PIO_TYPE_DOUBLE, 0, 0};
-    CHECK(x3pio_matrix_make(&m, d, &packed, 4, 1, true));
-    CHECK(!x3pio_matrix_make(&m, NULL, &packed, 4, 1, true));
-    CHECK(!x3pio_matrix_make(&m, d, &packed, 0, 1, true));
-    CHECK(!x3pio_matrix_make(&m, d, &packed, 4, 0, true));
+    CHECK(x3pio_matrix_init(&m, d, &packed, 4, 1, true));
+    CHECK(!x3pio_matrix_init(&m, NULL, &packed, 4, 1, true));
+    CHECK(!x3pio_matrix_init(&m, d, &packed, 0, 1, true));
+    CHECK(!x3pio_matrix_init(&m, d, &packed, 4, 0, true));
     const x3pio_layout bad_type = {(x3pio_type)42, 0, 0};
-    CHECK(!x3pio_matrix_make(&m, d, &bad_type, 4, 1, true));
+    CHECK(!x3pio_matrix_init(&m, d, &bad_type, 4, 1, true));
     /* The default row stride must not overflow. */
-    CHECK(!x3pio_matrix_make(&m, d, &packed, SIZE_MAX / 4, 2, true));
+    CHECK(!x3pio_matrix_init(&m, d, &packed, SIZE_MAX / 4, 2, true));
 
     CHECK(x3pio_layout_packed(X3PIO_TYPE_DOUBLE)->type == X3PIO_TYPE_DOUBLE);
     CHECK(x3pio_layout_packed(X3PIO_TYPE_INT8)->type == X3PIO_TYPE_INT8);

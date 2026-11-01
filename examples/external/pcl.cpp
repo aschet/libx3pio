@@ -93,12 +93,12 @@ Cloud read_cloud(const char *path)
     cloud.points.resize(static_cast<std::size_t>(cloud.width) * cloud.height);
     cloud.is_dense = false;
 
-    // The rows of the matrix are the rows of the cloud. For a list, a row is a
-    // point, and the cloud has the width of the list.
+    // The points come in the order of the file, so a run along u of a matrix is
+    // a row of the cloud. A list of points is an unorganized cloud with the
+    // width of the list.
     const x3pio_fields into = fields_of(cloud);
-    const std::size_t rows = dimensions.list ? dimensions.size_x : cloud.height;
     check(x3pio_read_points_in(reader.get(), X3PIO_COORDINATES_GLOBAL, &into,
-                               rows),
+                               cloud.points.size()),
           x3pio_reader_error_message(reader.get()));
     return cloud;
 }
@@ -115,9 +115,9 @@ void write_cloud(const char *path, const Cloud &cloud)
     // the new file is the identity, so they are stored as they are. A file with
     // a transformation takes them with x3pio_write_points_in().
 
-    x3pio_writer *made = nullptr;
-    x3pio_writer_create(&made);
-    Writer writer{made, x3pio_writer_free};
+    x3pio_writer *opened = nullptr;
+    x3pio_writer_create(&opened);
+    Writer writer{opened, x3pio_writer_free};
     check(x3pio_create_file(writer.get(), path, document.get()),
           x3pio_writer_error_message(writer.get()));
     const x3pio_const_fields from = fields_of(cloud);

@@ -28,15 +28,16 @@ void check(x3pio_status status, const char *message)
     }
 }
 
-// The description of the surface as float metres, with the metadata of the
+// The document of the surface as float metres, with the metadata of the
 // source.
 Document copy_document(const x3pio_document *source)
 {
     x3pio_document *document = nullptr;
     x3pio_document_create(&document);
     x3pio_document_copy(document, source);
+    const x3pio_dimensions size = x3pio_document_dimensions(source);
     x3pio_document_set_feature_surface(
-        document, x3pio_document_columns(source), x3pio_document_rows(source),
+        document, size.size_x, size.size_y,
         x3pio_document_axis(source, X3PIO_X).increment,
         x3pio_document_axis(source, X3PIO_Y).increment, X3PIO_TYPE_FLOAT, 1.0,
         1);
@@ -73,11 +74,11 @@ x3pio_layout layout_of(const Eigen::MatrixXd &matrix)
 Eigen::MatrixXd read_matrix(x3pio_reader *reader)
 {
     const x3pio_document *document = x3pio_reader_document(reader);
-    Eigen::MatrixXd heights(
-        static_cast<Eigen::Index>(x3pio_document_rows(document)),
-        static_cast<Eigen::Index>(x3pio_document_columns(document)));
+    const x3pio_dimensions size = x3pio_document_dimensions(document);
+    Eigen::MatrixXd heights(static_cast<Eigen::Index>(size.size_y),
+                            static_cast<Eigen::Index>(size.size_x));
     const x3pio_layout layout = layout_of(heights);
-    check(x3pio_read_heights(reader, &layout, heights.data()),
+    check(x3pio_read_z(reader, &layout, heights.data()),
           x3pio_reader_error_message(reader));
     return heights;
 }
@@ -139,7 +140,7 @@ void write_matrix(const char *path, const x3pio_document *source,
     check(x3pio_create_file(writer.get(), path, document.get()),
           x3pio_writer_error_message(writer.get()));
     const x3pio_layout layout = layout_of(heights);
-    check(x3pio_write_heights(writer.get(), &layout, heights.data()),
+    check(x3pio_write_z(writer.get(), &layout, heights.data()),
           x3pio_writer_error_message(writer.get()));
     check(x3pio_end_file(writer.get()),
           x3pio_writer_error_message(writer.get()));

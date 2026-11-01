@@ -42,9 +42,8 @@ static int write_cloud(const char *path)
     if (status == X3PIO_OK)
     {
         /* The coordinates are members of the structure: the element stride is
-         * the size of the structure. A list of points is a column: a row for
-         * each point, so the points of a cloud can be written in any number of
-         * parts. */
+         * the size of the structure. A list of points is written in any number
+         * of parts. */
         x3pio_const_fields from;
         x3pio_const_fields_init(&from);
         const ptrdiff_t stride = sizeof(point);
@@ -73,8 +72,8 @@ static int write_cloud(const char *path)
  * surface: the program does not need to know. A grid has no stored x and y, and
  * the reader gives them from the place of the point. The points come in pieces
  * that fit an array of the program, so a cloud of any size needs the memory of
- * one piece. A cloud has a row for each point, and a piece is a number of rows;
- * a piece of a surface is a number of whole rows, which must fit the array. */
+ * one piece. A list takes any number of points in a piece; a matrix is read in
+ * whole runs along u of size_x points, which must fit the array. */
 static int read_points(const char *path)
 {
     enum
@@ -91,10 +90,13 @@ static int read_points(const char *path)
     if (status == X3PIO_OK)
     {
         const x3pio_document *document = x3pio_reader_document(reader);
-        const size_t columns = x3pio_document_columns(document);
-        const size_t rows = x3pio_document_rows(document);
-        const size_t rows_per_piece = PIECE / columns;
-        if (rows_per_piece == 0)
+        const x3pio_dimensions size = x3pio_document_dimensions(document);
+        const size_t total = x3pio_document_point_count(document);
+        /* A matrix is read in whole runs along u of size_x points, a list in
+         * any number of points. */
+        const size_t run = size.list ? 1 : size.size_x;
+        const size_t points_per_piece = PIECE / run * run;
+        if (points_per_piece == 0)
         {
             status = X3PIO_ERR_ARGUMENT;
         }
@@ -104,18 +106,19 @@ static int read_points(const char *path)
         into.x = (x3pio_field){&piece[0].x, {X3PIO_TYPE_FLOAT, stride, 0}};
         into.y = (x3pio_field){&piece[0].y, {X3PIO_TYPE_FLOAT, stride, 0}};
         into.z = (x3pio_field){&piece[0].z, {X3PIO_TYPE_FLOAT, stride, 0}};
-        for (size_t row = 0; status == X3PIO_OK && row < rows;
-             row += rows_per_piece)
+        for (size_t first = 0; status == X3PIO_OK && first < total;
+             first += points_per_piece)
         {
-            const size_t n =
-                rows - row < rows_per_piece ? rows - row : rows_per_piece;
+            const size_t n = total - first < points_per_piece
+                                 ? total - first
+                                 : points_per_piece;
             status = x3pio_read_points(reader, &into, n);
-            for (size_t i = 0; status == X3PIO_OK && i < n * columns; ++i)
+            for (size_t i = 0; status == X3PIO_OK && i < n; ++i)
             {
                 measured += isnan(piece[i].z) ? 0U : 1U;
                 last = piece[i];
             }
-            count += n * columns;
+            count += n;
         }
     }
     if (status == X3PIO_OK)

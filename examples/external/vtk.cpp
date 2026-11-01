@@ -87,19 +87,19 @@ struct Data
 // file with an irregular grid or a cloud stores all three. The points are in
 // the coordinate system of the file, which shows the part itself; the global
 // coordinates of the machine come from x3pio_read_points_in(). The file can
-// be read in pieces of rows, and a list of points has a row for each point.
+// be read in pieces of points.
 Data read_data(x3pio_reader *reader)
 {
     const x3pio_document *document = x3pio_reader_document(reader);
     const x3pio_dimensions dimensions = x3pio_document_dimensions(document);
     Data data{x3pio_document_feature(document),
-              x3pio_document_columns(document),
+              dimensions.list ? 1 : dimensions.size_x,
               dimensions.list ? 1 : dimensions.size_y,
               dimensions.list ? 1 : dimensions.size_z,
               {},
               {}};
-    const size_t rows = x3pio_document_rows(document);
-    data.vertices.resize(x3pio_document_point_count(document));
+    const size_t points = x3pio_document_point_count(document);
+    data.vertices.resize(points);
 
     const auto stride = static_cast<ptrdiff_t>(sizeof(Vertex));
     Vertex *first = data.vertices.data();
@@ -108,7 +108,7 @@ Data read_data(x3pio_reader *reader)
     into.x = {&first->x, {X3PIO_TYPE_FLOAT, stride, 0}};
     into.y = {&first->y, {X3PIO_TYPE_FLOAT, stride, 0}};
     into.z = {&first->z, {X3PIO_TYPE_FLOAT, stride, 0}};
-    check(x3pio_read_points(reader, &into, rows),
+    check(x3pio_read_points(reader, &into, points),
           x3pio_reader_error_message(reader));
 
     // VTK cannot take a NaN in its bounds: the points not measured are marked

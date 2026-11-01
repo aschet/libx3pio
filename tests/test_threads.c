@@ -59,8 +59,7 @@ static bool build(int n, x3pio_storage storage, x3pio_buffer *out)
         ok = x3pio_writer_create(&writer) == X3PIO_OK
              && x3pio_writer_set_storage(writer, storage) == X3PIO_OK
              && create_in_buffer(writer, doc, out) == X3PIO_OK
-             && x3pio_write_heights(writer,
-                                    x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
+             && x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
                     == X3PIO_OK
              && x3pio_end_file(writer) == X3PIO_OK;
     }
@@ -112,8 +111,7 @@ static void *write_and_read(void *argument)
             double *z = malloc(40 * 30 * sizeof *z);
             double *want = malloc(40 * 30 * sizeof *want);
             heights_of(j->n, want);
-            if (x3pio_read_heights(reader,
-                                   x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
+            if (x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
                 != X3PIO_OK)
             {
                 j->ok = false;
@@ -149,8 +147,7 @@ static void *write_and_read(void *argument)
         else
         {
             double z[12] = {0};
-            if (x3pio_write_heights(writer,
-                                    x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
+            if (x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
                     != X3PIO_OK
                 || x3pio_end_file(writer) != X3PIO_OK)
             {
@@ -225,8 +222,7 @@ static void *read_shared(void *argument)
         double *want = malloc(40 * 30 * sizeof *want);
         heights_of(1, want);
         if (opened != X3PIO_OK
-            || x3pio_read_heights(reader,
-                                  x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
+            || x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z)
                    != X3PIO_OK)
         {
             s->ok = false;
@@ -327,8 +323,8 @@ static void test_locale(void)
         double *z = malloc(40 * 30 * sizeof *z);
         double *want = malloc(40 * 30 * sizeof *want);
         heights_of(2, want);
-        CHECK_OK(x3pio_read_heights(reader,
-                                    x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
+        CHECK_OK(
+            x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
         for (size_t i = 0; i < 40 * 30; ++i)
         {
             CHECK(isnan(want[i]) == isnan(z[i]));
