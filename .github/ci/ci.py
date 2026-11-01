@@ -118,6 +118,17 @@ def dependency_options(triplet=""):
     return options
 
 
+def conan_generators():
+    """The folder of the files that conan install made, found by the toolchain
+    file of the dependency options, or None if the dependencies come from
+    elsewhere."""
+    for option in dependency_options():
+        name, _, value = option.partition("=")
+        if name == "-DCMAKE_TOOLCHAIN_FILE" and Path(value).name == "conan_toolchain.cmake":
+            return Path(value).parent
+    return None
+
+
 def vcpkg_installed(build):
     """The folders of the libraries that vcpkg installed in manifest mode into
     the build folder of the library."""
@@ -153,10 +164,14 @@ def check_pkg_config(build, pc, static):
     # A static library requires its private dependencies, which pkg-config
     # reports only with --static.
     query = f"pkg-config {'--static' if static else ''} --cflags --libs x3pio"
-    # The libraries of vcpkg are in the build folder.
+    # The libraries of vcpkg are in the build folder, and those of Conan have
+    # their pc files next to the toolchain file (PkgConfigDeps).
     paths = [pc.parent]
     for installed in vcpkg_installed(build):
         paths += [installed / "lib" / "pkgconfig", installed / "share" / "pkgconfig"]
+    generators = conan_generators()
+    if generators is not None:
+        paths.append(generators)
     paths.append(os.environ.get("PKG_CONFIG_PATH", ""))
     env = dict(os.environ, PKG_CONFIG_PATH=os.pathsep.join(map(str, paths)))
     flags = subprocess.check_output(shlex.split(query), env=env, text=True)

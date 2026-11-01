@@ -21,6 +21,7 @@ from conan import ConanFile
 from conan.errors import ConanException
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import copy, load, rmdir
+from conan.tools.gnu import PkgConfigDeps
 
 required_conan_version = ">=2.0"
 
@@ -98,6 +99,13 @@ class X3pioConan(ConanFile):
         toolchain.cache_variables["BUILD_TESTING"] = not self._skip_test
         toolchain.generate()
         CMakeDeps(self).generate()
+        # The pc files of the dependencies, for the check of the pc file of the
+        # library with pkg-config. Conan Center names the one of minizip-ng
+        # minizip, and the pc file of the library requires minizip-ng, as
+        # upstream and vcpkg name it.
+        pc = PkgConfigDeps(self)
+        pc.set_property("minizip-ng::minizip", "pkg_config_aliases", ["minizip-ng"])
+        pc.generate()
 
     def build(self):
         cmake = CMake(self)
