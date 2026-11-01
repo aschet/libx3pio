@@ -439,7 +439,9 @@ static x3pio_status existing_member(x3pio_reader *reader, const char *name,
     {
         return X3PIO_OK;
     }
-    if (x3pio_member_index_find(&reader->index, path) == NULL)
+    /* An identifier does not name a file of the format. */
+    if (x3pio_is_reserved_name(path)
+        || x3pio_member_index_find(&reader->index, path) == NULL)
     {
         x3pio_release(&reader->allocator, path);
         return X3PIO_OK;
@@ -490,13 +492,19 @@ static x3pio_status find_vendor_files(x3pio_reader *reader)
     }
     /* In the first revision the one vendor owns every file that is not part of
      * the format. */
-    char *taken[4] = {NULL, NULL, NULL, NULL};
-    const char *names[4] = {
-        X3PIO_MAIN_XML,
-        d->checksum_file != NULL ? d->checksum_file : X3PIO_CHECKSUM_FILE,
-        d->binary ? d->point_path : NULL, d->binary ? d->valid_path : NULL};
+    enum
+    {
+        TAKEN = 7
+    };
+    char *taken[TAKEN] = {NULL};
+    /* The files of the format, also those the document does not use, and the
+     * files the document names. */
+    const char *names[TAKEN] = {
+        X3PIO_MAIN_XML,   X3PIO_CHECKSUM_FILE,
+        X3PIO_DATA_FILE,  X3PIO_VALID_FILE,
+        d->checksum_file, d->binary ? d->point_path : NULL};
     x3pio_status status = X3PIO_OK;
-    for (size_t i = 0; i < 4 && status == X3PIO_OK; ++i)
+    for (size_t i = 0; i < TAKEN && status == X3PIO_OK; ++i)
     {
         if (names[i] != NULL
             && x3pio_member_path(&reader->allocator, names[i], strlen(names[i]),
@@ -518,7 +526,7 @@ static x3pio_status find_vendor_files(x3pio_reader *reader)
         }
         const char *name = member->name + prefix_size;
         bool is_taken = false;
-        for (size_t t = 0; t < 4; ++t)
+        for (size_t t = 0; t < TAKEN; ++t)
         {
             is_taken =
                 is_taken || (taken[t] != NULL && strcmp(taken[t], name) == 0);
@@ -529,7 +537,7 @@ static x3pio_status find_vendor_files(x3pio_reader *reader)
                 x3pio_fail(&reader->message, X3PIO_ERR_MEMORY, "Out of memory");
         }
     }
-    for (size_t t = 0; t < 4; ++t)
+    for (size_t t = 0; t < TAKEN; ++t)
     {
         x3pio_release(&reader->allocator, taken[t]);
     }

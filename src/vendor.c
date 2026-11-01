@@ -104,27 +104,51 @@ static bool segment_valid(const char *text, size_t size)
            && !(size == 2 && text[0] == '.' && text[1] == '.');
 }
 
+/* The part of an identifier after its scheme, trimmed. */
+static void after_scheme(const char **uri, size_t *size, const char **rest,
+                         size_t *rest_size)
+{
+    x3pio_trim(uri, size);
+    *rest = *uri;
+    *rest_size = *size;
+    for (size_t i = 0; i + 2 < *size; ++i)
+    {
+        if ((*uri)[i] == ':' && (*uri)[i + 1] == '/' && (*uri)[i + 2] == '/')
+        {
+            *rest = *uri + i + 3;
+            *rest_size = *size - (i + 3);
+            return;
+        }
+    }
+    if (*size >= 2 && (*uri)[0] == '/' && (*uri)[1] == '/')
+    {
+        *rest = *uri + 2;
+        *rest_size = *size - 2;
+    }
+}
+
+bool x3pio_vendor_host_is_plain(const char *uri, size_t size)
+{
+    const char *rest = NULL;
+    size_t rest_size = 0;
+    after_scheme(&uri, &size, &rest, &rest_size);
+    for (size_t i = 0; i < rest_size && rest[i] != '/'; ++i)
+    {
+        if (rest[i] == ':' || rest[i] == '@')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 x3pio_status x3pio_vendor_member(const x3pio_allocator *allocator,
                                  const char *uri, size_t size, char **member)
 {
     *member = NULL;
-    x3pio_trim(&uri, &size);
-    const char *rest = uri;
-    size_t rest_size = size;
-    for (size_t i = 0; i + 2 < size; ++i)
-    {
-        if (uri[i] == ':' && uri[i + 1] == '/' && uri[i + 2] == '/')
-        {
-            rest = uri + i + 3;
-            rest_size = size - (i + 3);
-            break;
-        }
-    }
-    if (rest == uri && size >= 2 && uri[0] == '/' && uri[1] == '/')
-    {
-        rest = uri + 2;
-        rest_size = size - 2;
-    }
+    const char *rest = NULL;
+    size_t rest_size = 0;
+    after_scheme(&uri, &size, &rest, &rest_size);
     for (size_t i = 0; i < size; ++i)
     {
         if (uri[i] == '\\' || uri[i] == '?' || uri[i] == '#')

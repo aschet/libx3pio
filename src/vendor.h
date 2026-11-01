@@ -62,4 +62,14 @@ bool x3pio_is_reserved_name(const char *path);
 x3pio_status x3pio_vendor_member(const x3pio_allocator *allocator,
                                  const char *uri, size_t size, char **member);
 
+/**
+ * Tells whether the host name of an identifier is a plain domain name, as a
+ * file that is registered needs: without a user name or a port, which would
+ * make an awkward name in the container.
+ *
+ * @param uri The identifier.
+ * @param size The length of the identifier.
+ */
+bool x3pio_vendor_host_is_plain(const char *uri, size_t size);
+
 #endif /* X3PIO_SRC_VENDOR_H */

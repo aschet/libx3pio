@@ -199,13 +199,25 @@
  * elements.
  *
  * @section format_vendor Vendor Files
- * A vendor adds files to the container, and registers each by an identifier in
- * main.xml. In Amendment 1 the identifier is a URI, and the container holds the
- * file at a path that the URI gives: its host in reverse order, its path, and
- * with backslashes as separators. x3pio_add_vendor_file() derives the path, or
- * takes the name of the member as an argument; x3pio_reader_vendor_file_count()
- * and the functions after it list the files, and x3pio_read_member() reads one
- * without reading any other member.
+ * A vendor adds files to the container, and registers them by an identifier in
+ * main.xml. The two revisions differ in what the identifier stands for:
+ * - In Amendment 1 every file has an identifier of its own, a URI with a host
+ *   name and a path to a file, and the file lies where the URI says: the labels
+ *   of the host name and the segments of the path, with backslashes as
+ *   separators, so `http://www.vendor.com/mypath/a.xml` is the member
+ *   `www\vendor\com\mypath\a.xml`. The scheme is not part of the name, so
+ *   `http://a.b/c` and `https://a.b/c` name the same file, which they share if
+ *   its content is the same. A file registered by a new identifier has a host
+ *   name without a user name and a port. An identifier without a path names no
+ *   file, and a file that no identifier names is not a vendor file.
+ * - In ISO 25178-72:2017 a single identifier stands for the extension of the
+ *   vendor as a whole, and its files lie in the container under any name except
+ *   those of the format. A file with several identifiers is read as Amendment 1.
+ *
+ * A name is a file or a folder of the container, not both. x3pio_add_vendor_file()
+ * follows these rules; x3pio_reader_vendor_file_count() and the functions after
+ * it list the files, and x3pio_read_member() reads one without reading any other
+ * member.
  *
  * @section format_tolerance Tolerance
  * Real files differ from the standard, and some are damaged. The reader

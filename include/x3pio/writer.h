@@ -292,10 +292,13 @@ X3PIO_API x3pio_status x3pio_write_z(x3pio_writer *writer,
  * Adds a file of a vendor to the container.
  *
  * In the revision of Amd 1 every file has an identifier of its own, a URI with
- * a host name and a path to a file, which names the file in the container
- * unless `member` is given. In the revision of 2017 all files share one
- * identifier, and `member`, the name in the container, is required. The content
- * is copied, and the file is written when the file ends.
+ * a host name and a path to a file, and the file lies in the container where
+ * the identifier says: the labels of the host name and the segments of the
+ * path, with backslashes as separators. `member` is null, or the same name. An
+ * identifier whose file has the name and the content of another one shares it.
+ * In the revision of 2017 all files share one identifier, and `member`, the
+ * name in the container, is required. The content is copied, and the file is
+ * written when the file ends.
  *
  * @param[in,out] writer The writer.
  * @param[in] id The vendor identifier.
@@ -306,7 +309,9 @@ X3PIO_API x3pio_status x3pio_write_z(x3pio_writer *writer,
  * the writer. A file that is compressed already, such as a PNG image, is best
  * stored.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the identifier or the name
- * cannot be used: it is taken or reserved, or leaves the container.
+ * cannot be used: it is taken or reserved, leaves the container, would be a
+ * file and a folder at once, in Amd 1 has a user name or a port, or `member` is
+ * not the name that the identifier gives.
  * @retval X3PIO_ERR_STATE No file is created, or it is ended.
  * @retval X3PIO_ERR_MEMORY An allocation failed.
  */
