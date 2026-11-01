@@ -10,78 +10,117 @@
  */
 
 #include "md5.h"
+#include "byte_order.h"
 #include "text.h"
 
-static const unsigned shifts[64] = {
-    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-    5, 9,  14, 20, 5, 9,  14, 20, 5, 9,  14, 20, 5, 9,  14, 20,
-    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21};
-
-/* The constants of RFC 1321: floor(2^32 * abs(sin(i + 1))). */
-static const uint32_t constants[64] = {
-    0xd76aa478U, 0xe8c7b756U, 0x242070dbU, 0xc1bdceeeU, 0xf57c0fafU,
-    0x4787c62aU, 0xa8304613U, 0xfd469501U, 0x698098d8U, 0x8b44f7afU,
-    0xffff5bb1U, 0x895cd7beU, 0x6b901122U, 0xfd987193U, 0xa679438eU,
-    0x49b40821U, 0xf61e2562U, 0xc040b340U, 0x265e5a51U, 0xe9b6c7aaU,
-    0xd62f105dU, 0x02441453U, 0xd8a1e681U, 0xe7d3fbc8U, 0x21e1cde6U,
-    0xc33707d6U, 0xf4d50d87U, 0x455a14edU, 0xa9e3e905U, 0xfcefa3f8U,
-    0x676f02d9U, 0x8d2a4c8aU, 0xfffa3942U, 0x8771f681U, 0x6d9d6122U,
-    0xfde5380cU, 0xa4beea44U, 0x4bdecfa9U, 0xf6bb4b60U, 0xbebfbc70U,
-    0x289b7ec6U, 0xeaa127faU, 0xd4ef3085U, 0x04881d05U, 0xd9d4d039U,
-    0xe6db99e5U, 0x1fa27cf8U, 0xc4ac5665U, 0xf4292244U, 0x432aff97U,
-    0xab9423a7U, 0xfc93a039U, 0x655b59c3U, 0x8f0ccc92U, 0xffeff47dU,
-    0x85845dd1U, 0x6fa87e4fU, 0xfe2ce6e0U, 0xa3014314U, 0x4e0811a1U,
-    0xf7537e82U, 0xbd3af235U, 0x2ad7d2bbU, 0xeb86d391U};
-
-static uint32_t rotate_left(uint32_t x, unsigned n)
+/* A rotation by a count that is a constant at every call, so that it is one
+ * instruction of the processor. */
+static inline uint32_t rotate_left(uint32_t x, unsigned n)
 {
     return (x << n) | (x >> (32U - n));
 }
 
-static void process_block(uint32_t state[4], const unsigned char *block)
+/* The functions of the four rounds of RFC 1321. */
+#define ROUND1(x, y, z) (((x) & (y)) | (~(x) & (z)))
+#define ROUND2(x, y, z) (((x) & (z)) | ((y) & ~(z)))
+#define ROUND3(x, y, z) ((x) ^ (y) ^ (z))
+#define ROUND4(x, y, z) ((y) ^ ((x) | ~(z)))
+
+/*
+ * One step: a = b + rotate_left(a + f(b, c, d) + m[word] + constant, shift).
+ * The constants of RFC 1321 are floor(2^32 * abs(sin(i + 1))). The steps are
+ * written out so that the word, the shift and the constant of each are
+ * constants of the program: a loop over a table needs a branch for the round, a
+ * load for the shift and the constant, a remainder for the word and four moves
+ * of the registers for every step, and is a third slower.
+ */
+#define STEP(round, a, b, c, d, word, shift, constant)                         \
+    do                                                                         \
+    {                                                                          \
+        (a) += round((b), (c), (d)) + m[(word)] + (constant);                  \
+        (a) = (b) + rotate_left((a), (shift));                                 \
+    } while (0)
+
+static inline void process_block(uint32_t state[4], const unsigned char *block)
 {
     uint32_t m[16];
     for (size_t i = 0; i < 16; ++i)
     {
-        m[i] = (uint32_t)block[4 * i] | ((uint32_t)block[4 * i + 1] << 8U)
-               | ((uint32_t)block[4 * i + 2] << 16U)
-               | ((uint32_t)block[4 * i + 3] << 24U);
+        m[i] = x3pio_load_u32(block + 4 * i);
     }
     uint32_t a = state[0];
     uint32_t b = state[1];
     uint32_t c = state[2];
     uint32_t d = state[3];
-    for (size_t i = 0; i < 64; ++i)
-    {
-        uint32_t f = 0;
-        size_t g = 0;
-        if (i < 16)
-        {
-            f = (b & c) | (~b & d);
-            g = i;
-        }
-        else if (i < 32)
-        {
-            f = (d & b) | (~d & c);
-            g = (5 * i + 1) % 16;
-        }
-        else if (i < 48)
-        {
-            f = b ^ c ^ d;
-            g = (3 * i + 5) % 16;
-        }
-        else
-        {
-            f = c ^ (b | ~d);
-            g = (7 * i) % 16;
-        }
-        f = f + a + constants[i] + m[g];
-        a = d;
-        d = c;
-        c = b;
-        b = b + rotate_left(f, shifts[i]);
-    }
+
+    STEP(ROUND1, a, b, c, d, 0, 7, 0xd76aa478U);
+    STEP(ROUND1, d, a, b, c, 1, 12, 0xe8c7b756U);
+    STEP(ROUND1, c, d, a, b, 2, 17, 0x242070dbU);
+    STEP(ROUND1, b, c, d, a, 3, 22, 0xc1bdceeeU);
+    STEP(ROUND1, a, b, c, d, 4, 7, 0xf57c0fafU);
+    STEP(ROUND1, d, a, b, c, 5, 12, 0x4787c62aU);
+    STEP(ROUND1, c, d, a, b, 6, 17, 0xa8304613U);
+    STEP(ROUND1, b, c, d, a, 7, 22, 0xfd469501U);
+    STEP(ROUND1, a, b, c, d, 8, 7, 0x698098d8U);
+    STEP(ROUND1, d, a, b, c, 9, 12, 0x8b44f7afU);
+    STEP(ROUND1, c, d, a, b, 10, 17, 0xffff5bb1U);
+    STEP(ROUND1, b, c, d, a, 11, 22, 0x895cd7beU);
+    STEP(ROUND1, a, b, c, d, 12, 7, 0x6b901122U);
+    STEP(ROUND1, d, a, b, c, 13, 12, 0xfd987193U);
+    STEP(ROUND1, c, d, a, b, 14, 17, 0xa679438eU);
+    STEP(ROUND1, b, c, d, a, 15, 22, 0x49b40821U);
+
+    STEP(ROUND2, a, b, c, d, 1, 5, 0xf61e2562U);
+    STEP(ROUND2, d, a, b, c, 6, 9, 0xc040b340U);
+    STEP(ROUND2, c, d, a, b, 11, 14, 0x265e5a51U);
+    STEP(ROUND2, b, c, d, a, 0, 20, 0xe9b6c7aaU);
+    STEP(ROUND2, a, b, c, d, 5, 5, 0xd62f105dU);
+    STEP(ROUND2, d, a, b, c, 10, 9, 0x02441453U);
+    STEP(ROUND2, c, d, a, b, 15, 14, 0xd8a1e681U);
+    STEP(ROUND2, b, c, d, a, 4, 20, 0xe7d3fbc8U);
+    STEP(ROUND2, a, b, c, d, 9, 5, 0x21e1cde6U);
+    STEP(ROUND2, d, a, b, c, 14, 9, 0xc33707d6U);
+    STEP(ROUND2, c, d, a, b, 3, 14, 0xf4d50d87U);
+    STEP(ROUND2, b, c, d, a, 8, 20, 0x455a14edU);
+    STEP(ROUND2, a, b, c, d, 13, 5, 0xa9e3e905U);
+    STEP(ROUND2, d, a, b, c, 2, 9, 0xfcefa3f8U);
+    STEP(ROUND2, c, d, a, b, 7, 14, 0x676f02d9U);
+    STEP(ROUND2, b, c, d, a, 12, 20, 0x8d2a4c8aU);
+
+    STEP(ROUND3, a, b, c, d, 5, 4, 0xfffa3942U);
+    STEP(ROUND3, d, a, b, c, 8, 11, 0x8771f681U);
+    STEP(ROUND3, c, d, a, b, 11, 16, 0x6d9d6122U);
+    STEP(ROUND3, b, c, d, a, 14, 23, 0xfde5380cU);
+    STEP(ROUND3, a, b, c, d, 1, 4, 0xa4beea44U);
+    STEP(ROUND3, d, a, b, c, 4, 11, 0x4bdecfa9U);
+    STEP(ROUND3, c, d, a, b, 7, 16, 0xf6bb4b60U);
+    STEP(ROUND3, b, c, d, a, 10, 23, 0xbebfbc70U);
+    STEP(ROUND3, a, b, c, d, 13, 4, 0x289b7ec6U);
+    STEP(ROUND3, d, a, b, c, 0, 11, 0xeaa127faU);
+    STEP(ROUND3, c, d, a, b, 3, 16, 0xd4ef3085U);
+    STEP(ROUND3, b, c, d, a, 6, 23, 0x04881d05U);
+    STEP(ROUND3, a, b, c, d, 9, 4, 0xd9d4d039U);
+    STEP(ROUND3, d, a, b, c, 12, 11, 0xe6db99e5U);
+    STEP(ROUND3, c, d, a, b, 15, 16, 0x1fa27cf8U);
+    STEP(ROUND3, b, c, d, a, 2, 23, 0xc4ac5665U);
+
+    STEP(ROUND4, a, b, c, d, 0, 6, 0xf4292244U);
+    STEP(ROUND4, d, a, b, c, 7, 10, 0x432aff97U);
+    STEP(ROUND4, c, d, a, b, 14, 15, 0xab9423a7U);
+    STEP(ROUND4, b, c, d, a, 5, 21, 0xfc93a039U);
+    STEP(ROUND4, a, b, c, d, 12, 6, 0x655b59c3U);
+    STEP(ROUND4, d, a, b, c, 3, 10, 0x8f0ccc92U);
+    STEP(ROUND4, c, d, a, b, 10, 15, 0xffeff47dU);
+    STEP(ROUND4, b, c, d, a, 1, 21, 0x85845dd1U);
+    STEP(ROUND4, a, b, c, d, 8, 6, 0x6fa87e4fU);
+    STEP(ROUND4, d, a, b, c, 15, 10, 0xfe2ce6e0U);
+    STEP(ROUND4, c, d, a, b, 6, 15, 0xa3014314U);
+    STEP(ROUND4, b, c, d, a, 13, 21, 0x4e0811a1U);
+    STEP(ROUND4, a, b, c, d, 4, 6, 0xf7537e82U);
+    STEP(ROUND4, d, a, b, c, 11, 10, 0xbd3af235U);
+    STEP(ROUND4, c, d, a, b, 2, 15, 0x2ad7d2bbU);
+    STEP(ROUND4, b, c, d, a, 9, 21, 0xeb86d391U);
+
     state[0] += a;
     state[1] += b;
     state[2] += c;
