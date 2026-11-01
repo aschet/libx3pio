@@ -67,12 +67,15 @@ static x3pio_status size_of_leaf(state *s, int id, size_t *out)
     return X3PIO_OK;
 }
 
-/* The dashes that appear in real files instead of '-': U+2010 to U+2015 and the
- * minus sign U+2212, in UTF-8. */
-static bool revision_is_amd1(const char *text, size_t size)
+/* The revision that the text of the Revision element names, which is false for
+ * a text that names none. The dashes that appear in real files instead of '-',
+ * U+2010 to U+2015 and the minus sign U+2212 in UTF-8, count as a hyphen. */
+static bool revision_of_text(const char *text, size_t size,
+                             x3pio_revision *revision)
 {
-    static const char expected[] = "ISO25178-72:2017/DAM1";
-    char normalized[sizeof expected + 8];
+    static const char amd1[] = "ISO25178-72:2017/DAM1";
+    static const char first[] = "ISO5436 - 2000";
+    char normalized[sizeof amd1 + 8];
     size_t used = 0;
     for (size_t i = 0; i < size; ++i)
     {
@@ -95,8 +98,20 @@ static bool revision_is_amd1(const char *text, size_t size)
         }
         normalized[used++] = c;
     }
-    return used == sizeof expected - 1
-           && memcmp(normalized, expected, used) == 0;
+    /* A missing revision is the first one, as in files of the first
+     * implementations. */
+    if (used == 0
+        || (used == sizeof first - 1 && memcmp(normalized, first, used) == 0))
+    {
+        *revision = X3PIO_REVISION_2017;
+        return true;
+    }
+    if (used == sizeof amd1 - 1 && memcmp(normalized, amd1, used) == 0)
+    {
+        *revision = X3PIO_REVISION_AMD1;
+        return true;
+    }
+    return false;
 }
 
 static bool parse_code(const char *text, size_t size, const char *codes,
@@ -504,9 +519,17 @@ x3pio_status x3pio_xml_finish(state *s)
         d->feature = X3PIO_SURFACE;
     }
     text = leaf_text(s, L_REVISION, &size);
-    d->revision = d->vendor_count > 1 || revision_is_amd1(text, size)
-                      ? X3PIO_REVISION_AMD1
-                      : X3PIO_REVISION_2017;
+    /* A revision that is not known may store its data differently. */
+    if (!revision_of_text(text, size, &d->revision))
+    {
+        return x3pio_fail(m, X3PIO_ERR_FORMAT,
+                          "The revision is not one that the library reads");
+    }
+    /* Only Amd 1 allows several vendor identifiers. */
+    if (d->vendor_count > 1)
+    {
+        d->revision = X3PIO_REVISION_AMD1;
+    }
 
     const bool link = s->container_seen[E_DATALINK];
     if (link == s->container_seen[E_DATALIST])

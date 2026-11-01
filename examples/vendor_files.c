@@ -6,9 +6,12 @@
 #include <string.h>
 
 /* A vendor puts files of its own in the container, for example the settings of
- * the instrument. In the revision of Amd 1 the identifier of a file is a URI of
- * the vendor, which also names the file in the container. A reader reads only
- * the file that it is asked for. */
+ * the instrument. A file is added with the vendor and its path below it, and
+ * has the identifier that is both, whatever the revision of the standard: in
+ * Amd 1 the identifier also names the file in the container, and in
+ * ISO 25178-72:2017 the vendor is the one identifier of the extension and the
+ * path is the name of the file. A reader reads only the file that it is asked
+ * for, by its identifier. */
 int main(int argc, char **argv)
 {
     const char *path = argc > 1 ? argv[1] : "vendor.x3p";
@@ -25,9 +28,9 @@ int main(int argc, char **argv)
     x3pio_status status = x3pio_create_file(writer, path, document);
     if (status == X3PIO_OK)
     {
-        status =
-            x3pio_add_vendor_file(writer, "http://www.example.com/settings.ini",
-                                  NULL, settings, strlen(settings), NULL);
+        status = x3pio_add_vendor_file(writer, "http://www.example.com",
+                                       "settings.ini", settings,
+                                       strlen(settings), NULL);
     }
     if (status == X3PIO_OK)
     {
@@ -51,19 +54,19 @@ int main(int argc, char **argv)
     for (size_t i = 0;
          status == X3PIO_OK && i < x3pio_reader_vendor_file_count(reader); ++i)
     {
+        const char *id = x3pio_reader_vendor_file_id(reader, i);
         const char *member = x3pio_reader_vendor_file_member(reader, i);
-        printf("%s is the file %s\n", x3pio_reader_vendor_file_id(reader, i),
-               member != NULL ? member : "(none)");
+        printf("%s is the file %s\n", id, member != NULL ? member : "(none)");
         if (member == NULL)
         {
             continue;
         }
         /* The size first, then the bytes. */
         size_t size = 0;
-        (void)x3pio_read_member(reader, member, NULL, 0, &size);
+        (void)x3pio_read_vendor_file(reader, id, NULL, 0, &size);
         char *content = malloc(size + 1);
         if (content != NULL
-            && x3pio_read_member(reader, member, content, size, &size)
+            && x3pio_read_vendor_file(reader, id, content, size, &size)
                    == X3PIO_OK)
         {
             content[size] = '\0';

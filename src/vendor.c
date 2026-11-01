@@ -224,3 +224,22 @@ x3pio_status x3pio_vendor_member(const x3pio_allocator *allocator,
     *member = out;
     return X3PIO_OK;
 }
+
+void x3pio_vendor_base(const char **text, size_t *size)
+{
+    x3pio_trim(text, size);
+    while (*size > 0 && (*text)[*size - 1] == '/')
+    {
+        --*size;
+    }
+    x3pio_trim(text, size);
+}
+
+bool x3pio_vendor_same(const char *a, const char *b)
+{
+    size_t size_a = strlen(a);
+    size_t size_b = strlen(b);
+    x3pio_vendor_base(&a, &size_a);
+    x3pio_vendor_base(&b, &size_b);
+    return size_a == size_b && memcmp(a, b, size_a) == 0;
+}

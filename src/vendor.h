@@ -72,4 +72,19 @@ x3pio_status x3pio_vendor_member(const x3pio_allocator *allocator,
  */
 bool x3pio_vendor_host_is_plain(const char *uri, size_t size);
 
+/**
+ * Narrows a vendor to what identifies it: without the white space around it
+ * and without slashes at its end.
+ *
+ * @param[in,out] text The vendor; moved to its first character.
+ * @param[in,out] size The length; reduced to the trimmed length.
+ */
+void x3pio_vendor_base(const char **text, size_t *size);
+
+/**
+ * Tells whether two vendors are the same, which they are if they differ in the
+ * white space around them or in slashes at their end only.
+ */
+bool x3pio_vendor_same(const char *a, const char *b);
+
 #endif /* X3PIO_SRC_VENDOR_H */

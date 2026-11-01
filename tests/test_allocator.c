@@ -116,8 +116,8 @@ static x3pio_buffer sample(x3pio_storage storage, bool vendor)
     CHECK_OK(x3pio_write_data(writer, &from, 12));
     if (vendor)
     {
-        CHECK_OK(x3pio_add_vendor_file(writer, "http://v.org/x", NULL, "data",
-                                       4, NULL));
+        CHECK_OK(x3pio_add_vendor_file(writer, "http://v.org", "x", "data", 4,
+                                       NULL));
     }
     CHECK_OK(x3pio_end_file(writer));
     x3pio_writer_free(writer);
@@ -240,8 +240,8 @@ static x3pio_status write_cycle(counter *c, x3pio_storage storage, bool vendor,
     }
     if (status == X3PIO_OK && vendor)
     {
-        status = x3pio_add_vendor_file(writer, "http://v.org/x", NULL, "data",
-                                       4, NULL);
+        status =
+            x3pio_add_vendor_file(writer, "http://v.org", "x", "data", 4, NULL);
     }
     if (status == X3PIO_OK)
     {

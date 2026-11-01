@@ -196,6 +196,30 @@ static void test_memory_writer(void)
 static const unsigned char vendor_bytes[] =
     "settings of the instrument\nlevel=3\n";
 
+/* The additions that no revision allows. */
+static void check_refusals(x3pio_writer *writer)
+{
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file(NULL, "http://a.b", "c", "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file(writer, NULL, "c", "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_add_vendor_file(writer, "http://a.b",
+                                                           NULL, "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_add_vendor_file(writer, "http://a.b",
+                                                           "c", NULL, 1, NULL));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file(writer, "http://a.b", "../escape", "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file(
+                     writer, "http://a.b", "z", "x", 1,
+                     &(x3pio_compression){X3PIO_COMPRESS_DEFLATE, 12}));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file_by_id(writer, NULL, "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_add_vendor_id(writer, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_add_vendor_id(writer, "  "));
+}
+
 static void test_vendor_files_amd1(void)
 {
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
@@ -205,71 +229,58 @@ static void test_vendor_files_amd1(void)
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     const x3pio_compression store = {X3PIO_COMPRESS_STORE, 0};
-    CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com/my/a.xml",
-                                   NULL, vendor_bytes, sizeof vendor_bytes,
-                                   NULL));
-    /* The name in the container may be given if it is the one the identifier
-     * gives. */
-    CHECK_OK(x3pio_add_vendor_file(writer, "http://other.org/thumb.png",
-                                   "other/org/thumb.png", "PNG", 3, &store));
-    CHECK_OK(x3pio_add_vendor_file(writer, "http://empty.net/nothing", NULL,
-                                   NULL, 0, NULL));
-    /* What cannot be added. */
+    /* The identifier of a file is the vendor, a slash and the path. */
+    CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com", "my/a.xml",
+                                   vendor_bytes, sizeof vendor_bytes, NULL));
+    /* A slash at the end of the vendor does not matter. */
+    CHECK_OK(x3pio_add_vendor_file(writer, "http://other.org/", "thumb.png",
+                                   "PNG", 3, &store));
+    /* An identifier in full serves the same, as a reader reports it. */
+    CHECK_OK(x3pio_add_vendor_file_by_id(writer, "http://empty.net/nothing",
+                                         NULL, 0, NULL));
+    /* An identifier without a file, such as a bare domain name. */
+    CHECK_OK(x3pio_add_vendor_id(writer, "http://nofile.org"));
+    /* An identifier that has no file yet takes it later. */
+    CHECK_OK(x3pio_add_vendor_id(writer, "http://late.net/f.txt"));
+    CHECK_OK(x3pio_add_vendor_file_by_id(writer, "http://late.net/f.txt", "L",
+                                         1, NULL));
+    check_refusals(writer);
+    /* What only Amd 1 refuses. */
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://www.vendor.com/my/a.xml",
-                                       NULL, "x", 1, NULL));
+                 x3pio_add_vendor_file(writer, "http://www.vendor.com",
+                                       "my/a.xml", "x", 1, NULL));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "The vendor id is registered already");
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_add_vendor_file(writer, "not a uri",
-                                                           NULL, "x", 1, NULL));
-    /* In Amd 1 the file lies where its identifier says. */
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://a.b/c", "images/c.png",
-                                       "x", 1, NULL));
-    CHECK_STRING(x3pio_writer_error_message(writer),
-                 "In Amd 1 the file lies where its identifier says");
+                 x3pio_add_vendor_id(writer, "http://nofile.org"));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file(writer, "http://a..b", "c", "x", 1, NULL));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file_by_id(writer, "http://host.net", "x", 1, NULL));
     /* A domain name has no user name and no port. */
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://host:8080/c", NULL, "x",
-                                       1, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://user@host/c", NULL, "x",
-                                       1, NULL));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file(writer, "http://host:8080", "c", "x", 1, NULL));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file(writer, "http://user@host", "c", "x", 1, NULL));
     /* A name is a file or a folder, not both. */
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://www.vendor.com/my", NULL,
+                 x3pio_add_vendor_file(writer, "http://www.vendor.com", "my",
                                        "x", 1, NULL));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "The name would be both a file and a folder of the container");
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer,
-                                       "http://www.vendor.com/my/a.xml/b", NULL,
-                                       "x", 1, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://a.b/c", "main.xml", "x",
-                                       1, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://a.b/c",
-                                       "bindata\\data.bin", "x", 1, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://a.b/c", "../escape", "x",
-                                       1, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://a.b/c",
-                                       "images/thumb.png", "x", 1, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(
-                     writer, "http://a.b/c", "z", "x", 1,
-                     &(x3pio_compression){X3PIO_COMPRESS_DEFLATE, 12}));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, NULL, "z", "x", 1, NULL));
-    CHECK_STATUS(
-        X3PIO_ERR_ARGUMENT,
-        x3pio_add_vendor_file(writer, "http://a.b/c", "z", NULL, 1, NULL));
+                 x3pio_add_vendor_file(writer, "http://www.vendor.com",
+                                       "my/a.xml/b", "x", 1, NULL));
     finish_with_heights(writer);
-    CHECK_STATUS(
-        X3PIO_ERR_STATE,
-        x3pio_add_vendor_file(writer, "http://a.b/late", NULL, "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_file(writer, "http://a.b",
+                                                        "late", "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_file_by_id(
+                                      writer, "http://a.b/late", "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_id(writer, "http://a.b"));
     x3pio_writer_free(writer);
 
     archive a = {0};
@@ -281,6 +292,7 @@ static void test_vendor_files_amd1(void)
     CHECK(thumb != NULL && thumb->method == 0);
     CHECK(first != NULL && first->method == 8);
     CHECK(archive_find(&a, "empty\\net\\nothing") != NULL);
+    CHECK(archive_find(&a, "late\\net\\f.txt") != NULL);
     char error[100];
     member *main = archive_find(&a, "main.xml");
     CHECK(main != NULL
@@ -292,39 +304,66 @@ static void test_vendor_files_amd1(void)
     CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
     const x3pio_document *read = x3pio_reader_document(reader);
-    CHECK(x3pio_document_vendor_count(read) == 3);
+    CHECK(x3pio_document_vendor_count(read) == 5);
     CHECK_STRING(x3pio_document_vendor_id(read, 0),
                  "http://www.vendor.com/my/a.xml");
-    CHECK(x3pio_reader_vendor_file_count(reader) == 3);
+    CHECK(x3pio_reader_vendor_file_count(reader) == 5);
     CHECK_STRING(x3pio_reader_vendor_file_id(reader, 0),
                  "http://www.vendor.com/my/a.xml");
     CHECK_STRING(x3pio_reader_vendor_file_member(reader, 0),
                  "www/vendor/com/my/a.xml");
-    CHECK(x3pio_reader_vendor_file_id(reader, 3) == NULL);
-    CHECK(x3pio_reader_vendor_file_member(reader, 3) == NULL);
-    CHECK(x3pio_reader_vendor_file_id(NULL, 0) == NULL);
-    CHECK(x3pio_reader_vendor_file_count(NULL) == 0);
     CHECK_STRING(x3pio_reader_vendor_file_id(reader, 1),
                  "http://other.org/thumb.png");
     CHECK_STRING(x3pio_reader_vendor_file_member(reader, 1),
                  "other/org/thumb.png");
+    /* An identifier that names no file of the container has no member. */
+    CHECK_STRING(x3pio_reader_vendor_file_id(reader, 3), "http://nofile.org");
+    CHECK(x3pio_reader_vendor_file_member(reader, 3) == NULL);
+    CHECK(x3pio_reader_vendor_file_id(reader, 5) == NULL);
+    CHECK(x3pio_reader_vendor_file_member(reader, 5) == NULL);
+    CHECK(x3pio_reader_vendor_file_id(NULL, 0) == NULL);
+    CHECK(x3pio_reader_vendor_file_count(NULL) == 0);
+
+    /* A file by its identifier: the size first, then the bytes. */
+    size_t size = 0;
+    CHECK_STATUS(X3PIO_ERR_RANGE,
+                 x3pio_read_vendor_file(
+                     reader, "http://www.vendor.com/my/a.xml", NULL, 0, &size));
+    CHECK(size == sizeof vendor_bytes);
+    unsigned char content[64];
+    CHECK_OK(x3pio_read_vendor_file(reader, "http://www.vendor.com/my/a.xml",
+                                    content, sizeof content, &size));
+    CHECK(size == sizeof vendor_bytes
+          && memcmp(content, vendor_bytes, size) == 0);
+    CHECK_OK(x3pio_read_vendor_file(reader, "http://other.org/thumb.png",
+                                    content, sizeof content, &size));
+    CHECK(size == 3 && memcmp(content, "PNG", 3) == 0);
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_read_vendor_file(reader, "http://nofile.org", content,
+                                        sizeof content, &size));
+    CHECK_STRING(x3pio_reader_error_message(reader),
+                 "The vendor id names no file of the container");
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_read_vendor_file(reader, "http://not.registered/x",
+                                        content, sizeof content, &size));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_read_vendor_file(reader, NULL, content, sizeof content, &size));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_read_vendor_file(reader, "http://other.org/thumb.png",
+                                        NULL, 5, &size));
 
     /* Reading a member: the size first, then the bytes. */
-    size_t size = 0;
     CHECK_STATUS(
         X3PIO_ERR_RANGE,
         x3pio_read_member(reader, "www/vendor/com/my/a.xml", NULL, 0, &size));
     CHECK(size == sizeof vendor_bytes);
-    unsigned char content[64];
     CHECK_OK(x3pio_read_member(reader, "www/vendor/com/my/a.xml", content,
                                sizeof content, &size));
     CHECK(size == sizeof vendor_bytes
           && memcmp(content, vendor_bytes, size) == 0);
     CHECK_OK(x3pio_read_member(reader, "www\\vendor\\com\\my\\a.xml", content,
                                sizeof content, &size));
-    CHECK_OK(x3pio_read_member(reader, "other/org/thumb.png", content,
-                               sizeof content, &size));
-    CHECK(size == 3 && memcmp(content, "PNG", 3) == 0);
     CHECK_OK(x3pio_read_member(reader, "empty/net/nothing", content,
                                sizeof content, &size));
     CHECK(size == 0);
@@ -361,14 +400,13 @@ static void test_vendor_rules(void)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
-    CHECK_OK(
-        x3pio_add_vendor_file(writer, "http://a.b/c", NULL, "same", 4, NULL));
+    CHECK_OK(x3pio_add_vendor_file(writer, "http://a.b", "c", "same", 4, NULL));
     /* The scheme is not part of the name. */
     CHECK_OK(
-        x3pio_add_vendor_file(writer, "https://a.b/c", NULL, "same", 4, NULL));
+        x3pio_add_vendor_file(writer, "https://a.b", "c", "same", 4, NULL));
     CHECK_STATUS(
         X3PIO_ERR_ARGUMENT,
-        x3pio_add_vendor_file(writer, "ftp://a.b/c", NULL, "other", 5, NULL));
+        x3pio_add_vendor_file(writer, "ftp://a.b", "c", "other", 5, NULL));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "The container has a file of that name already");
     finish_with_heights(writer);
@@ -430,27 +468,53 @@ static void test_vendor_files_2017(void)
     x3pio_buffer bytes;
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
-    /* The name in the container is required, and one identifier serves all. */
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "http://www.vendor.com/x", NULL,
-                                       "x", 1, NULL));
-    CHECK_STRING(
-        x3pio_writer_error_message(writer),
-        "ISO 25178-72:2017 needs the name of the file in the container");
+    /* By identifier needs the vendor, which the first file fixes. */
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file_by_id(
+            writer, "http://www.vendor.com/x/settings.ini", "x", 1, NULL));
+    CHECK_STATUS(
+        X3PIO_ERR_ARGUMENT,
+        x3pio_add_vendor_file(writer, "  ", "settings.ini", "x", 1, NULL));
+    /* The same call as in Amd 1: the vendor and the path, which is the name in
+     * the container here. */
     CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com/x",
                                    "settings.ini", "a=1\n", 4, NULL));
-    CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com/x",
+    CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com/x/",
                                    "extra/data.bin", "01234", 5, NULL));
+    CHECK_OK(x3pio_add_vendor_file_by_id(
+        writer, "http://www.vendor.com/x/more.txt", "m", 1, NULL));
+    /* The vendor itself, again. */
+    CHECK_OK(x3pio_add_vendor_id(writer, "http://www.vendor.com/x"));
+    check_refusals(writer);
+    /* What only the first revision refuses: a second vendor. */
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_add_vendor_file(writer, "http://other.org/y",
                                        "third.txt", "x", 1, NULL));
     CHECK_STRING(x3pio_writer_error_message(writer),
                  "ISO 25178-72:2017 allows one vendor id for all files");
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_add_vendor_file(writer, "", "third.txt", "x", 1, NULL));
+                 x3pio_add_vendor_file_by_id(writer, "http://other.org/y/z",
+                                             "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_id(writer, "http://other.org/y"));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_add_vendor_file(writer, "http://www.vendor.com/x",
                                        "settings.ini", "x", 1, NULL));
+    /* A name is a file or a folder, not both. */
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file(writer, "http://www.vendor.com/x",
+                                       "extra", "x", 1, NULL));
+    /* The path is the name in the container here, so the files of the format
+     * are taken. */
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file(writer, "http://www.vendor.com/x",
+                                       "main.xml", "x", 1, NULL));
+    CHECK_STRING(x3pio_writer_error_message(writer),
+                 "The name is one that the format uses");
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_add_vendor_file(writer, "http://www.vendor.com/x",
+                                       "bindata\\data.bin", "x", 1, NULL));
     finish_with_heights(writer);
     x3pio_writer_free(writer);
 
@@ -464,18 +528,23 @@ static void test_vendor_files_2017(void)
     CHECK(archive_find(&a, "settings.ini") != NULL);
     archive_free(&a);
 
-    /* Every file that is not part of the format belongs to the vendor. */
+    /* Every file that is not part of the format belongs to the vendor, and has
+     * an identifier of its own: the vendor and the name. */
     x3pio_reader *reader = NULL;
     CHECK_OK(x3pio_reader_create(&reader));
     CHECK_OK(x3pio_open_memory(reader, bytes.data, bytes.size));
-    CHECK(x3pio_reader_vendor_file_count(reader) == 2);
+    CHECK(x3pio_document_vendor_count(x3pio_reader_document(reader)) == 1);
+    CHECK_STRING(x3pio_document_vendor_id(x3pio_reader_document(reader), 0),
+                 "http://www.vendor.com/x");
+    CHECK(x3pio_reader_vendor_file_count(reader) == 3);
     bool settings = false;
     bool extra = false;
-    for (size_t i = 0; i < 2; ++i)
+    for (size_t i = 0; i < 3; ++i)
     {
-        CHECK_STRING(x3pio_reader_vendor_file_id(reader, i),
-                     "http://www.vendor.com/x");
+        const char *id = x3pio_reader_vendor_file_id(reader, i);
         const char *name = x3pio_reader_vendor_file_member(reader, i);
+        CHECK(name != NULL && strncmp(id, "http://www.vendor.com/x/", 24) == 0
+              && strcmp(id + 24, name) == 0);
         settings =
             settings || (name != NULL && strcmp(name, "settings.ini") == 0);
         extra = extra || (name != NULL && strcmp(name, "extra/data.bin") == 0);
@@ -486,6 +555,14 @@ static void test_vendor_files_2017(void)
     CHECK_OK(x3pio_read_member(reader, "extra/data.bin", content,
                                sizeof content, &size));
     CHECK(size == 5 && memcmp(content, "01234", 5) == 0);
+    /* The identifier reads the file, as in Amd 1. */
+    CHECK_OK(x3pio_read_vendor_file(reader,
+                                    "http://www.vendor.com/x/extra/data.bin",
+                                    content, sizeof content, &size));
+    CHECK(size == 5 && memcmp(content, "01234", 5) == 0);
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_read_vendor_file(reader, "http://www.vendor.com/x",
+                                        content, sizeof content, &size));
     x3pio_reader_free(reader);
     x3pio_document_free(doc);
     x3pio_buffer_free(&bytes);
@@ -668,8 +745,8 @@ static void test_writer_states(void)
         X3PIO_ERR_STATE,
         x3pio_write_z(writer, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
     CHECK_STATUS(X3PIO_ERR_STATE, x3pio_end_file(writer));
-    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_file(writer, "http://a.b/c",
-                                                        NULL, "x", 1, NULL));
+    CHECK_STATUS(X3PIO_ERR_STATE, x3pio_add_vendor_file(writer, "http://a.b",
+                                                        "c", "x", 1, NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_end_file(NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_memory(writer, NULL));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(NULL, &from, 12));
@@ -745,8 +822,9 @@ static void test_damage(void)
     CHECK_OK(x3pio_writer_set_compression(writer, &spec.compression));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     static const unsigned char pattern[] = "VENDOR-PATTERN-0123456789";
-    CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com/pattern.txt",
-                                   NULL, pattern, sizeof pattern, NULL));
+    CHECK_OK(x3pio_add_vendor_file(writer, "http://www.vendor.com",
+                                   "pattern.txt", pattern, sizeof pattern,
+                                   NULL));
     finish_with_heights(writer);
     x3pio_writer_free(writer);
     x3pio_document_free(doc);

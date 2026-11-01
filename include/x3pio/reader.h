@@ -41,9 +41,9 @@
  * A zip file lists its members at its end, so a reader needs the whole file to
  * be available, on disk or in memory, and reads the member that a call needs
  * and nothing else: the points are read from their member in parts, and a file
- * of a vendor is read only by x3pio_read_member(). A program that receives a
- * file as a stream, for example from a pipe, collects the bytes in a buffer
- * first and opens that with x3pio_open_memory().
+ * of a vendor is read only by x3pio_read_vendor_file() or x3pio_read_member().
+ * A program that receives a file as a stream, for example from a pipe, collects
+ * the bytes in a buffer first and opens that with x3pio_open_memory().
  */
 
 #ifndef X3PIO_READER_H
@@ -269,14 +269,20 @@ X3PIO_API x3pio_status x3pio_read_z(x3pio_reader *reader,
  * In the revision of Amd 1 each vendor identifier names a file. In the revision
  * of 2017 the one vendor owns every file of the container that is not part of
  * the format. A vendor identifier that names no file in the container counts as
- * a file without a member.
+ * a file without a member. Either way a file has an identifier of its own, see
+ * x3pio_reader_vendor_file_id().
  *
  * @param[in] reader The reader. May be null, which has none.
  */
 X3PIO_API size_t x3pio_reader_vendor_file_count(const x3pio_reader *reader);
 
 /**
- * Returns the vendor identifier of a file of a vendor.
+ * Returns the identifier of a file of a vendor, the same kind of key in both
+ * revisions. In Amd 1 it is the `VendorSpecificID` as the file has it. In
+ * ISO 25178-72:2017, where one identifier stands for the vendor, it is the
+ * vendor, a `/` and the name of the file in the container, so that every file
+ * has an identifier of its own. x3pio_read_vendor_file() and
+ * x3pio_add_vendor_file_by_id() take it.
  *
  * @param[in] reader The reader.
  * @param index A number below x3pio_reader_vendor_file_count().
@@ -321,6 +327,28 @@ x3pio_reader_vendor_file_member(const x3pio_reader *reader, size_t index);
 X3PIO_API x3pio_status x3pio_read_member(x3pio_reader *reader,
                                          const char *member, void *buffer,
                                          size_t capacity, size_t *size);
+
+/**
+ * Reads the file of a vendor by its identifier, from the container, without
+ * reading any other member. The call serves both revisions: the identifier is
+ * the one that x3pio_reader_vendor_file_id() reports.
+ *
+ * With a null buffer and a capacity of 0 the size is returned alone, as
+ * x3pio_read_member() does.
+ *
+ * @param[in,out] reader The reader.
+ * @param[in] id The identifier of the file.
+ * @param[out] buffer Receives the bytes. May be null if the capacity is 0.
+ * @param capacity The size of the buffer.
+ * @param[out] size Receives the size of the file.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, the file registers no such
+ * identifier, or the identifier names no file of the container.
+ * @retval X3PIO_ERR_RANGE The buffer is too small; `*size` is the size needed.
+ * @return Otherwise the errors of x3pio_read_member().
+ */
+X3PIO_API x3pio_status x3pio_read_vendor_file(x3pio_reader *reader,
+                                              const char *id, void *buffer,
+                                              size_t capacity, size_t *size);
 
 /**
  * Returns the text of the most recent failure of the reader, or an empty

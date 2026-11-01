@@ -289,35 +289,79 @@ X3PIO_API x3pio_status x3pio_write_z(x3pio_writer *writer,
                                      const void *src);
 
 /**
- * Adds a file of a vendor to the container.
+ * Adds a file of a vendor to the container. The same call serves both
+ * revisions of the standard, which register vendor files in different ways:
+ * - In Amd 1 the identifier of the file, its `VendorSpecificID`, is `vendor`, a
+ *   `/` and `path`, and the file lies in the container where the identifier
+ *   says: the labels of the host name and the segments of the path, with
+ *   backslashes as separators. The vendor is a URI with a host name, such as
+ *   `http://www.vendor.com`, and `path` is below it, such as `mypath/a.xml`.
+ * - In ISO 25178-72:2017 the vendor is the one identifier of the extension as a
+ *   whole, and `path` is the name of the file in the container. The first file
+ *   fixes the vendor, and a file of another vendor is refused.
  *
- * In the revision of Amd 1 every file has an identifier of its own, a URI with
- * a host name and a path to a file, and the file lies in the container where
- * the identifier says: the labels of the host name and the segments of the
- * path, with backslashes as separators. `member` is null, or the same name. An
- * identifier whose file has the name and the content of another one shares it.
- * In the revision of 2017 all files share one identifier, and `member`, the
- * name in the container, is required. The content is copied, and the file is
- * written when the file ends.
+ * In both the identifier that the reader reports for the file is `vendor`, a
+ * `/` and `path`. The content is copied, and the file is written when the file
+ * ends. A name is a file or a folder of the container, not both.
  *
  * @param[in,out] writer The writer.
- * @param[in] id The vendor identifier.
- * @param[in] member The name in the container, or null.
+ * @param[in] vendor The vendor, a domain name or a URI that the vendor owns. It
+ * is written as it is given.
+ * @param[in] path The path of the file below the vendor.
  * @param[in] content The bytes of the file. May be null if the size is 0.
  * @param size The size of the file in bytes.
  * @param[in] compression The compression of this file, or null for the one of
  * the writer. A file that is compressed already, such as a PNG image, is best
  * stored.
- * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the identifier or the name
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the vendor or the path
  * cannot be used: it is taken or reserved, leaves the container, would be a
- * file and a folder at once, in Amd 1 has a user name or a port, or `member` is
- * not the name that the identifier gives.
+ * file and a folder at once, in Amd 1 has a user name or a port, or in 2017 is
+ * the file of another vendor.
  * @retval X3PIO_ERR_STATE No file is created, or it is ended.
  * @retval X3PIO_ERR_MEMORY An allocation failed.
  */
 X3PIO_API x3pio_status x3pio_add_vendor_file(
-    x3pio_writer *writer, const char *id, const char *member,
+    x3pio_writer *writer, const char *vendor, const char *path,
     const void *content, size_t size, const x3pio_compression *compression);
+
+/**
+ * Adds a file of a vendor by its identifier in full, as a reader reports it
+ * with x3pio_reader_vendor_file_id(). A program that copies the files of one
+ * file into another uses it, whatever the revisions of the two.
+ * - In Amd 1 the identifier is a URI with a host name and a path to a file, and
+ *   the file lies where it says.
+ * - In ISO 25178-72:2017 the identifier lies below the vendor that an earlier
+ *   file fixed, and the rest of it is the name in the container.
+ *
+ * @param[in,out] writer The writer.
+ * @param[in] id The identifier.
+ * @param[in] content The bytes of the file. May be null if the size is 0.
+ * @param size The size of the file in bytes.
+ * @param[in] compression The compression of this file, or null for the one of
+ * the writer.
+ * @retval X3PIO_ERR_ARGUMENT As for x3pio_add_vendor_file(), or in 2017 no
+ * vendor is fixed yet or the identifier does not lie below it.
+ * @retval X3PIO_ERR_STATE No file is created, or it is ended.
+ * @retval X3PIO_ERR_MEMORY An allocation failed.
+ */
+X3PIO_API x3pio_status x3pio_add_vendor_file_by_id(
+    x3pio_writer *writer, const char *id, const void *content, size_t size,
+    const x3pio_compression *compression);
+
+/**
+ * Registers an identifier without a file, as a reader reports one that names
+ * none, such as a bare domain name. In Amd 1 it is one more identifier. In
+ * ISO 25178-72:2017 it fixes the vendor, or must be the vendor that is fixed.
+ *
+ * @param[in,out] writer The writer.
+ * @param[in] id The identifier.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, the identifier is empty or
+ * registered already, or in 2017 another vendor is fixed.
+ * @retval X3PIO_ERR_STATE No file is created, or it is ended.
+ * @retval X3PIO_ERR_MEMORY An allocation failed.
+ */
+X3PIO_API x3pio_status x3pio_add_vendor_id(x3pio_writer *writer,
+                                           const char *id);
 
 /**
  * Ends the file: writes main.xml and the checksum, completes the container, and

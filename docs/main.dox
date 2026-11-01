@@ -147,7 +147,8 @@
  * - The files of vendors, for which the document names an identifier.
  *
  * @section format_revisions Revisions
- * The element `Revision` names the schema of main.xml. `ISO5436 - 2000` is the
+ * The element `Revision` names the schema of main.xml. A missing or empty
+ * element means the first revision, as in the files of early implementations. `ISO5436 - 2000` is the
  * schema of ISO 25178-72:2017, whose calibration record has a required
  * date. `ISO25178-72:2017/DAM1` is the schema of Amendment 1, which
  * requires the data type and the increment of an axis and allows any number of
@@ -214,10 +215,26 @@
  *   vendor as a whole, and its files lie in the container under any name except
  *   those of the format. A file with several identifiers is read as Amendment 1.
  *
- * A name is a file or a folder of the container, not both. x3pio_add_vendor_file()
- * follows these rules; x3pio_reader_vendor_file_count() and the functions after
- * it list the files, and x3pio_read_member() reads one without reading any other
- * member.
+ * A name is a file or a folder of the container, not both.
+ *
+ * The functions hide this difference, so that a program serves both revisions
+ * with the same calls. A file has an identifier of its own, the vendor, a `/`
+ * and the path of the file below it: in Amendment 1 it is the identifier of
+ * main.xml, and in 2017 it is made from the one identifier and the name of the
+ * file in the container.
+ * - x3pio_add_vendor_file() adds a file by its vendor and its path, and
+ *   x3pio_add_vendor_file_by_id() by its identifier in full, as a reader
+ *   reports it, which is how the files of one file are copied into another.
+ *   x3pio_add_vendor_id() registers an identifier without a file.
+ * - x3pio_reader_vendor_file_count() and the functions after it list the files
+ *   with their identifiers, and x3pio_read_vendor_file() reads one by its
+ *   identifier without reading any other member. x3pio_read_member() reads a
+ *   member of the container by its name.
+ *
+ * ISO 25178-72:2017 cannot take the identifiers of Amendment 1 as they are,
+ * since an identifier does not say where the vendor ends and the path begins:
+ * a program that converts a file to the first revision names the vendor itself,
+ * and adds the files with it.
  *
  * @section format_tolerance Tolerance
  * Real files differ from the standard, and some are damaged. The reader
@@ -238,8 +255,9 @@
  * It refuses these files with X3PIO_ERR_FORMAT: a main.xml that is missing,
  * that is not well-formed or whose root is not an x3p, in several folders or
  * more than one folder deep; a required element that is missing, a data type
- * or an axis type that the standard does not define, a size that is not a
- * whole number, an increment that is zero or infinite; a data file whose length
+ * or an axis type that the standard does not define, a revision that is none
+ * of the two, since an unknown revision may store its data differently, a size
+ * that is not a whole number, an increment that is zero or infinite; a data file whose length
  * does not fit the dimensions. A checksum that is readable and does not match
  * fails with X3PIO_ERR_CHECKSUM. A program that wants to read such a file
  * regardless turns the check off with x3pio_reader_set_verify().

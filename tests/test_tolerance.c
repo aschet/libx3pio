@@ -813,7 +813,9 @@ static void test_vendor_tolerance(void)
     CHECK(x3pio_reader_vendor_file_count(r) == 2);
     for (size_t i = 0; i < 2; ++i)
     {
-        CHECK_STRING(x3pio_reader_vendor_file_id(r, i), "http://a.b/c");
+        /* Every file has an identifier of its own: the vendor and the name. */
+        CHECK(strncmp(x3pio_reader_vendor_file_id(r, i), "http://a.b/c/", 13)
+              == 0);
     }
     x3pio_reader_free(r);
     archive_free(&a);
@@ -848,7 +850,19 @@ static void test_revision_text(void)
           == X3PIO_REVISION_AMD1);
     CHECK(revision_of("  ISO25178-72:2017/DAM1\n") == X3PIO_REVISION_AMD1);
     CHECK(revision_of("ISO5436 - 2000") == X3PIO_REVISION_2017);
-    CHECK(revision_of("whatever") == X3PIO_REVISION_2017);
+    CHECK(revision_of("ISO5436 \xE2\x80\x93 2000") == X3PIO_REVISION_2017);
+    /* A revision that is not known may store its data differently. */
+    for (size_t k = 0; k < 3; ++k)
+    {
+        static const char *unknown[3] = {"whatever", "ISO25178-72:2017",
+                                         "ISO5436 - 2001"};
+        archive u = {0};
+        base_binary(&u);
+        replace_first(&u, "ISO25178-72:2017/DAM1", unknown[k]);
+        fixed(&u);
+        CHECK_STATUS(X3PIO_ERR_FORMAT, try_open(&u, true));
+        archive_free(&u);
+    }
     archive a = {0};
     base_binary(&a);
     archive_strip_element(&a, "main.xml", "Revision");

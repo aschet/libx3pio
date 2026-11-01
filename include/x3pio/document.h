@@ -461,7 +461,11 @@ X3PIO_API x3pio_status x3pio_document_set_comment(x3pio_document *document,
  * @name Vendors
  *
  * The identifiers of the vendors whose files the container carries. A reader
- * reports them. A writer adds them with x3pio_add_vendor_file().
+ * reports them as they are written in main.xml, which is the raw view: the
+ * files of the vendors are better listed by the reader, with
+ * x3pio_reader_vendor_file_id(). A writer adds them with
+ * x3pio_add_vendor_file(), x3pio_add_vendor_file_by_id() and
+ * x3pio_add_vendor_id().
  * @{
  */
 

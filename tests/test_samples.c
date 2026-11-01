@@ -253,6 +253,13 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
     /* The files of vendors travel with the file, in the same revision. */
     if (revision == x3pio_document_revision(doc))
     {
+        /* The identifiers of the file come first: in 2017 the first one fixes
+         * the vendor, and in Amd 1 an identifier takes its file below. */
+        for (size_t i = 0; i < x3pio_document_vendor_count(doc); ++i)
+        {
+            CHECK_OK(
+                x3pio_add_vendor_id(writer, x3pio_document_vendor_id(doc, i)));
+        }
         for (size_t i = 0; i < x3pio_reader_vendor_file_count(reader); ++i)
         {
             const char *name = x3pio_reader_vendor_file_member(reader, i);
@@ -264,10 +271,10 @@ static bool rewrite(x3pio_reader *reader, x3pio_revision revision,
             (void)x3pio_read_member(reader, name, NULL, 0, &size);
             unsigned char *content = malloc(size != 0 ? size : 1);
             CHECK_OK(x3pio_read_member(reader, name, content, size, &size));
-            const char *id = x3pio_reader_vendor_file_id(reader, i);
-            CHECK_OK(x3pio_add_vendor_file(
-                writer, id, revision == X3PIO_REVISION_AMD1 ? NULL : name,
-                content, size, NULL));
+            /* The same call serves both revisions. */
+            CHECK_OK(x3pio_add_vendor_file_by_id(
+                writer, x3pio_reader_vendor_file_id(reader, i), content, size,
+                NULL));
             free(content);
         }
     }

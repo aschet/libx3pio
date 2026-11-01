@@ -151,10 +151,32 @@ x3pio_status x3pio_reader_find_vendor_files(x3pio_reader *reader)
             is_taken =
                 is_taken || (taken[t] != NULL && strcmp(taken[t], name) == 0);
         }
-        if (!is_taken && !add_vendor(reader, d->vendor_ids[0], name))
+        if (!is_taken)
         {
-            status =
-                x3pio_fail(&reader->message, X3PIO_ERR_MEMORY, "Out of memory");
+            /* The identifier of a file is the vendor and the name, as in Amd 1
+             * it is the whole of it. */
+            const char *vendor = d->vendor_ids[0];
+            size_t vendor_size = strlen(vendor);
+            x3pio_vendor_base(&vendor, &vendor_size);
+            const size_t name_size = strlen(name);
+            char *id = x3pio_allocate(&reader->allocator,
+                                      vendor_size + 1 + name_size + 1);
+            if (id == NULL)
+            {
+                status = x3pio_fail(&reader->message, X3PIO_ERR_MEMORY,
+                                    "Out of memory");
+            }
+            else
+            {
+                (void)snprintf(id, vendor_size + 1 + name_size + 1, "%.*s/%s",
+                               (int)vendor_size, vendor, name);
+                if (!add_vendor(reader, id, name))
+                {
+                    status = x3pio_fail(&reader->message, X3PIO_ERR_MEMORY,
+                                        "Out of memory");
+                }
+                x3pio_release(&reader->allocator, id);
+            }
         }
     }
     for (size_t t = 0; t < TAKEN; ++t)
@@ -274,4 +296,34 @@ x3pio_status x3pio_read_member(x3pio_reader *reader, const char *member,
                             "The member is smaller than the zip file states");
     }
     return status;
+}
+
+x3pio_status x3pio_read_vendor_file(x3pio_reader *reader, const char *id,
+                                    void *buffer, size_t capacity, size_t *size)
+{
+    if (reader == NULL || id == NULL || size == NULL
+        || (buffer == NULL && capacity != 0))
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    if (!reader->opened)
+    {
+        return x3pio_fail(&reader->message, X3PIO_ERR_STATE, "No file is open");
+    }
+    for (size_t i = 0; i < reader->vendor_count; ++i)
+    {
+        if (strcmp(reader->vendors[i].id, id) != 0)
+        {
+            continue;
+        }
+        if (reader->vendors[i].member == NULL)
+        {
+            return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
+                              "The vendor id names no file of the container");
+        }
+        return x3pio_read_member(reader, reader->vendors[i].member, buffer,
+                                 capacity, size);
+    }
+    return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
+                      "The file does not register that vendor id");
 }
