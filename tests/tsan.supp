@@ -5,7 +5,11 @@
 # minizip-ng converts the DOS time stamp of a member of a zip file with mktime,
 # and glibc reads the zone in tzset under a lock of its own, which
 # ThreadSanitizer does not see in its interceptors. The race it reports is
-# between two threads in tzset itself.
+# between two threads in tzset itself. The libraries of the C library have no
+# symbols on some systems, so the stack is also matched by the functions of
+# minizip-ng that call mktime (the name differs between its versions).
+race:mz_zip_dosdate_to_time_t
+race:mz_zip_tm_to_time_t
 race:tzset_internal
 race:__tz_convert
 race:__tzset_parse_tz

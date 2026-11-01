@@ -96,13 +96,20 @@ static member *archive_add(archive *a, const char *name)
 /* The separator of the names in a zip file is the one that the zip library
  * writes, which depends on its version and on the platform: both are the same
  * name here. */
+static char with_slash(char c)
+{
+    if (c == '\\')
+    {
+        return '/';
+    }
+    return c;
+}
+
 static bool same_name(const char *a, const char *b)
 {
     for (; *a != '\0' && *b != '\0'; ++a, ++b)
     {
-        const char x = *a == '\\' ? '/' : *a;
-        const char y = *b == '\\' ? '/' : *b;
-        if (x != y)
+        if (with_slash(*a) != with_slash(*b))
         {
             return false;
         }
