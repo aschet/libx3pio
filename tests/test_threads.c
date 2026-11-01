@@ -42,12 +42,12 @@ static bool build(int n, x3pio_storage storage, x3pio_buffer *out)
     const x3pio_timestamp date = {2026, 3, 4, 12, 30, n, 0, true, 60};
     bool ok = z != NULL && x3pio_document_create(&doc) == X3PIO_OK;
     ok = ok
-         && x3pio_document_describe_surface(doc, 40, 30, 1e-6, 1e-6, type,
-                                            type == X3PIO_TYPE_FLOAT
-                                                    || type == X3PIO_TYPE_DOUBLE
-                                                ? 1.0
-                                                : X3PIO_AUTO_INCREMENT,
-                                            1)
+         && x3pio_document_set_feature_surface(
+                doc, 40, 30, 1e-6, 1e-6, type,
+                type == X3PIO_TYPE_FLOAT || type == X3PIO_TYPE_DOUBLE
+                    ? 1.0
+                    : X3PIO_AUTO_INCREMENT,
+                1)
                 == X3PIO_OK
          && x3pio_document_set_date(doc, &date) == X3PIO_OK
          && x3pio_document_set_probing_type(doc, X3PIO_PROBING_SOFTWARE)
@@ -139,8 +139,8 @@ static void *write_and_read(void *argument)
         x3pio_document *doc = NULL;
         if (x3pio_writer_create(&writer) != X3PIO_OK
             || x3pio_document_create(&doc) != X3PIO_OK
-            || x3pio_document_describe_surface(doc, 4, 3, 1e-6, 1e-6,
-                                               X3PIO_TYPE_FLOAT, 1.0, 1)
+            || x3pio_document_set_feature_surface(doc, 4, 3, 1e-6, 1e-6,
+                                                  X3PIO_TYPE_FLOAT, 1.0, 1)
                    != X3PIO_OK
             || x3pio_create_file(writer, j->path, doc) != X3PIO_OK)
         {

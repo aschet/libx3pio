@@ -50,8 +50,8 @@ static x3pio_status write_part(const char *path)
     const x3pio_transformation transformation = machine_transformation();
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
-    x3pio_document_describe_point_cloud(document, COUNT, X3PIO_TYPE_DOUBLE,
-                                        1.0);
+    x3pio_document_set_feature_point_cloud(document, COUNT, X3PIO_TYPE_DOUBLE,
+                                           1.0);
     x3pio_document_set_transformation(document, &transformation);
     x3pio_writer *writer = NULL;
     x3pio_writer_create(&writer);

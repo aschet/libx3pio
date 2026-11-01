@@ -19,8 +19,8 @@ static x3pio_document *grid_document(x3pio_type type, double increment)
 {
     x3pio_document *d = NULL;
     CHECK_OK(x3pio_document_create(&d));
-    CHECK_OK(x3pio_document_describe_surface(d, COLUMNS, ROWS, 1e-6, 1e-6, type,
-                                             increment, 1));
+    CHECK_OK(x3pio_document_set_feature_surface(d, COLUMNS, ROWS, 1e-6, 1e-6,
+                                                type, increment, 1));
     return d;
 }
 
@@ -352,8 +352,8 @@ static void test_absolute_axes(void)
 {
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_irregular_surface(doc, 3, 2, X3PIO_TYPE_FLOAT,
-                                                  1.0, 1));
+    CHECK_OK(x3pio_document_set_feature_irregular_surface(
+        doc, 3, 2, X3PIO_TYPE_FLOAT, 1.0, 1));
     double x[6] = {0, 1, 2, 0, 1, 2};
     double y[6] = {0, 0, 0, 1, 1, 1};
     double z[6] = {1, 2, 3, 4, 5, 6};
@@ -393,7 +393,7 @@ static void test_absolute_axes(void)
 
     /* A point cloud has no missing points. */
     CHECK_OK(
-        x3pio_document_describe_point_cloud(doc, 6, X3PIO_TYPE_DOUBLE, 1.0));
+        x3pio_document_set_feature_point_cloud(doc, 6, X3PIO_TYPE_DOUBLE, 1.0));
     CHECK_OK(x3pio_writer_create(&writer));
     CHECK_OK(create_in_buffer(writer, doc, &bytes));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_write_points(writer, &from, 6));

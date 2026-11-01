@@ -49,8 +49,8 @@ static void test_defaults(void)
 static void test_descriptions(void)
 {
     x3pio_document *d = create();
-    CHECK_OK(x3pio_document_describe_surface(d, 640, 480, 1e-6, 2e-6,
-                                             X3PIO_TYPE_FLOAT, 1.0, 1));
+    CHECK_OK(x3pio_document_set_feature_surface(d, 640, 480, 1e-6, 2e-6,
+                                                X3PIO_TYPE_FLOAT, 1.0, 1));
     CHECK(x3pio_document_feature(d) == X3PIO_SURFACE);
     CHECK(x3pio_document_axis(d, X3PIO_X).increment == 1e-6);
     CHECK(x3pio_document_axis(d, X3PIO_Y).increment == 2e-6);
@@ -58,8 +58,8 @@ static void test_descriptions(void)
     CHECK(x3pio_document_point_count(d) == 640 * 480);
     CHECK_OK(x3pio_document_validate(d, NULL));
 
-    CHECK_OK(x3pio_document_describe_profile(d, 256, 1e-6, X3PIO_TYPE_INT16,
-                                             1e-9, 3));
+    CHECK_OK(x3pio_document_set_feature_profile(d, 256, 1e-6, X3PIO_TYPE_INT16,
+                                                1e-9, 3));
     CHECK(x3pio_document_feature(d) == X3PIO_PROFILE);
     x3pio_dimensions dims = x3pio_document_dimensions(d);
     CHECK(dims.size_x == 256 && dims.size_y == 1 && dims.size_z == 3
@@ -67,8 +67,8 @@ static void test_descriptions(void)
     CHECK(x3pio_document_axis(d, X3PIO_Y).increment == 1e-6);
     CHECK_OK(x3pio_document_validate(d, NULL));
 
-    CHECK_OK(
-        x3pio_document_describe_point_cloud(d, 1000, X3PIO_TYPE_INT32, 1e-8));
+    CHECK_OK(x3pio_document_set_feature_point_cloud(d, 1000, X3PIO_TYPE_INT32,
+                                                    1e-8));
     CHECK(x3pio_document_feature(d) == X3PIO_POINT_CLOUD);
     dims = x3pio_document_dimensions(d);
     CHECK(dims.list && dims.size_x == 1000);
@@ -80,8 +80,8 @@ static void test_descriptions(void)
     }
     CHECK_OK(x3pio_document_validate(d, NULL));
 
-    CHECK_OK(x3pio_document_set_irregular_surface(d, 96, 72, X3PIO_TYPE_DOUBLE,
-                                                  1.0, 2));
+    CHECK_OK(x3pio_document_set_feature_irregular_surface(
+        d, 96, 72, X3PIO_TYPE_DOUBLE, 1.0, 2));
     CHECK(x3pio_document_feature(d) == X3PIO_SURFACE);
     dims = x3pio_document_dimensions(d);
     CHECK(!dims.list && dims.size_x == 96 && dims.size_y == 72
@@ -91,22 +91,22 @@ static void test_descriptions(void)
 
     /* A bad number changes nothing. */
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_document_describe_surface(d, 4, 4, 0.0, 1.0,
-                                                 X3PIO_TYPE_FLOAT, 1.0, 1));
+                 x3pio_document_set_feature_surface(d, 4, 4, 0.0, 1.0,
+                                                    X3PIO_TYPE_FLOAT, 1.0, 1));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_document_describe_surface(d, 4, 4, 1.0, NAN,
-                                                 X3PIO_TYPE_FLOAT, 1.0, 1));
+                 x3pio_document_set_feature_surface(d, 4, 4, 1.0, NAN,
+                                                    X3PIO_TYPE_FLOAT, 1.0, 1));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_document_describe_surface(d, 4, 4, 1.0, 1.0,
-                                                 X3PIO_TYPE_UINT8, 1.0, 1));
+                 x3pio_document_set_feature_surface(d, 4, 4, 1.0, 1.0,
+                                                    X3PIO_TYPE_UINT8, 1.0, 1));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_document_describe_surface(d, 4, 4, 1.0, 1.0,
-                                                 X3PIO_TYPE_FLOAT, -1.0, 1));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_point_cloud(
+                 x3pio_document_set_feature_surface(d, 4, 4, 1.0, 1.0,
+                                                    X3PIO_TYPE_FLOAT, -1.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_feature_point_cloud(
                                          d, 4, X3PIO_TYPE_INT8, 1.0));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
-                 x3pio_document_describe_surface(NULL, 4, 4, 1.0, 1.0,
-                                                 X3PIO_TYPE_FLOAT, 1.0, 1));
+                 x3pio_document_set_feature_surface(NULL, 4, 4, 1.0, 1.0,
+                                                    X3PIO_TYPE_FLOAT, 1.0, 1));
     CHECK(x3pio_document_dimensions(d).size_x == 96);
     x3pio_document_free(d);
 }
@@ -114,14 +114,14 @@ static void test_descriptions(void)
 static void test_rows_and_automatic_increment(void)
 {
     x3pio_document *d = create();
-    CHECK_OK(x3pio_document_describe_surface(
+    CHECK_OK(x3pio_document_set_feature_surface(
         d, 640, 480, 1e-6, 1e-6, X3PIO_TYPE_INT16, X3PIO_AUTO_INCREMENT, 3));
     CHECK(x3pio_document_columns(d) == 640);
     CHECK(x3pio_document_rows(d) == 480 * 3);
     CHECK_OK(x3pio_document_validate(d, NULL));
     CHECK(x3pio_document_axis(d, X3PIO_Z).increment == X3PIO_AUTO_INCREMENT);
     /* Floats store the metres: there is nothing to select. */
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_surface(
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_feature_surface(
                                          d, 4, 4, 1e-6, 1e-6, X3PIO_TYPE_FLOAT,
                                          X3PIO_AUTO_INCREMENT, 1));
     x3pio_axis axis = {X3PIO_AXIS_ABSOLUTE, X3PIO_TYPE_FLOAT,
@@ -139,7 +139,7 @@ static void test_rows_and_automatic_increment(void)
 
     /* A list is a column of rows of one point each. */
     CHECK_OK(
-        x3pio_document_describe_point_cloud(d, 1000, X3PIO_TYPE_FLOAT, 1.0));
+        x3pio_document_set_feature_point_cloud(d, 1000, X3PIO_TYPE_FLOAT, 1.0));
     CHECK(x3pio_document_columns(d) == 1);
     CHECK(x3pio_document_rows(d) == 1000);
     CHECK_OK(x3pio_document_set_matrix(d, 4, SIZE_MAX / 2, 4));
@@ -154,8 +154,8 @@ static void test_validate(void)
 {
     x3pio_document *d = create();
     const char *reason = "";
-    CHECK_OK(x3pio_document_describe_surface(d, 4, 3, 1.0, 1.0,
-                                             X3PIO_TYPE_DOUBLE, 1.0, 1));
+    CHECK_OK(x3pio_document_set_feature_surface(d, 4, 3, 1.0, 1.0,
+                                                X3PIO_TYPE_DOUBLE, 1.0, 1));
     CHECK_OK(x3pio_document_validate(d, &reason));
     CHECK_STRING(reason, "");
 
@@ -177,8 +177,8 @@ static void test_validate(void)
     CHECK(strstr(reason, "absolute") != NULL);
     CHECK_OK(x3pio_document_set_feature(d, X3PIO_SURFACE));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_validate(d, &reason));
-    CHECK_OK(x3pio_document_describe_surface(d, 4, 3, 1.0, 1.0,
-                                             X3PIO_TYPE_DOUBLE, 1.0, 1));
+    CHECK_OK(x3pio_document_set_feature_surface(d, 4, 3, 1.0, 1.0,
+                                                X3PIO_TYPE_DOUBLE, 1.0, 1));
     CHECK_OK(x3pio_document_set_matrix(d, 4, 0, 1));
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_validate(d, &reason));
     CHECK_OK(x3pio_document_set_matrix(d, SIZE_MAX / 2, 4, 4));
@@ -314,7 +314,8 @@ static void test_copy(void)
     x3pio_document *a = create();
     CHECK_OK(x3pio_document_set_software_metadata(a, "tool", "1"));
     CHECK_OK(x3pio_document_set_creator(a, "me"));
-    CHECK_OK(x3pio_document_describe_point_cloud(a, 7, X3PIO_TYPE_INT16, 1e-6));
+    CHECK_OK(
+        x3pio_document_set_feature_point_cloud(a, 7, X3PIO_TYPE_INT16, 1e-6));
     x3pio_transformation place = x3pio_transformation_identity();
     place.offset[0] = 3.0;
     CHECK_OK(x3pio_document_set_transformation(a, &place));
@@ -344,8 +345,8 @@ static void test_irregular_profile(void)
 {
     x3pio_document *d = NULL;
     CHECK_OK(x3pio_document_create(&d));
-    CHECK_OK(x3pio_document_describe_irregular_profile(d, 50, X3PIO_TYPE_INT16,
-                                                       1e-9, 2));
+    CHECK_OK(x3pio_document_set_feature_irregular_profile(
+        d, 50, X3PIO_TYPE_INT16, 1e-9, 2));
     CHECK(x3pio_document_feature(d) == X3PIO_PROFILE);
     x3pio_axis axis = x3pio_document_axis(d, X3PIO_X);
     CHECK(axis.type == X3PIO_AXIS_ABSOLUTE && axis.storage == X3PIO_TYPE_INT16
@@ -360,16 +361,21 @@ static void test_irregular_profile(void)
     CHECK(x3pio_document_columns(d) == 50 && x3pio_document_rows(d) == 2);
     CHECK_OK(x3pio_document_validate(d, NULL));
 
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_irregular_profile(
-                                         NULL, 5, X3PIO_TYPE_FLOAT, 1.0, 1));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_irregular_profile(
-                                         d, 5, X3PIO_TYPE_FLOAT, 0.0, 1));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_irregular_profile(
-                                         d, 5, X3PIO_TYPE_FLOAT, -1.0, 1));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_irregular_profile(
-                                         d, 5, X3PIO_TYPE_FLOAT, NAN, 1));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_describe_irregular_profile(
-                                         d, 5, X3PIO_TYPE_INT8, 1.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_feature_irregular_profile(
+                     NULL, 5, X3PIO_TYPE_FLOAT, 1.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_feature_irregular_profile(
+                     d, 5, X3PIO_TYPE_FLOAT, 0.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_feature_irregular_profile(
+                     d, 5, X3PIO_TYPE_FLOAT, -1.0, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_feature_irregular_profile(
+                     d, 5, X3PIO_TYPE_FLOAT, NAN, 1));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_feature_irregular_profile(
+                     d, 5, X3PIO_TYPE_INT8, 1.0, 1));
     x3pio_document_free(d);
 }
 
@@ -380,8 +386,8 @@ static void test_pointer_getters(void)
 {
     x3pio_document *d = NULL;
     CHECK_OK(x3pio_document_create(&d));
-    CHECK_OK(x3pio_document_describe_surface(d, 7, 5, 2e-6, 3e-6,
-                                             X3PIO_TYPE_INT16, 1e-9, 2));
+    CHECK_OK(x3pio_document_set_feature_surface(d, 7, 5, 2e-6, 3e-6,
+                                                X3PIO_TYPE_INT16, 1e-9, 2));
     x3pio_transformation place = x3pio_transformation_identity();
     place.offset[0] = 0.25;
     CHECK_OK(x3pio_document_set_transformation(d, &place));

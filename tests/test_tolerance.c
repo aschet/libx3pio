@@ -952,7 +952,7 @@ static void test_feature_type(void)
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
     CHECK_OK(
-        x3pio_document_describe_point_cloud(doc, 3, X3PIO_TYPE_DOUBLE, 1.0));
+        x3pio_document_set_feature_point_cloud(doc, 3, X3PIO_TYPE_DOUBLE, 1.0));
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;

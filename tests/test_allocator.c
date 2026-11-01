@@ -90,8 +90,8 @@ static x3pio_buffer sample(x3pio_storage storage, bool vendor)
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_describe_surface(doc, 4, 3, 1e-6, 1e-6,
-                                             X3PIO_TYPE_INT16, 1e-9, 1));
+    CHECK_OK(x3pio_document_set_feature_surface(doc, 4, 3, 1e-6, 1e-6,
+                                                X3PIO_TYPE_INT16, 1e-9, 1));
     x3pio_timestamp date = {2026, 3, 4, 12, 30, 0, 0, true, 60};
     CHECK_OK(x3pio_document_set_date(doc, &date));
     CHECK_OK(x3pio_document_set_probing_type(doc, X3PIO_PROBING_SOFTWARE));
@@ -186,8 +186,8 @@ static x3pio_status write_cycle(counter *c, x3pio_storage storage, bool vendor,
     x3pio_buffer_init(&bytes, x3pio_default_allocator());
     if (status == X3PIO_OK)
     {
-        status = x3pio_document_describe_surface(doc, 4, 3, 1e-6, 1e-6,
-                                                 X3PIO_TYPE_INT16, 1e-9, 1);
+        status = x3pio_document_set_feature_surface(doc, 4, 3, 1e-6, 1e-6,
+                                                    X3PIO_TYPE_INT16, 1e-9, 1);
     }
     if (status == X3PIO_OK)
     {

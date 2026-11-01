@@ -10,8 +10,8 @@ int main(void)
 {
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
-    x3pio_document_describe_surface(document, 4, 3, 1e-6, 1e-6,
-                                    X3PIO_TYPE_FLOAT, 1.0, 1);
+    x3pio_document_set_feature_surface(document, 4, 3, 1e-6, 1e-6,
+                                       X3PIO_TYPE_FLOAT, 1.0, 1);
     x3pio_document_set_software_metadata(document, "write_memory", "1.0");
     const double heights[12] = {1e-7, 2e-7, 3e-7, 4e-7, 5e-7,   6e-7,
                                 7e-7, 8e-7, 9e-7, 1e-6, 1.1e-6, 1.2e-6};

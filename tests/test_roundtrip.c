@@ -598,8 +598,8 @@ static void test_structures(void)
     /* Written from the structures again, into a file of floats. */
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(
-        x3pio_document_describe_point_cloud(doc, count, X3PIO_TYPE_FLOAT, 1.0));
+    CHECK_OK(x3pio_document_set_feature_point_cloud(doc, count,
+                                                    X3PIO_TYPE_FLOAT, 1.0));
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer second;
@@ -748,7 +748,7 @@ static void test_layers(void)
 
     /* Written layer by layer into a file of floats. */
     x3pio_document *doc = scenario_document(s, X3PIO_REVISION_AMD1);
-    CHECK_OK(x3pio_document_describe_surface(
+    CHECK_OK(x3pio_document_set_feature_surface(
         doc, columns, rows, GRID_STEP, GRID_STEP, X3PIO_TYPE_FLOAT, 1.0, 3));
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
@@ -918,9 +918,9 @@ static void test_heights_and_automatic_increment(void)
             CHECK_OK(x3pio_document_create(&doc));
             const x3pio_type stored =
                 type == 0 ? X3PIO_TYPE_INT16 : X3PIO_TYPE_INT32;
-            CHECK_OK(x3pio_document_describe_surface(doc, columns, rows, 1e-6,
-                                                     1e-6, stored,
-                                                     X3PIO_AUTO_INCREMENT, 1));
+            CHECK_OK(x3pio_document_set_feature_surface(
+                doc, columns, rows, 1e-6, 1e-6, stored, X3PIO_AUTO_INCREMENT,
+                1));
             x3pio_writer *writer = NULL;
             CHECK_OK(x3pio_writer_create(&writer));
             CHECK_OK(x3pio_writer_set_storage(
@@ -990,8 +990,8 @@ static void test_heights_and_automatic_increment(void)
     /* A file that stores x and y is written by points. */
     x3pio_document *doc = NULL;
     CHECK_OK(x3pio_document_create(&doc));
-    CHECK_OK(x3pio_document_set_irregular_surface(doc, columns, rows,
-                                                  X3PIO_TYPE_DOUBLE, 1.0, 1));
+    CHECK_OK(x3pio_document_set_feature_irregular_surface(
+        doc, columns, rows, X3PIO_TYPE_DOUBLE, 1.0, 1));
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
     x3pio_buffer bytes;
@@ -1032,27 +1032,27 @@ static x3pio_document *float_document(const scenario *s)
     x3pio_document *doc = scenario_document(s, X3PIO_REVISION_AMD1);
     if (s->feature == X3PIO_POINT_CLOUD)
     {
-        CHECK_OK(x3pio_document_describe_point_cloud(doc, s->columns,
-                                                     X3PIO_TYPE_FLOAT, 1.0));
+        CHECK_OK(x3pio_document_set_feature_point_cloud(doc, s->columns,
+                                                        X3PIO_TYPE_FLOAT, 1.0));
     }
     else if (!s->regular && s->feature == X3PIO_PROFILE)
     {
-        CHECK_OK(x3pio_document_describe_irregular_profile(
+        CHECK_OK(x3pio_document_set_feature_irregular_profile(
             doc, s->columns, X3PIO_TYPE_FLOAT, 1.0, s->layers));
     }
     else if (!s->regular)
     {
-        CHECK_OK(x3pio_document_set_irregular_surface(
+        CHECK_OK(x3pio_document_set_feature_irregular_surface(
             doc, s->columns, s->rows, X3PIO_TYPE_FLOAT, 1.0, s->layers));
     }
     else if (s->feature == X3PIO_PROFILE)
     {
-        CHECK_OK(x3pio_document_describe_profile(
+        CHECK_OK(x3pio_document_set_feature_profile(
             doc, s->columns, GRID_STEP, X3PIO_TYPE_FLOAT, 1.0, s->layers));
     }
     else
     {
-        CHECK_OK(x3pio_document_describe_surface(
+        CHECK_OK(x3pio_document_set_feature_surface(
             doc, s->columns, s->rows, GRID_STEP, GRID_STEP, X3PIO_TYPE_FLOAT,
             1.0, s->layers));
     }

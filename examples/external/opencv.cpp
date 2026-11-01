@@ -37,7 +37,7 @@ Document copy_document(const x3pio_document *source)
     x3pio_document *document = nullptr;
     x3pio_document_create(&document);
     x3pio_document_copy(document, source);
-    x3pio_document_describe_surface(
+    x3pio_document_set_feature_surface(
         document, x3pio_document_columns(source), x3pio_document_rows(source),
         x3pio_document_axis(source, X3PIO_X).increment,
         x3pio_document_axis(source, X3PIO_Y).increment, X3PIO_TYPE_FLOAT, 1.0,

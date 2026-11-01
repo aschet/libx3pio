@@ -264,57 +264,58 @@ X3PIO_API bool x3pio_document_has_validity(const x3pio_document *document);
  */
 
 /**
- * Describes a surface on a regular grid: `columns` points along x and `rows`
- * along y, `x_step` and `y_step` metres apart, in `layers` layers. Only the
- * heights are stored, as `z_type`. A float type stores the metres, with the z
- * increment 1. An integer type needs an increment in metres that fits the
+ * Sets the feature to a surface on a regular grid: `columns` points along x and
+ * `rows` along y, `x_step` and `y_step` metres apart, in `layers` layers. Only
+ * the heights are stored, as `z_type`. A float type stores the metres, with the
+ * z increment 1. An integer type needs an increment in metres that fits the
  * heights, or X3PIO_AUTO_INCREMENT, which x3pio_write_heights() resolves, see
  * x3pio_suggest_increment_for_range().
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_describe_surface(
+X3PIO_API x3pio_status x3pio_document_set_feature_surface(
     x3pio_document *document, size_t columns, size_t rows, double x_step,
     double y_step, x3pio_type z_type, double z_increment, size_t layers);
 
 /**
- * Describes a profile of `points` points `x_step` metres apart, in `layers`
- * layers.
+ * Sets the feature to a profile of `points` points `x_step` metres apart, in
+ * `layers` layers.
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_describe_profile(
+X3PIO_API x3pio_status x3pio_document_set_feature_profile(
     x3pio_document *document, size_t points, double x_step, x3pio_type z_type,
     double z_increment, size_t layers);
 
 /**
- * Describes a point cloud of `count` points whose three coordinates are stored
- * as `type`.
+ * Sets the feature to a point cloud of `count` points whose three coordinates
+ * are stored as `type`.
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_describe_point_cloud(
+X3PIO_API x3pio_status x3pio_document_set_feature_point_cloud(
     x3pio_document *document, size_t count, x3pio_type type, double increment);
 
 /**
- * Describes an irregular grid: a surface whose points are free in x, y and z,
- * stored as `type`, with the points in a matrix.
+ * Sets the feature to an irregular grid: a surface whose points are free in x,
+ * y and z, stored as `type`, with the points in a matrix.
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_set_irregular_surface(
+X3PIO_API x3pio_status x3pio_document_set_feature_irregular_surface(
     x3pio_document *document, size_t columns, size_t rows, x3pio_type type,
     double increment, size_t layers);
 
 /**
- * Describes a profile whose points are not equally spaced: x and z are stored,
- * as `type`, and the points lie on the line y = 0. `increment` is the increment
- * of both stored axes; x3pio_document_set_axis() sets another for one of them.
- * With `layers` greater than 1 the layers are profiles on the same line.
+ * Sets the feature to a profile whose points are not equally spaced: x and z
+ * are stored, as `type`, and the points lie on the line y = 0. `increment` is
+ * the increment of both stored axes; x3pio_document_set_axis() sets another for
+ * one of them. With `layers` greater than 1 the layers are profiles on the same
+ * line.
  *
  * @retval X3PIO_ERR_ARGUMENT `document` is null, or a number is invalid.
  */
-X3PIO_API x3pio_status x3pio_document_describe_irregular_profile(
+X3PIO_API x3pio_status x3pio_document_set_feature_irregular_profile(
     x3pio_document *document, size_t points, x3pio_type type, double increment,
     size_t layers);
 

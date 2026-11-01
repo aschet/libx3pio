@@ -38,7 +38,7 @@ static int write_surface(const char *path, x3pio_revision revision,
     x3pio_document *document = NULL;
     x3pio_document_create(&document);
     x3pio_document_set_revision(document, revision);
-    x3pio_document_describe_surface(
+    x3pio_document_set_feature_surface(
         document, COLUMNS, ROWS, 1e-6, 1e-6, type,
         type == X3PIO_TYPE_FLOAT ? 1.0 : X3PIO_AUTO_INCREMENT, 1);
 

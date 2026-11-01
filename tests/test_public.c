@@ -39,9 +39,9 @@ int main(void)
     static const char path[] = "test_public.x3p";
     x3pio_document *document = NULL;
     expect(x3pio_document_create(&document) == X3PIO_OK, "document");
-    expect(x3pio_document_describe_surface(document, 4, 3, 1e-6, 1e-6,
-                                           X3PIO_TYPE_INT16,
-                                           X3PIO_AUTO_INCREMENT, 1)
+    expect(x3pio_document_set_feature_surface(document, 4, 3, 1e-6, 1e-6,
+                                              X3PIO_TYPE_INT16,
+                                              X3PIO_AUTO_INCREMENT, 1)
                == X3PIO_OK,
            "surface");
     expect(x3pio_document_set_software_metadata(document, "test_public", "1")

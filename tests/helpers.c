@@ -443,8 +443,8 @@ void make_base_file(const file_spec *spec, x3pio_buffer *out)
         spec->z_type == X3PIO_TYPE_DOUBLE || spec->z_type == X3PIO_TYPE_FLOAT
             ? 1.0
             : 1e-9;
-    CHECK_OK(x3pio_document_describe_surface(doc, 4, 3, 1e-6, 1e-6,
-                                             spec->z_type, increment, 1));
+    CHECK_OK(x3pio_document_set_feature_surface(doc, 4, 3, 1e-6, 1e-6,
+                                                spec->z_type, increment, 1));
     if (spec->metadata)
     {
         x3pio_timestamp date = {2026, 3, 4, 12, 30, 0, 0, true, 60};
