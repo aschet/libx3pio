@@ -94,7 +94,10 @@ static x3pio_status decode(x3pio_reader *reader, size_t first, size_t n)
         {
             return status;
         }
-        x3pio_md5_update(&reader->hash, reader->bytes, n * record);
+        if (reader->verify)
+        {
+            x3pio_md5_update(&reader->hash, reader->bytes, n * record);
+        }
         for (size_t k = 0; k < 3; ++k)
         {
             if (d->axes[k].type == X3PIO_AXIS_ABSOLUTE)

@@ -54,7 +54,7 @@ x3pio_status x3pio_encode_samples(x3pio_type type, const double *values,
         case X3PIO_TYPE_INT16:
         {
             double r = 0;
-            if (!x3pio_round_to_integer(type, value, &r))
+            if (!x3pio_round_in_range(value, -32768.0, 32767.0, &r))
             {
                 return X3PIO_ERR_RANGE;
             }
@@ -64,7 +64,7 @@ x3pio_status x3pio_encode_samples(x3pio_type type, const double *values,
         case X3PIO_TYPE_INT32:
         {
             double r = 0;
-            if (!x3pio_round_to_integer(type, value, &r))
+            if (!x3pio_round_in_range(value, -2147483648.0, 2147483647.0, &r))
             {
                 return X3PIO_ERR_RANGE;
             }

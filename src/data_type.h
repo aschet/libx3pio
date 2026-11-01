@@ -14,6 +14,8 @@
 #define X3PIO_SRC_DATA_TYPE_H
 
 #include "common.h"
+#include <float.h>
+#include <math.h>
 
 /**
  * Gives the range of an integer type.
@@ -38,8 +40,40 @@ bool x3pio_round_to_integer(x3pio_type type, double value, double *out);
 
 /**
  * Tells whether a number can be stored as a float. A NaN and an infinity can,
- * and a finite number must not exceed the range of a float.
+ * and a finite number must not exceed the range of a float. The function is
+ * inline, since it is called for every value that is converted.
  */
-bool x3pio_fits_float(double value);
+static inline bool x3pio_fits_float(double value)
+{
+    return !(isfinite(value) && fabs(value) > (double)FLT_MAX);
+}
+
+/**
+ * Converts a number to the nearest integer in a range, a tie to the even one. A
+ * NaN becomes 0. The function is inline, since it is called for every value
+ * that is converted.
+ *
+ * @param value The number.
+ * @param low The lowest integer.
+ * @param high The highest integer.
+ * @param[out] out Receives the integer as a double.
+ * @return False if the number does not fit the range.
+ */
+static inline bool x3pio_round_in_range(double value, double low, double high,
+                                        double *out)
+{
+    if (isnan(value))
+    {
+        *out = 0.0;
+        return true;
+    }
+    const double rounded = nearbyint(value);
+    if (!(rounded >= low && rounded <= high))
+    {
+        return false;
+    }
+    *out = rounded;
+    return true;
+}
 
 #endif /* X3PIO_SRC_DATA_TYPE_H */

@@ -68,25 +68,6 @@ bool x3pio_round_to_integer(x3pio_type type, double value, double *out)
 {
     double low = 0;
     double high = 0;
-    if (!x3pio_integer_range(type, &low, &high))
-    {
-        return false;
-    }
-    if (isnan(value))
-    {
-        *out = 0.0;
-        return true;
-    }
-    const double rounded = nearbyint(value);
-    if (!(rounded >= low && rounded <= high))
-    {
-        return false;
-    }
-    *out = rounded;
-    return true;
-}
-
-bool x3pio_fits_float(double value)
-{
-    return !(isfinite(value) && fabs(value) > (double)FLT_MAX);
+    return x3pio_integer_range(type, &low, &high)
+           && x3pio_round_in_range(value, low, high, out);
 }
