@@ -28,11 +28,12 @@ x3pio_document *x3pio_document_make(const x3pio_allocator *allocator)
     {
         return NULL;
     }
-    *document = (x3pio_document){.allocator = *allocator,
-                                 .revision = X3PIO_REVISION_AMD1,
-                                 .feature = X3PIO_SURFACE,
-                                 .placement = x3pio_placement_identity(),
-                                 .dims = {0, 1, 1, false}};
+    *document =
+        (x3pio_document){.allocator = *allocator,
+                         .revision = X3PIO_REVISION_AMD1,
+                         .feature = X3PIO_SURFACE,
+                         .transformation = x3pio_transformation_identity(),
+                         .dims = {0, 1, 1, false}};
     document->axes[0] = default_axis(X3PIO_AXIS_INCREMENTAL);
     document->axes[1] = default_axis(X3PIO_AXIS_INCREMENTAL);
     document->axes[2] = default_axis(X3PIO_AXIS_ABSOLUTE);
@@ -181,7 +182,7 @@ x3pio_status x3pio_document_copy(x3pio_document *dst, const x3pio_document *src)
     copy->revision = src->revision;
     copy->feature = src->feature;
     memcpy(copy->axes, src->axes, sizeof copy->axes);
-    copy->placement = src->placement;
+    copy->transformation = src->transformation;
     copy->dims = src->dims;
     copy->has_metadata = src->has_metadata;
     copy->has_date = src->has_date;
@@ -247,7 +248,7 @@ x3pio_status x3pio_document_copy(x3pio_document *dst, const x3pio_document *src)
 
 /* ---- checks ----------------------------------------------------------- */
 
-static bool rotation_valid(const x3pio_placement *p, const char **message)
+static bool rotation_valid(const x3pio_transformation *p, const char **message)
 {
     const double tolerance = 1e-6;
     const double *r = p->rotation;
@@ -287,7 +288,8 @@ static bool rotation_valid(const x3pio_placement *p, const char **message)
     return true;
 }
 
-static bool placement_valid(const x3pio_placement *p, const char **message)
+static bool transformation_valid(const x3pio_transformation *p,
+                                 const char **message)
 {
     for (size_t i = 0; i < 3; ++i)
     {
@@ -368,7 +370,7 @@ x3pio_status x3pio_document_validate(const x3pio_document *d,
                  "an absolute axis needs a type that files store");
         }
     }
-    if (!placement_valid(&d->placement, &text))
+    if (!transformation_valid(&d->transformation, &text))
     {
         if (message != NULL)
         {
@@ -417,7 +419,8 @@ x3pio_status x3pio_document_validate(const x3pio_document *d,
     return X3PIO_OK;
 }
 
-/* ---- revision, feature, axes, placement, dimensions -------------------- */
+/* ---- revision, feature, axes, transformation, dimensions --------------------
+ */
 
 x3pio_revision x3pio_document_revision(const x3pio_document *document)
 {
@@ -493,32 +496,36 @@ x3pio_status x3pio_document_set_axis(x3pio_document *document,
     return X3PIO_OK;
 }
 
-x3pio_placement x3pio_document_placement(const x3pio_document *document)
+x3pio_transformation
+x3pio_document_transformation(const x3pio_document *document)
 {
-    return document != NULL ? document->placement : x3pio_placement_identity();
+    return document != NULL ? document->transformation
+                            : x3pio_transformation_identity();
 }
 
-x3pio_status x3pio_document_get_placement(const x3pio_document *document,
-                                          x3pio_placement *placement)
+x3pio_status
+x3pio_document_get_transformation(const x3pio_document *document,
+                                  x3pio_transformation *transformation)
 {
-    if (document == NULL || placement == NULL)
+    if (document == NULL || transformation == NULL)
     {
         return X3PIO_ERR_ARGUMENT;
     }
-    *placement = document->placement;
+    *transformation = document->transformation;
     return X3PIO_OK;
 }
 
-x3pio_status x3pio_document_set_placement(x3pio_document *document,
-                                          const x3pio_placement *placement)
+x3pio_status
+x3pio_document_set_transformation(x3pio_document *document,
+                                  const x3pio_transformation *transformation)
 {
     const char *message = "";
-    if (document == NULL || placement == NULL
-        || !placement_valid(placement, &message))
+    if (document == NULL || transformation == NULL
+        || !transformation_valid(transformation, &message))
     {
         return X3PIO_ERR_ARGUMENT;
     }
-    document->placement = *placement;
+    document->transformation = *transformation;
     return X3PIO_OK;
 }
 

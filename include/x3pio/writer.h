@@ -212,8 +212,8 @@ X3PIO_API x3pio_status x3pio_write_data(x3pio_writer *writer,
  * layout is X3PIO_TYPE_FLOAT or X3PIO_TYPE_DOUBLE, NaN and infinity mark the
  * points that were not measured, and `valid` cannot be bound.
  *
- * A program that has coordinates in the global coordinate system applies
- * x3pio_placement_to_view() to a point first.
+ * A program that has coordinates in another coordinate system uses
+ * x3pio_write_points_in().
  *
  * @param[in,out] writer The writer.
  * @param[in] from The buffers to write.
@@ -227,6 +227,38 @@ X3PIO_API x3pio_status x3pio_write_data(x3pio_writer *writer,
 X3PIO_API x3pio_status x3pio_write_points(x3pio_writer *writer,
                                           const x3pio_const_fields *from,
                                           size_t rows);
+
+/**
+ * Writes the next rows of points from coordinates in metres in a coordinate
+ * system that the program chooses, see x3pio_coordinate_system. With
+ * X3PIO_COORDINATES_VIEW it is x3pio_write_points().
+ * X3PIO_COORDINATES_VIEW_OFFSET subtracts the offset of each axis, and
+ * X3PIO_COORDINATES_GLOBAL undoes the rotation and the offset of the
+ * transformation, in double precision, so a program that holds floats loses
+ * nothing to the transformation. The transformation is the one of the document,
+ * which has to be set before the file is created.
+ *
+ * The rotation acts on a whole point, so with X3PIO_COORDINATES_GLOBAL x, y and
+ * z have to be bound, also an axis that the file does not store, as in a
+ * regular grid: its coordinate is needed to find the others, and the position
+ * it gives in the view system is not checked against the grid. NaN and infinity
+ * in any coordinate mark a point that was not measured. The rules of
+ * x3pio_write_points() apply otherwise, and calls with different coordinate
+ * systems may follow each other.
+ *
+ * @param[in,out] writer The writer.
+ * @param system The coordinate system of the buffers.
+ * @param[in] from The buffers to write.
+ * @param rows The number of rows to write. A list of points has a row for each
+ * point.
+ * @retval X3PIO_ERR_ARGUMENT As for x3pio_write_points(), `system` is not a
+ * coordinate system, or x, y or z is not bound with X3PIO_COORDINATES_GLOBAL.
+ * @return Otherwise the errors of x3pio_write_points().
+ */
+X3PIO_API x3pio_status x3pio_write_points_in(x3pio_writer *writer,
+                                             x3pio_coordinate_system system,
+                                             const x3pio_const_fields *from,
+                                             size_t rows);
 
 /**
  * Writes all rows from a matrix of heights in metres that lies in memory as the

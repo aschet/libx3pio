@@ -27,7 +27,7 @@ struct x3pio_document
     /** The axes x, y and z. */
     x3pio_axis axes[3];
     /** Where the view lies in the global system. */
-    x3pio_placement placement;
+    x3pio_transformation transformation;
     /** The dimensions of the points. */
     x3pio_dimensions dims;
 

@@ -385,15 +385,15 @@ x3pio_status x3pio_xml_build(const x3pio_document *d, x3pio_xml_emit emit,
         leaf_text(&o, "AxisType", code);
         leaf_text(&o, "DataType", data);
         leaf_number(&o, "Increment", d->axes[k].increment);
-        leaf_number(&o, "Offset", d->placement.offset[k]);
+        leaf_number(&o, "Offset", d->transformation.offset[k]);
         close_element(&o, axis_names[k]);
     }
-    if (x3pio_placement_has_rotation(&d->placement))
+    if (x3pio_transformation_has_rotation(&d->transformation))
     {
         open_element(&o, "Rotation");
         for (size_t i = 0; i < 9; ++i)
         {
-            const double v = d->placement.rotation[i];
+            const double v = d->transformation.rotation[i];
             leaf_number(&o, rotation_names[i], x3pio_clamp_unit(v));
         }
         close_element(&o, "Rotation");

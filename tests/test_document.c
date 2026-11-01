@@ -30,7 +30,7 @@ static void test_defaults(void)
     CHECK(x3pio_document_point_count(d) == 0);
     CHECK(x3pio_document_vendor_count(d) == 0);
     CHECK(x3pio_document_vendor_id(d, 0) == NULL);
-    CHECK(!x3pio_placement_has_rotation(&d->placement));
+    CHECK(!x3pio_transformation_has_rotation(&d->transformation));
     const char *reason = NULL;
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_validate(d, &reason));
     CHECK_STRING(reason, "The dimensions of the point data must not be zero");
@@ -233,21 +233,25 @@ static void test_setters(void)
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_document_set_probing_type(d, (x3pio_probing)9));
 
-    x3pio_placement place = x3pio_placement_identity();
+    x3pio_transformation place = x3pio_transformation_identity();
     place.offset[1] = 0.5;
-    CHECK_OK(x3pio_document_set_placement(d, &place));
+    CHECK_OK(x3pio_document_set_transformation(d, &place));
     place.rotation[0] = 2.0;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_placement(d, &place));
-    place = x3pio_placement_identity();
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_transformation(d, &place));
+    place = x3pio_transformation_identity();
     place.rotation[0] = -1.0; /* a mirror */
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_placement(d, &place));
-    place = x3pio_placement_identity();
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_transformation(d, &place));
+    place = x3pio_transformation_identity();
     place.rotation[1] = 0.1; /* not orthonormal */
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_placement(d, &place));
-    place = x3pio_placement_identity();
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_transformation(d, &place));
+    place = x3pio_transformation_identity();
     place.offset[2] = NAN;
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_placement(d, &place));
-    CHECK(x3pio_document_placement(d).offset[1] == 0.5);
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_set_transformation(d, &place));
+    CHECK(x3pio_document_transformation(d).offset[1] == 0.5);
 
     x3pio_timestamp date = {2026, 2, 30, 0, 0, 0, 0, false, 0};
     CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_set_date(d, &date));
@@ -309,9 +313,9 @@ static void test_copy(void)
     CHECK_OK(x3pio_document_set_software_metadata(a, "tool", "1"));
     CHECK_OK(x3pio_document_set_creator(a, "me"));
     CHECK_OK(x3pio_document_set_point_cloud(a, 7, X3PIO_TYPE_INT16, 1e-6));
-    x3pio_placement place = x3pio_placement_identity();
+    x3pio_transformation place = x3pio_transformation_identity();
     place.offset[0] = 3.0;
-    CHECK_OK(x3pio_document_set_placement(a, &place));
+    CHECK_OK(x3pio_document_set_transformation(a, &place));
     x3pio_document *b = create();
     CHECK_OK(x3pio_document_set_comment(b, "to be replaced"));
     CHECK_OK(x3pio_document_copy(b, a));
@@ -320,7 +324,7 @@ static void test_copy(void)
     CHECK_STRING(x3pio_document_creator(b), "me");
     CHECK_STRING(x3pio_document_comment(b), "");
     CHECK_STRING(x3pio_document_model(b), "tool");
-    CHECK(x3pio_document_placement(b).offset[0] == 3.0);
+    CHECK(x3pio_document_transformation(b).offset[0] == 3.0);
     CHECK(x3pio_document_axis(b, X3PIO_X).storage == X3PIO_TYPE_INT16);
     /* The copy is independent. */
     CHECK_OK(x3pio_document_set_creator(a, "someone else"));
@@ -376,9 +380,9 @@ static void test_pointer_getters(void)
     CHECK_OK(x3pio_document_create(&d));
     CHECK_OK(x3pio_document_set_surface(d, 7, 5, 2e-6, 3e-6, X3PIO_TYPE_INT16,
                                         1e-9, 2));
-    x3pio_placement place = x3pio_placement_identity();
+    x3pio_transformation place = x3pio_transformation_identity();
     place.offset[0] = 0.25;
-    CHECK_OK(x3pio_document_set_placement(d, &place));
+    CHECK_OK(x3pio_document_set_transformation(d, &place));
 
     for (int k = 0; k < 3; ++k)
     {
@@ -396,11 +400,13 @@ static void test_pointer_getters(void)
     CHECK_STATUS(X3PIO_ERR_ARGUMENT,
                  x3pio_document_get_axis(d, (x3pio_coordinate)3, &axis));
 
-    x3pio_placement got;
-    CHECK_OK(x3pio_document_get_placement(d, &got));
+    x3pio_transformation got;
+    CHECK_OK(x3pio_document_get_transformation(d, &got));
     CHECK(got.offset[0] == 0.25 && got.rotation[0] == 1.0);
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_get_placement(d, NULL));
-    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_document_get_placement(NULL, &got));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_get_transformation(d, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_document_get_transformation(NULL, &got));
 
     x3pio_dimensions dims;
     CHECK_OK(x3pio_document_get_dimensions(d, &dims));
@@ -412,9 +418,9 @@ static void test_pointer_getters(void)
     x3pio_document_free(d);
 
     /* Initialization of the structures in place. */
-    x3pio_placement identity;
-    x3pio_placement_init(&identity);
-    const x3pio_placement expected = x3pio_placement_identity();
+    x3pio_transformation identity;
+    x3pio_transformation_init(&identity);
+    const x3pio_transformation expected = x3pio_transformation_identity();
     for (size_t i = 0; i < 9; ++i)
     {
         CHECK(identity.rotation[i] == expected.rotation[i]);
@@ -423,7 +429,7 @@ static void test_pointer_getters(void)
     {
         CHECK(identity.offset[i] == expected.offset[i]);
     }
-    x3pio_placement_init(NULL);
+    x3pio_transformation_init(NULL);
     x3pio_compression compression = {X3PIO_COMPRESS_STORE, 9};
     x3pio_compression_init(&compression);
     const x3pio_compression by_value = x3pio_compression_default();

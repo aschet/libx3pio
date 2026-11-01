@@ -18,6 +18,8 @@
 
 /** @example layers.c */
 
+/** @example coordinates.c */
+
 /** @example vendor_files.c */
 
 /** @example write_memory.c */

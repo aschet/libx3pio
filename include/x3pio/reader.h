@@ -189,8 +189,8 @@ X3PIO_API x3pio_status x3pio_read_data(x3pio_reader *reader,
  * point that was not measured is NaN in every bound field that the file stores,
  * whereas `valid` cannot be bound.
  *
- * The coordinates are not rotated or shifted. A program that wants the global
- * coordinate system applies x3pio_placement_to_global() to a point.
+ * The coordinates are not rotated or shifted. x3pio_read_points_in() reads them
+ * in the other coordinate systems.
  *
  * @param[in,out] reader The reader.
  * @param[in] into The buffers to fill.
@@ -202,6 +202,38 @@ X3PIO_API x3pio_status x3pio_read_data(x3pio_reader *reader,
  */
 X3PIO_API x3pio_status x3pio_read_points(x3pio_reader *reader,
                                          const x3pio_fields *into, size_t rows);
+
+/**
+ * Reads the next rows of points as coordinates in metres in a coordinate system
+ * that the program chooses, see x3pio_coordinate_system. With
+ * X3PIO_COORDINATES_VIEW it is x3pio_read_points().
+ * X3PIO_COORDINATES_VIEW_OFFSET adds the offset of each axis, and
+ * X3PIO_COORDINATES_GLOBAL applies the rotation and the offset of the
+ * transformation. The transformation is applied in double precision before a
+ * coordinate is stored in the type of its buffer, which matters for buffers of
+ * floats and for transformations with a large offset: a program that applies
+ * the transformation to floats itself loses digits.
+ *
+ * The rotation acts on a whole point, so with X3PIO_COORDINATES_GLOBAL x, y and
+ * z have to be bound, and a point that was not measured is NaN in all three
+ * coordinates. A shift acts on each axis alone, so
+ * X3PIO_COORDINATES_VIEW_OFFSET binds any of the fields, for example z alone.
+ * The rules of x3pio_read_points() apply otherwise, and calls with different
+ * coordinate systems may follow each other.
+ *
+ * @param[in,out] reader The reader.
+ * @param system The coordinate system of the buffers.
+ * @param[in] into The buffers to fill.
+ * @param rows The number of rows to read. A list of points has a row for each
+ * point.
+ * @retval X3PIO_ERR_ARGUMENT As for x3pio_read_points(), `system` is not a
+ * coordinate system, or x, y or z is not bound with X3PIO_COORDINATES_GLOBAL.
+ * @return Otherwise the errors of x3pio_read_points().
+ */
+X3PIO_API x3pio_status x3pio_read_points_in(x3pio_reader *reader,
+                                            x3pio_coordinate_system system,
+                                            const x3pio_fields *into,
+                                            size_t rows);
 
 /**
  * Reads the remaining rows as heights in metres into a buffer that lies in

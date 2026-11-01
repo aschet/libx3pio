@@ -115,8 +115,8 @@ static void test_defaults(void)
     x3pio_buffer keep;
     x3pio_buffer_init(&keep, x3pio_default_allocator());
     x3pio_reader *r = open_for(&a, &keep, true);
-    const x3pio_placement place =
-        x3pio_document_placement(x3pio_reader_document(r));
+    const x3pio_transformation place =
+        x3pio_document_transformation(x3pio_reader_document(r));
     CHECK(place.offset[0] == 0 && place.offset[1] == 0 && place.offset[2] == 0);
     x3pio_reader_free(r);
 
@@ -879,7 +879,7 @@ static void test_rotation(void)
     x3pio_buffer keep;
     x3pio_buffer_init(&keep, x3pio_default_allocator());
     x3pio_reader *r = open_for(&a, &keep, true);
-    CHECK(x3pio_document_placement(x3pio_reader_document(r)).rotation[0]
+    CHECK(x3pio_document_transformation(x3pio_reader_document(r)).rotation[0]
           == 1.0);
     x3pio_reader_free(r);
     archive_free(&a);
@@ -909,9 +909,9 @@ static void test_rotation(void)
         "Record1>");
     fixed(&a);
     r = open_for(&a, &keep, true);
-    const x3pio_placement place =
-        x3pio_document_placement(x3pio_reader_document(r));
-    CHECK(x3pio_placement_has_rotation(&place));
+    const x3pio_transformation place =
+        x3pio_document_transformation(x3pio_reader_document(r));
+    CHECK(x3pio_transformation_has_rotation(&place));
     x3pio_reader_free(r);
     x3pio_buffer_free(&keep);
     archive_free(&a);

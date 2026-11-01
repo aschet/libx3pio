@@ -107,9 +107,9 @@ static inline bool scenario_is_missing(const scenario *s, size_t i)
 }
 
 /* The rotation of 10 degrees about x, and an offset. */
-static inline x3pio_placement scenario_placement(const scenario *s)
+static inline x3pio_transformation scenario_transformation(const scenario *s)
 {
-    x3pio_placement place = x3pio_placement_identity();
+    x3pio_transformation place = x3pio_transformation_identity();
     if (s->placed)
     {
         const double c = cos(10.0 * 3.14159265358979323846 / 180.0);
@@ -219,8 +219,8 @@ static inline x3pio_document *scenario_document(const scenario *s,
                                             GRID_STEP, s->type, s->increment,
                                             s->layers));
     }
-    const x3pio_placement place = scenario_placement(s);
-    CHECK_OK(x3pio_document_set_placement(d, &place));
+    const x3pio_transformation place = scenario_transformation(s);
+    CHECK_OK(x3pio_document_set_transformation(d, &place));
     x3pio_timestamp date = {2026, 3, 4, 12, 30, 0, 0, true, 60};
     CHECK_OK(x3pio_document_set_date(d, &date));
     CHECK_OK(x3pio_document_set_probing_type(d, X3PIO_PROBING_SOFTWARE));

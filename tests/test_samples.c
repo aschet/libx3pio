@@ -169,12 +169,12 @@ static bool read_global(x3pio_reader *reader, points *p)
     into.y = (x3pio_field){p->y, *packed};
     into.z = (x3pio_field){p->z, *packed};
     CHECK_OK(x3pio_read_points(reader, &into, x3pio_document_rows(doc)));
-    const x3pio_placement place = x3pio_document_placement(doc);
+    const x3pio_transformation place = x3pio_document_transformation(doc);
     for (size_t i = 0; i < p->count; ++i)
     {
         const double view[3] = {p->x[i], p->y[i], p->z[i]};
         double global[3];
-        x3pio_placement_to_global(&place, view, global);
+        x3pio_transformation_to_global(&place, view, global);
         p->x[i] = global[0];
         p->y[i] = global[1];
         p->z[i] = global[2];
@@ -482,8 +482,8 @@ static void test_standard_example(void)
     const x3pio_dimensions dims = x3pio_document_dimensions(doc);
     CHECK(dims.size_x == 4 && dims.size_y == 4 && dims.size_z == 1);
     CHECK(x3pio_document_axis(doc, X3PIO_X).increment == 1.6016e-6);
-    const x3pio_placement place = x3pio_document_placement(doc);
-    CHECK(!x3pio_placement_has_rotation(&place));
+    const x3pio_transformation place = x3pio_document_transformation(doc);
+    CHECK(!x3pio_transformation_has_rotation(&place));
     CHECK_STRING(x3pio_document_creator(doc), "Name of measuring person");
     CHECK_STRING(x3pio_document_serial(doc), "12345abc");
     CHECK(x3pio_document_probing_type(doc) == X3PIO_PROBING_NON_CONTACTING);

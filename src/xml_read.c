@@ -697,7 +697,8 @@ static x3pio_status build_axis(state *s, size_t k, double *offset)
     return number_of(s, base + L_AXIS_OFFSET, 0.0, offset);
 }
 
-static x3pio_status build_rotation(state *s, int base, x3pio_placement *place)
+static x3pio_status build_rotation(state *s, int base,
+                                   x3pio_transformation *place)
 {
     for (int i = 0; i < 9; ++i)
     {
@@ -918,7 +919,7 @@ static x3pio_status finish(state *s)
             return status;
         }
     }
-    memcpy(d->placement.offset, offsets, sizeof offsets);
+    memcpy(d->transformation.offset, offsets, sizeof offsets);
     if (d->axes[2].type != X3PIO_AXIS_ABSOLUTE)
     {
         return x3pio_fail(m, X3PIO_ERR_FORMAT, "The z axis must be absolute");
@@ -926,12 +927,12 @@ static x3pio_status finish(state *s)
     x3pio_status status = X3PIO_OK;
     if (any_of(s, L_ROTATION_AXES, 9) || s->container_seen[E_ROTATION_AXES])
     {
-        status = build_rotation(s, L_ROTATION_AXES, &d->placement);
+        status = build_rotation(s, L_ROTATION_AXES, &d->transformation);
     }
     else if (any_of(s, L_ROTATION_RECORD, 9)
              || s->container_seen[E_ROTATION_RECORD])
     {
-        status = build_rotation(s, L_ROTATION_RECORD, &d->placement);
+        status = build_rotation(s, L_ROTATION_RECORD, &d->transformation);
     }
     if (status != X3PIO_OK)
     {

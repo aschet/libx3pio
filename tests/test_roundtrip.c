@@ -188,9 +188,10 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
         CHECK_NEAR(y[i], want_y, y_tolerance + fabs(want_y) * 1e-12);
     }
 
-    /* The placement of the document puts the points in the global system. */
-    const x3pio_placement place = scenario_placement(s);
-    const x3pio_placement read_place = x3pio_document_placement(doc);
+    /* The transformation of the document puts the points in the global system.
+     */
+    const x3pio_transformation place = scenario_transformation(s);
+    const x3pio_transformation read_place = x3pio_document_transformation(doc);
     for (size_t k = 0; k < 9; ++k)
     {
         CHECK_NEAR(read_place.rotation[k], place.rotation[k], 1e-12);
@@ -208,8 +209,8 @@ static void check_scenario(const scenario *s, x3pio_revision revision,
         const double view[3] = {x[i], y[i], z[i]};
         double global[3];
         double again[3];
-        x3pio_placement_to_global(&read_place, view, global);
-        x3pio_placement_to_view(&read_place, global, again);
+        x3pio_transformation_to_global(&read_place, view, global);
+        x3pio_transformation_to_view(&read_place, global, again);
         CHECK_NEAR(again[0], x[i], 1e-15);
         CHECK_NEAR(again[1], y[i], 1e-15);
         CHECK_NEAR(again[2], z[i], 1e-15);

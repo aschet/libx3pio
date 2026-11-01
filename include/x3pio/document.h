@@ -11,11 +11,11 @@
  *
  * @par Content
  * A document has the revision and the feature type, the three axes, the
- * placement of the view in the global coordinate system, the dimensions of the
- * points, the metadata of the measurement and the identifiers of the vendors
- * whose files the container carries. It does not hold the points. A reader
- * gives the document of a file it has opened, and a writer takes the document
- * of a file it creates.
+ * transformation of the view in the global coordinate system, the dimensions of
+ * the points, the metadata of the measurement and the identifiers of the
+ * vendors whose files the container carries. It does not hold the points. A
+ * reader gives the document of a file it has opened, and a writer takes the
+ * document of a file it creates.
  */
 
 #ifndef X3PIO_DOCUMENT_H
@@ -44,7 +44,7 @@ typedef struct x3pio_document x3pio_document;
 /**
  * Creates a document with default values: the revision of Amd 1, a surface of
  * 0 by 0 points with incremental x and y axes of the increment 1 and an
- * absolute z axis of doubles, the identity placement and no metadata. The
+ * absolute z axis of doubles, the identity transformation and no metadata. The
  * caller sets the dimensions, and what differs. Release it with
  * x3pio_document_free().
  *
@@ -122,7 +122,7 @@ X3PIO_API x3pio_status x3pio_document_set_feature(x3pio_document *document,
 /** @} */
 
 /**
- * @name Axes, placement and dimensions
+ * @name Axes, transformation and dimensions
  * @{
  */
 
@@ -164,31 +164,32 @@ X3PIO_API x3pio_status x3pio_document_set_axis(x3pio_document *document,
                                                x3pio_coordinate coordinate,
                                                const x3pio_axis *axis);
 
-/** Returns the placement of the view in the global coordinate system. */
-X3PIO_API x3pio_placement
-x3pio_document_placement(const x3pio_document *document);
+/** Returns the transformation of the view in the global coordinate system. */
+X3PIO_API x3pio_transformation
+x3pio_document_transformation(const x3pio_document *document);
 
 /**
- * Returns the placement through a pointer, for a language that cannot take a
- * structure as a return value.
+ * Returns the transformation through a pointer, for a language that cannot take
+ * a structure as a return value.
  *
  * @param[in] document The document.
- * @param[out] placement Receives the placement.
+ * @param[out] transformation Receives the transformation.
  * @retval X3PIO_ERR_ARGUMENT A pointer is null.
  */
-X3PIO_API x3pio_status x3pio_document_get_placement(
-    const x3pio_document *document, x3pio_placement *placement);
+X3PIO_API x3pio_status x3pio_document_get_transformation(
+    const x3pio_document *document, x3pio_transformation *transformation);
 
 /**
- * Sets the placement.
+ * Sets the transformation.
  *
  * @param[in,out] document The document.
- * @param[in] placement The placement: finite numbers, and a rotation that is
- * orthonormal and does not mirror.
- * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the placement is invalid.
+ * @param[in] transformation The transformation: finite numbers, and a rotation
+ * that is orthonormal and does not mirror.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the transformation is
+ * invalid.
  */
-X3PIO_API x3pio_status x3pio_document_set_placement(
-    x3pio_document *document, const x3pio_placement *placement);
+X3PIO_API x3pio_status x3pio_document_set_transformation(
+    x3pio_document *document, const x3pio_transformation *transformation);
 
 /** Returns the dimensions of the points. */
 X3PIO_API x3pio_dimensions
@@ -258,7 +259,7 @@ X3PIO_API bool x3pio_document_has_validity(const x3pio_document *document);
  * @name Ready-made descriptions
  *
  * Each function resets the feature type, the axes and the dimensions, and
- * keeps the rest, the metadata and the placement.
+ * keeps the rest, the metadata and the transformation.
  * @{
  */
 

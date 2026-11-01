@@ -29,8 +29,10 @@
  * whatever the file holds.
  *
  * @par Coordinate Systems
- * Metres are in the view coordinate system of the file. The placement of the
- * document, with x3pio_placement_to_global(), puts them in the global one.
+ * Metres are in the view coordinate system of the file. The transformation of
+ * the document puts them in the global one: x3pio_read_points_in() and
+ * x3pio_write_points_in() do it while the points are transferred, in double
+ * precision, and x3pio_transformation_to_global() converts a single point.
  *
  * @par Increment
  * A file of integers trades range against resolution by the increment of its

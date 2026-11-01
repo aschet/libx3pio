@@ -10,8 +10,9 @@
 #define ROWS 48
 
 /* A file can hold several layers of a surface. They are rows that follow each
- * other, so an image is written or read by as many rows as it has, and the
- * images of an application can be separate arrays. */
+ * other, so an image is written or read by as many rows as it has, and each
+ * call can name another array: the images of an application are separate
+ * arrays. The layers come in the order of the file. */
 int main(int argc, char **argv)
 {
     const char *path = argc > 1 ? argv[1] : "layers.x3p";
@@ -55,16 +56,16 @@ int main(int argc, char **argv)
     x3pio_reader *reader = NULL;
     x3pio_reader_create(&reader);
     status = x3pio_open_file(reader, path);
-    static float back[ROWS * COLUMNS];
+    static float back[LAYERS][ROWS * COLUMNS];
     for (size_t l = 0; status == X3PIO_OK && l < LAYERS; ++l)
     {
         x3pio_fields into;
         x3pio_fields_init(&into);
-        into.z = (x3pio_field){back, *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
+        into.z = (x3pio_field){back[l], *x3pio_layout_packed(X3PIO_TYPE_FLOAT)};
         status = x3pio_read_points(reader, &into, ROWS);
         if (status == X3PIO_OK)
         {
-            printf("layer %zu: first height %g m\n", l, (double)back[1]);
+            printf("layer %zu: first height %g m\n", l, (double)back[l][1]);
         }
     }
     x3pio_reader_free(reader);

@@ -191,7 +191,9 @@ typedef struct bound
 typedef enum mode
 {
     MODE_DATA,
-    MODE_POINTS
+    MODE_POINTS,
+    MODE_TRANSLATED,
+    MODE_GLOBAL
 } mode;
 
 static bool metres_type(x3pio_type type)
@@ -209,6 +211,12 @@ static x3pio_status check_fields(x3pio_reader *reader, const x3pio_fields *into,
     for (size_t i = 0; i < 4; ++i)
     {
         b->is_bound[i] = fields[i]->data != NULL;
+        if (m == MODE_GLOBAL && i < 3 && !b->is_bound[i])
+        {
+            return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
+                              "The rotation of the transformation couples the "
+                              "axes, so x, y and z have to be bound");
+        }
         if (!b->is_bound[i])
         {
             continue;
@@ -293,6 +301,36 @@ static void convert(x3pio_reader *reader, const bound *b, mode m, size_t first,
                     k == 0 ? at % d->dims.size_x
                            : (at / d->dims.size_x) % d->dims.size_y;
                 out[i] = (double)index * axis->increment;
+            }
+        }
+    }
+    if (m == MODE_TRANSLATED)
+    {
+        for (size_t k = 0; k < 3; ++k)
+        {
+            for (size_t i = 0; b->is_bound[k] && i < n; ++i)
+            {
+                reader->values[k][i] += d->transformation.offset[k];
+            }
+        }
+    }
+    if (m == MODE_GLOBAL)
+    {
+        /* The transformation acts on a whole point, and a point that was not
+         * measured has no place. */
+        for (size_t i = 0; i < n; ++i)
+        {
+            double view[3] = {reader->values[0][i], reader->values[1][i],
+                              reader->values[2][i]};
+            double global[3] = {NAN, NAN, NAN};
+            if (reader->flags[i] != 0)
+            {
+                x3pio_transformation_to_global(&d->transformation, view,
+                                               global);
+            }
+            for (size_t k = 0; k < 3; ++k)
+            {
+                reader->values[k][i] = global[k];
             }
         }
     }
@@ -396,6 +434,24 @@ x3pio_status x3pio_read_points(x3pio_reader *reader, const x3pio_fields *into,
                                size_t rows)
 {
     return read_rows(reader, into, rows, MODE_POINTS);
+}
+
+x3pio_status x3pio_read_points_in(x3pio_reader *reader,
+                                  x3pio_coordinate_system system,
+                                  const x3pio_fields *into, size_t rows)
+{
+    switch (system)
+    {
+    case X3PIO_COORDINATES_VIEW:
+        return read_rows(reader, into, rows, MODE_POINTS);
+    case X3PIO_COORDINATES_VIEW_OFFSET:
+        return read_rows(reader, into, rows, MODE_TRANSLATED);
+    case X3PIO_COORDINATES_GLOBAL:
+        return read_rows(reader, into, rows, MODE_GLOBAL);
+    }
+    return reader != NULL ? x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
+                                       "The coordinate system is not defined")
+                          : X3PIO_ERR_ARGUMENT;
 }
 
 x3pio_status x3pio_read_heights(x3pio_reader *reader,

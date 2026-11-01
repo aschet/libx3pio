@@ -30,8 +30,10 @@
  * - A point cloud, which is a list of points, is read and written in any number
  *   of parts, so a program needs the memory of one part and not of the whole
  *   cloud.
- * - Access to the points as numbers in metres, or as the values that the file
- *   stores, together with the mask of the points that were measured.
+ * - Access to the points as numbers in metres, in the coordinate system of the
+ *   file or in the global one that its transformation gives, or as the values that
+ *   the file stores, together with the mask of the points that were
+ *   measured.
  * - Files and blocks of memory as sources, and files and memory as targets. A
  *   reader reads only the member of the zip file that a call needs.
  * - Thread support: the library holds no global state, so threads use handles
@@ -113,8 +115,8 @@
  * structures that are passed by pointer, and no macros that a binding would
  * have to expand. A function that returns a structure by value has a twin that
  * takes a pointer, for a language that cannot take a structure as a return
- * value: x3pio_document_get_axis(), x3pio_document_get_placement(),
- * x3pio_document_get_dimensions(), x3pio_placement_init() and
+ * value: x3pio_document_get_axis(), x3pio_document_get_transformation(),
+ * x3pio_document_get_dimensions(), x3pio_transformation_init() and
  * x3pio_compression_init(). The program surface.py in `examples/python` writes
  * and reads a file with ctypes.
  *
@@ -152,7 +154,7 @@
  * vendor-specific files. A writer writes the revision it is told to and is
  * strict: every file it makes is valid according to the schema of its revision.
  *
- * @section format_axes Axes and Placement
+ * @section format_axes Axes and Transformation
  * `Record1` holds the feature type: a profile (`PRF`), a surface (`SUR`) or a
  * point cloud (`PCL`), and one description for each of the axes X, Y and Z. An
  * axis is incremental (`I`) or absolute (`A`). An incremental axis has no
@@ -161,9 +163,12 @@
  * and a value times the increment of the axis is a length in metres. Offset
  * and rotation do not change the values of the file, they place the points in
  * the coordinate system of the machine:
- * `global = R * (I * stored) + O`. The library returns the points in the
- * coordinate system of the file, and offers the placement with
- * x3pio_document_placement().
+ * `global = R * (I * stored) + O`. x3pio_read_points() returns the points in
+ * the coordinate system of the file, and x3pio_read_points_in() in the
+ * global one, with the transformation applied in double precision before the
+ * coordinates are stored in the buffers of the program;
+ * x3pio_write_points_in() does the reverse. The transformation itself is
+ * x3pio_document_transformation().
  *
  * @section format_missing Missing Points
  * A floating-point value that is NaN marks a point that was not measured. An

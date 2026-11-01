@@ -130,6 +130,45 @@ static void test_floats(void)
     }
 }
 
+/* The standard defines no value for a point of integers that was not measured,
+ * and the mask says which they are. The writer stores 0 for a NaN in metres, so
+ * that a file does not depend on what the program had in the buffer. */
+static void test_integer_value_of_missing_points(void)
+{
+    x3pio_document *doc = grid_document(X3PIO_TYPE_INT16, 1e-9);
+    double heights[COUNT];
+    for (size_t i = 0; i < COUNT; ++i)
+    {
+        heights[i] = is_hole(i) ? NAN : 1e-9 * (double)((int)i * 100 - 500);
+    }
+    x3pio_writer *writer = NULL;
+    CHECK_OK(x3pio_writer_create(&writer));
+    x3pio_buffer bytes;
+    x3pio_buffer_init(&bytes, x3pio_default_allocator());
+    CHECK_OK(create_in_buffer(writer, doc, &bytes));
+    CHECK_OK(x3pio_write_heights(writer, packed(X3PIO_TYPE_DOUBLE), heights));
+    CHECK_OK(x3pio_end_file(writer));
+    x3pio_writer_free(writer);
+
+    archive a = {0};
+    CHECK(archive_unzip(&a, bytes.data, bytes.size));
+    member *data = archive_find(&a, "bindata/data.bin");
+    CHECK(data != NULL && data->data.size == COUNT * 2);
+    if (data != NULL)
+    {
+        for (size_t i = 0; i < COUNT; ++i)
+        {
+            const int16_t got = (int16_t)(data->data.data[2 * i]
+                                          | (data->data.data[2 * i + 1] << 8));
+            CHECK(got == (is_hole(i) ? 0 : (int)i * 100 - 500));
+        }
+    }
+    CHECK(archive_find(&a, "bindata/valid.bin") != NULL);
+    archive_free(&a);
+    x3pio_buffer_free(&bytes);
+    x3pio_document_free(doc);
+}
+
 /* Integers have no NaN: they carry the points that were not measured in a file
  * of bits. */
 static void test_integer_mask(void)
@@ -371,6 +410,7 @@ int main(void)
 {
     test_floats();
     test_integer_mask();
+    test_integer_value_of_missing_points();
     test_integers_stay_integers();
     test_absolute_axes();
     return finish_tests();

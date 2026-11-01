@@ -79,7 +79,9 @@ x3pio_status x3pio_writer_prepare(x3pio_writer *writer)
 typedef enum mode
 {
     MODE_DATA,
-    MODE_POINTS
+    MODE_POINTS,
+    MODE_TRANSLATED,
+    MODE_GLOBAL
 } mode;
 
 static bool metres_type(x3pio_type type)
@@ -110,13 +112,26 @@ static x3pio_status check_fields(x3pio_writer *writer,
         {
             const x3pio_axis *axis = &d->axes[i];
             const bool stored = axis->type == X3PIO_AXIS_ABSOLUTE;
-            if (stored && !b->is_bound[i])
+            if (m == MODE_GLOBAL)
+            {
+                /* The transformation acts on a whole point, so the coordinates
+                 * of an axis that the file does not store are needed too. */
+                if (!b->is_bound[i])
+                {
+                    return x3pio_fail(
+                        &writer->message, X3PIO_ERR_ARGUMENT,
+                        "The rotation of the transformation couples "
+                        "the axes, so x, y and z have to be "
+                        "bound");
+                }
+            }
+            else if (stored && !b->is_bound[i])
             {
                 return x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
                                   "The axis is stored in the file, so its "
                                   "values have to be bound");
             }
-            if (!stored && b->is_bound[i])
+            if (m != MODE_GLOBAL && !stored && b->is_bound[i])
             {
                 return x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
                                   "An axis that the file does not store cannot "
@@ -233,12 +248,45 @@ static x3pio_status write_chunk(x3pio_writer *writer, const bound *b, mode m,
                 writer->flags[i] = 0;
             }
         }
-        if (m == MODE_POINTS)
+    }
+    if (m == MODE_TRANSLATED)
+    {
+        for (size_t k = 0; k < 3; ++k)
         {
-            for (size_t i = 0; i < n; ++i)
+            for (size_t i = 0; b->is_bound[k] && i < n; ++i)
             {
-                writer->values[k][i] /= d->axes[k].increment;
+                writer->values[k][i] -= d->transformation.offset[k];
             }
+        }
+    }
+    if (m == MODE_GLOBAL)
+    {
+        for (size_t i = 0; i < n; ++i)
+        {
+            if (writer->flags[i] == 0)
+            {
+                continue;
+            }
+            const double global[3] = {writer->values[0][i],
+                                      writer->values[1][i],
+                                      writer->values[2][i]};
+            double view[3];
+            x3pio_transformation_to_view(&d->transformation, global, view);
+            for (size_t k = 0; k < 3; ++k)
+            {
+                writer->values[k][i] = view[k];
+            }
+        }
+    }
+    for (size_t k = 0; m != MODE_DATA && k < 3; ++k)
+    {
+        if (!b->is_bound[k])
+        {
+            continue;
+        }
+        for (size_t i = 0; i < n; ++i)
+        {
+            writer->values[k][i] /= d->axes[k].increment;
         }
     }
     for (size_t i = 0; i < n; ++i)
@@ -256,7 +304,7 @@ static x3pio_status write_chunk(x3pio_writer *writer, const bound *b, mode m,
         /* A file of floats marks the point by NaN in z. A file of integers
          * keeps the value that the program gave: the mask marks the point
          * there. */
-        if (m == MODE_POINTS || d->axes[2].storage == X3PIO_TYPE_FLOAT
+        if (m != MODE_DATA || d->axes[2].storage == X3PIO_TYPE_FLOAT
             || d->axes[2].storage == X3PIO_TYPE_DOUBLE)
         {
             writer->values[2][i] = NAN;
@@ -267,7 +315,7 @@ static x3pio_status write_chunk(x3pio_writer *writer, const bound *b, mode m,
         const size_t record = x3pio_document_record_size(d);
         for (size_t k = 0; k < 3; ++k)
         {
-            if (!b->is_bound[k])
+            if (d->axes[k].type != X3PIO_AXIS_ABSOLUTE)
             {
                 continue;
             }
@@ -375,6 +423,24 @@ x3pio_status x3pio_write_points(x3pio_writer *writer,
                                 const x3pio_const_fields *from, size_t rows)
 {
     return write_rows(writer, from, rows, MODE_POINTS);
+}
+
+x3pio_status x3pio_write_points_in(x3pio_writer *writer,
+                                   x3pio_coordinate_system system,
+                                   const x3pio_const_fields *from, size_t rows)
+{
+    switch (system)
+    {
+    case X3PIO_COORDINATES_VIEW:
+        return write_rows(writer, from, rows, MODE_POINTS);
+    case X3PIO_COORDINATES_VIEW_OFFSET:
+        return write_rows(writer, from, rows, MODE_TRANSLATED);
+    case X3PIO_COORDINATES_GLOBAL:
+        return write_rows(writer, from, rows, MODE_GLOBAL);
+    }
+    return writer != NULL ? x3pio_fail(&writer->message, X3PIO_ERR_ARGUMENT,
+                                       "The coordinate system is not defined")
+                          : X3PIO_ERR_ARGUMENT;
 }
 
 x3pio_status x3pio_write_heights(x3pio_writer *writer,

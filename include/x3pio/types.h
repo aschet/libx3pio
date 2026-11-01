@@ -94,6 +94,26 @@ typedef enum x3pio_coordinate
     X3PIO_Z = 2
 } x3pio_coordinate;
 
+/**
+ * The coordinate system in which a program takes or gives the points in metres,
+ * with the stored values `s`, the increments `I`, the rotation `R` and the
+ * offsets `O` of the coordinate transformation of the document.
+ */
+typedef enum x3pio_coordinate_system
+{
+    /** The view coordinate system of the file: `I * s`. */
+    X3PIO_COORDINATES_VIEW = 0,
+    /**
+     * The view coordinates shifted by the offsets, without the rotation:
+     * `I * s + O`. The standard does not define this system. It is what the
+     * openGPS libraries gave, which did not apply the rotation. For a file
+     * without a rotation it is the global coordinate system.
+     */
+    X3PIO_COORDINATES_VIEW_OFFSET = 1,
+    /** The global coordinate system: `R * (I * s) + O`. */
+    X3PIO_COORDINATES_GLOBAL = 2
+} x3pio_coordinate_system;
+
 /** How the coordinates along an axis are given. */
 typedef enum x3pio_axis_type
 {
@@ -256,56 +276,58 @@ typedef struct x3pio_axis
  *
  * The structure is frozen for the major version.
  */
-typedef struct x3pio_placement
+typedef struct x3pio_transformation
 {
     /** The rotation matrix in row-major order: r11 r12 r13 r21 ... r33. */
     double rotation[9];
     /** The offset in metres along x, y and z. */
     double offset[3];
-} x3pio_placement;
+} x3pio_transformation;
 
 /**
- * Returns the placement that places nothing: the identity rotation and the
+ * Returns the transformation that places nothing: the identity rotation and the
  * offset 0.
  */
-X3PIO_API x3pio_placement x3pio_placement_identity(void);
+X3PIO_API x3pio_transformation x3pio_transformation_identity(void);
 
 /**
- * Sets a placement to the identity, as x3pio_placement_identity() returns it,
- * for a language that cannot take a structure as a return value.
+ * Sets a transformation to the identity, as x3pio_transformation_identity()
+ * returns it, for a language that cannot take a structure as a return value.
  *
- * @param[out] placement The placement. A null pointer is ignored.
+ * @param[out] transformation The transformation. A null pointer is ignored.
  */
-X3PIO_API void x3pio_placement_init(x3pio_placement *placement);
+X3PIO_API void x3pio_transformation_init(x3pio_transformation *transformation);
 
 /**
- * Tells whether the rotation of a placement is not the identity.
+ * Tells whether the rotation of a transformation is not the identity.
  *
- * @param[in] placement The placement.
+ * @param[in] transformation The transformation.
  */
-X3PIO_API bool x3pio_placement_has_rotation(const x3pio_placement *placement);
+X3PIO_API bool
+x3pio_transformation_has_rotation(const x3pio_transformation *transformation);
 
 /**
  * Converts a point from the view to the global coordinate system.
  *
- * @param[in] placement The placement.
+ * @param[in] transformation The transformation.
  * @param[in] view The coordinates in the view system, in metres.
  * @param[out] global Receives the coordinates in the global system.
  */
-X3PIO_API void x3pio_placement_to_global(const x3pio_placement *placement,
-                                         const double view[3],
-                                         double global[3]);
+X3PIO_API void
+x3pio_transformation_to_global(const x3pio_transformation *transformation,
+                               const double view[3], double global[3]);
 
 /**
  * Converts a point from the global to the view coordinate system. The rotation
  * has to be orthonormal, whose inverse is its transpose.
  *
- * @param[in] placement The placement.
+ * @param[in] transformation The transformation.
  * @param[in] global The coordinates in the global system, in metres.
  * @param[out] view Receives the coordinates in the view system.
  */
-X3PIO_API void x3pio_placement_to_view(const x3pio_placement *placement,
-                                       const double global[3], double view[3]);
+X3PIO_API void
+x3pio_transformation_to_view(const x3pio_transformation *transformation,
+                             const double global[3], double view[3]);
 
 /**
  * The number of points of a file, and how they are arranged.

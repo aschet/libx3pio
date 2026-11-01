@@ -76,16 +76,16 @@ x3pio_compression x3pio_compression_default(void)
     return (x3pio_compression){X3PIO_COMPRESS_DEFLATE, -1};
 }
 
-x3pio_placement x3pio_placement_identity(void)
+x3pio_transformation x3pio_transformation_identity(void)
 {
-    return (x3pio_placement){{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}};
+    return (x3pio_transformation){{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}};
 }
 
-void x3pio_placement_init(x3pio_placement *placement)
+void x3pio_transformation_init(x3pio_transformation *transformation)
 {
-    if (placement != NULL)
+    if (transformation != NULL)
     {
-        *placement = x3pio_placement_identity();
+        *transformation = x3pio_transformation_identity();
     }
 }
 
@@ -97,12 +97,13 @@ void x3pio_compression_init(x3pio_compression *compression)
     }
 }
 
-bool x3pio_placement_has_rotation(const x3pio_placement *placement)
+bool x3pio_transformation_has_rotation(
+    const x3pio_transformation *transformation)
 {
     static const double identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
     for (size_t i = 0; i < 9; ++i)
     {
-        if (placement->rotation[i] != identity[i])
+        if (transformation->rotation[i] != identity[i])
         {
             return true;
         }
@@ -110,30 +111,33 @@ bool x3pio_placement_has_rotation(const x3pio_placement *placement)
     return false;
 }
 
-void x3pio_placement_to_global(const x3pio_placement *p, const double v[3],
-                               double g[3])
+void x3pio_transformation_to_global(const x3pio_transformation *transformation,
+                                    const double v[3], double g[3])
 {
     const double a = v[0];
     const double b = v[1];
     const double c = v[2];
-    g[0] = p->rotation[0] * a + p->rotation[1] * b + p->rotation[2] * c
-           + p->offset[0];
-    g[1] = p->rotation[3] * a + p->rotation[4] * b + p->rotation[5] * c
-           + p->offset[1];
-    g[2] = p->rotation[6] * a + p->rotation[7] * b + p->rotation[8] * c
-           + p->offset[2];
+    g[0] = transformation->rotation[0] * a + transformation->rotation[1] * b
+           + transformation->rotation[2] * c + transformation->offset[0];
+    g[1] = transformation->rotation[3] * a + transformation->rotation[4] * b
+           + transformation->rotation[5] * c + transformation->offset[1];
+    g[2] = transformation->rotation[6] * a + transformation->rotation[7] * b
+           + transformation->rotation[8] * c + transformation->offset[2];
 }
 
-void x3pio_placement_to_view(const x3pio_placement *p, const double g[3],
-                             double v[3])
+void x3pio_transformation_to_view(const x3pio_transformation *transformation,
+                                  const double g[3], double v[3])
 {
-    const double a = g[0] - p->offset[0];
-    const double b = g[1] - p->offset[1];
-    const double c = g[2] - p->offset[2];
+    const double a = g[0] - transformation->offset[0];
+    const double b = g[1] - transformation->offset[1];
+    const double c = g[2] - transformation->offset[2];
     /* The inverse of a rotation is its transpose. */
-    v[0] = p->rotation[0] * a + p->rotation[3] * b + p->rotation[6] * c;
-    v[1] = p->rotation[1] * a + p->rotation[4] * b + p->rotation[7] * c;
-    v[2] = p->rotation[2] * a + p->rotation[5] * b + p->rotation[8] * c;
+    v[0] = transformation->rotation[0] * a + transformation->rotation[3] * b
+           + transformation->rotation[6] * c;
+    v[1] = transformation->rotation[1] * a + transformation->rotation[4] * b
+           + transformation->rotation[7] * c;
+    v[2] = transformation->rotation[2] * a + transformation->rotation[5] * b
+           + transformation->rotation[8] * c;
 }
 
 const char *x3pio_version(void)

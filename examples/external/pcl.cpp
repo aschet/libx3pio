@@ -68,7 +68,11 @@ x3pio_const_fields fields_of(const Cloud &cloud)
 // PCL has it. A list of points is an unorganized cloud, which has a height of 1
 // and all points in the width. Where a file stores no x and y, the library
 // gives the position in the grid times the increments. Of a file with layers,
-// the first one is read.
+// the first one is read. The points are in the global coordinate system, as
+// the transformation of the file puts them: a cloud is usually registered with
+// other clouds, which are in the coordinate system of the machine. The library
+// rotates them in double precision before it stores the floats of the cloud.
+// x3pio_read_points() would give the points as the file holds them.
 Cloud read_cloud(const char *path)
 {
     Reader reader{nullptr, x3pio_reader_free};
@@ -93,7 +97,8 @@ Cloud read_cloud(const char *path)
     // point, and the cloud has the width of the list.
     const x3pio_fields into = fields_of(cloud);
     const std::size_t rows = dimensions.list ? dimensions.size_x : cloud.height;
-    check(x3pio_read_points(reader.get(), &into, rows),
+    check(x3pio_read_points_in(reader.get(), X3PIO_COORDINATES_GLOBAL, &into,
+                               rows),
           x3pio_reader_error_message(reader.get()));
     return cloud;
 }
@@ -106,6 +111,9 @@ void write_cloud(const char *path, const Cloud &cloud)
     x3pio_document_set_point_cloud(document.get(), cloud.points.size(),
                                    X3PIO_TYPE_FLOAT, 1.0);
     x3pio_document_set_software_metadata(document.get(), "pcl", "1.0");
+    // The points are in the global coordinate system and the transformation of
+    // the new file is the identity, so they are stored as they are. A file with
+    // a transformation takes them with x3pio_write_points_in().
 
     x3pio_writer *made = nullptr;
     x3pio_writer_create(&made);
