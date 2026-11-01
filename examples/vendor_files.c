@@ -51,9 +51,17 @@ int main(int argc, char **argv)
     x3pio_reader *reader = NULL;
     x3pio_reader_create(&reader);
     status = x3pio_open_file(reader, path);
-    for (size_t i = 0;
-         status == X3PIO_OK && i < x3pio_reader_vendor_file_count(reader); ++i)
+    /* Only the files of one vendor: those whose identifier lies below it. The
+     * scheme does not count, and neither does a slash at the end. */
+    size_t i = 0;
+    while (status == X3PIO_OK)
     {
+        status =
+            x3pio_reader_find_vendor_file(reader, "www.example.com", i, &i);
+        if (status != X3PIO_OK || i == x3pio_reader_vendor_file_count(reader))
+        {
+            break;
+        }
         const char *id = x3pio_reader_vendor_file_id(reader, i);
         const char *member = x3pio_reader_vendor_file_member(reader, i);
         printf("%s is the file %s\n", id, member != NULL ? member : "(none)");
@@ -73,6 +81,7 @@ int main(int argc, char **argv)
             printf("%s", content);
         }
         free(content);
+        ++i;
     }
     x3pio_reader_free(reader);
     return status == X3PIO_OK ? EXIT_SUCCESS : EXIT_FAILURE;

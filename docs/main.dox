@@ -36,6 +36,8 @@
  *   measured.
  * - Files and blocks of memory as sources, and files and memory as targets. A
  *   reader reads only the member of the zip file that a call needs.
+ *   A path is UTF-8 on every platform; on Windows x3pio_open_wfile() and
+ *   x3pio_create_wfile() take paths of wide characters.
  * - Thread support: the library holds no global state, so threads use handles
  *   of their own at the same time.
  * - The headers of the library do not include those of its dependencies, so a
@@ -227,8 +229,9 @@
  *   reports it, which is how the files of one file are copied into another.
  *   x3pio_add_vendor_id() registers an identifier without a file.
  * - x3pio_reader_vendor_file_count() and the functions after it list the files
- *   with their identifiers, and x3pio_read_vendor_file() reads one by its
- *   identifier without reading any other member. x3pio_read_member() reads a
+ *   with their identifiers, x3pio_reader_find_vendor_file() finds the next one
+ *   below a vendor or a folder of it, and x3pio_read_vendor_file() reads one by
+ *   its identifier without reading any other member. x3pio_read_member() reads a
  *   member of the container by its name.
  *
  * ISO 25178-72:2017 cannot take the identifiers of Amendment 1 as they are,

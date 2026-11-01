@@ -6,78 +6,143 @@
 
 /**
  * @file
- * @brief Conversion between the little-endian byte order of files and the
- * numbers of the host.
+ * @brief Conversion between the little-endian byte order of files and that of
+ * the host.
  */
 
 #include "byte_order.h"
 #include <string.h>
 
+bool x3pio_host_is_little_endian(void)
+{
+    const uint16_t one = 1;
+    unsigned char first = 0;
+    memcpy(&first, &one, 1);
+    return first == 1;
+}
+
+/* A byte swap written with shifts, which compilers translate to the byte swap
+ * instruction of the processor, where there is one. */
+static uint16_t swap16(uint16_t value)
+{
+    return (uint16_t)((value << 8) | (value >> 8));
+}
+
+static uint32_t swap32(uint32_t value)
+{
+    return (value << 24) | ((value & 0xFF00U) << 8) | ((value >> 8) & 0xFF00U)
+           | (value >> 24);
+}
+
+static uint64_t swap64(uint64_t value)
+{
+    return ((uint64_t)swap32((uint32_t)value) << 32)
+           | swap32((uint32_t)(value >> 32));
+}
+
+/*
+ * Defines swap_values<bits>(), which reverses the bytes of each value of a
+ * width. The values are moved through memcpy, so that their alignment in memory
+ * does not matter.
+ */
+#define SWAP_VALUES(bits)                                                      \
+    static void swap_values##bits(unsigned char *bytes, size_t count)          \
+    {                                                                          \
+        for (size_t i = 0; i < count; ++i)                                     \
+        {                                                                      \
+            uint##bits##_t value;                                              \
+            memcpy(&value, bytes + i * sizeof value, sizeof value);            \
+            value = swap##bits(value);                                         \
+            memcpy(bytes + i * sizeof value, &value, sizeof value);            \
+        }                                                                      \
+    }
+
+SWAP_VALUES(16)
+SWAP_VALUES(32)
+SWAP_VALUES(64)
+
+#undef SWAP_VALUES
+
+void x3pio_swap_bytes(void *values, size_t count, size_t width)
+{
+    switch (width)
+    {
+    case 2:
+        swap_values16(values, count);
+        break;
+    case 4:
+        swap_values32(values, count);
+        break;
+    case 8:
+        swap_values64(values, count);
+        break;
+    default:
+        break;
+    }
+}
+
+void x3pio_convert_byte_order(void *values, size_t count, x3pio_type type)
+{
+    if (x3pio_host_is_little_endian())
+    {
+        return;
+    }
+    x3pio_swap_bytes(values, count, x3pio_type_size(type));
+}
+
+/* The values of a file are read as bytes of the host and converted. */
 uint16_t x3pio_load_u16(const unsigned char *p)
 {
-    return (uint16_t)((uint16_t)p[0] | (uint16_t)((uint16_t)p[1] << 8U));
+    uint16_t value;
+    memcpy(&value, p, sizeof value);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_UINT16);
+    return value;
 }
 
 uint32_t x3pio_load_u32(const unsigned char *p)
 {
-    return (uint32_t)p[0] | ((uint32_t)p[1] << 8U) | ((uint32_t)p[2] << 16U)
-           | ((uint32_t)p[3] << 24U);
+    uint32_t value;
+    memcpy(&value, p, sizeof value);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_UINT32);
+    return value;
 }
 
-uint64_t x3pio_load_u64(const unsigned char *p)
-{
-    return (uint64_t)x3pio_load_u32(p)
-           | ((uint64_t)x3pio_load_u32(p + 4) << 32U);
-}
-
-void x3pio_store_u16(unsigned char *p, uint16_t value)
-{
-    p[0] = (unsigned char)(value & 0xFFU);
-    p[1] = (unsigned char)((value >> 8U) & 0xFFU);
-}
-
-void x3pio_store_u32(unsigned char *p, uint32_t value)
-{
-    p[0] = (unsigned char)(value & 0xFFU);
-    p[1] = (unsigned char)((value >> 8U) & 0xFFU);
-    p[2] = (unsigned char)((value >> 16U) & 0xFFU);
-    p[3] = (unsigned char)((value >> 24U) & 0xFFU);
-}
-
-void x3pio_store_u64(unsigned char *p, uint64_t value)
-{
-    x3pio_store_u32(p, (uint32_t)(value & 0xFFFFFFFFU));
-    x3pio_store_u32(p + 4, (uint32_t)(value >> 32U));
-}
-
-/* The number that a pattern of bits stands for, and the pattern of a number. A
- * copy of the bytes is the defined way to reinterpret them. */
 float x3pio_load_float(const unsigned char *p)
 {
-    const uint32_t bits = x3pio_load_u32(p);
-    float value = 0;
-    memcpy(&value, &bits, sizeof value);
+    float value;
+    memcpy(&value, p, sizeof value);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_FLOAT);
     return value;
 }
 
 double x3pio_load_double(const unsigned char *p)
 {
-    const uint64_t bits = x3pio_load_u64(p);
-    double value = 0;
-    memcpy(&value, &bits, sizeof value);
+    double value;
+    memcpy(&value, p, sizeof value);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_DOUBLE);
     return value;
+}
+
+void x3pio_store_u16(unsigned char *p, uint16_t value)
+{
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_UINT16);
+    memcpy(p, &value, sizeof value);
+}
+
+void x3pio_store_u32(unsigned char *p, uint32_t value)
+{
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_UINT32);
+    memcpy(p, &value, sizeof value);
 }
 
 void x3pio_store_float(unsigned char *p, float value)
 {
-    uint32_t bits = 0;
-    memcpy(&bits, &value, sizeof bits);
-    x3pio_store_u32(p, bits);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_FLOAT);
+    memcpy(p, &value, sizeof value);
 }
 
 void x3pio_store_double(unsigned char *p, double value)
 {
-    uint64_t bits = 0;
-    memcpy(&bits, &value, sizeof bits);
-    x3pio_store_u64(p, bits);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_DOUBLE);
+    memcpy(p, &value, sizeof value);
 }

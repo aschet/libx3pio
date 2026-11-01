@@ -327,3 +327,33 @@ x3pio_status x3pio_read_vendor_file(x3pio_reader *reader, const char *id,
     return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
                       "The file does not register that vendor id");
 }
+
+x3pio_status x3pio_reader_find_vendor_file(x3pio_reader *reader,
+                                           const char *prefix, size_t first,
+                                           size_t *index)
+{
+    if (reader == NULL || prefix == NULL || index == NULL)
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
+    if (!reader->opened)
+    {
+        return x3pio_fail(&reader->message, X3PIO_ERR_STATE, "No file is open");
+    }
+    if (!x3pio_vendor_prefix_valid(prefix))
+    {
+        return x3pio_fail(&reader->message, X3PIO_ERR_ARGUMENT,
+                          "The prefix is not a URI of a domain name with an "
+                          "optional path");
+    }
+    *index = reader->vendor_count;
+    for (size_t i = first; i < reader->vendor_count; ++i)
+    {
+        if (x3pio_vendor_below(prefix, reader->vendors[i].id))
+        {
+            *index = i;
+            break;
+        }
+    }
+    return X3PIO_OK;
+}

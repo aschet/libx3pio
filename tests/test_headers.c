@@ -17,7 +17,7 @@ static int failures = 0;
 
 static const char *const allowed[] = {"stdbool.h", "stddef.h", "stdint.h",
                                       "stdio.h",   "time.h",   "float.h",
-                                      "limits.h"};
+                                      "limits.h",  "wchar.h"};
 static const char *const forbidden[] = {"mz_",     "mz.h", "expat", "XML_",
                                         "minizip", "zlib", "libxml"};
 static const char *const headers[] = {"convert.h", "document.h", "file.h",

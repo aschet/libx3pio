@@ -87,4 +87,26 @@ void x3pio_vendor_base(const char **text, size_t *size);
  */
 bool x3pio_vendor_same(const char *a, const char *b);
 
+/**
+ * Tells whether a prefix is a URI of a domain name, optionally with a path: it
+ * has a host name without empty labels, and no empty or relative segment, no
+ * backslash, no query and no fragment. A slash at its end is allowed.
+ *
+ * @param prefix The prefix, null-terminated.
+ */
+bool x3pio_vendor_prefix_valid(const char *prefix);
+
+/**
+ * Tells whether an identifier lies below a prefix: it has the same host name,
+ * and the segments of the prefix are its first segments. Whole segments are
+ * compared, and the scheme is ignored, so `http://a.b/c` lies below
+ * `https://a.b` and below `a.b/c`, and `http://a.b/cd` does not lie below
+ * `http://a.b/c`. An identifier lies below itself.
+ *
+ * @param prefix The prefix, null-terminated.
+ * @param id The identifier, null-terminated.
+ * @return False if either is no URI of a domain name.
+ */
+bool x3pio_vendor_below(const char *prefix, const char *id);
+
 #endif /* X3PIO_SRC_VENDOR_H */

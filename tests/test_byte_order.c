@@ -17,11 +17,8 @@ static void test_integers(void)
 {
     const unsigned char b16[2] = {0x02, 0x01};
     const unsigned char b32[4] = {0x04, 0x03, 0x02, 0x01};
-    const unsigned char b64[8] = {0x08, 0x07, 0x06, 0x05,
-                                  0x04, 0x03, 0x02, 0x01};
     CHECK(x3pio_load_u16(b16) == 0x0102U);
     CHECK(x3pio_load_u32(b32) == 0x01020304UL);
-    CHECK(x3pio_load_u64(b64) == 0x0102030405060708ULL);
 
     unsigned char out[10];
     memset(out, 0xAA, sizeof out);
@@ -32,18 +29,56 @@ static void test_integers(void)
     x3pio_store_u32(out + 1, 0x01020304UL);
     CHECK(memcmp(out + 1, b32, 4) == 0);
     CHECK(out[0] == 0xAA && out[5] == 0xAA);
-    memset(out, 0xAA, sizeof out);
-    x3pio_store_u64(out + 1, 0x0102030405060708ULL);
-    CHECK(memcmp(out + 1, b64, 8) == 0);
-    CHECK(out[0] == 0xAA && out[9] == 0xAA);
 
     /* The extremes survive the trip. */
     unsigned char bytes[8];
-    x3pio_store_u64(bytes, 0xFFFFFFFFFFFFFFFFULL);
-    CHECK(x3pio_load_u64(bytes) == 0xFFFFFFFFFFFFFFFFULL);
     x3pio_store_u32(bytes, 0x80000000UL);
     CHECK(x3pio_load_u32(bytes) == 0x80000000UL);
     CHECK(bytes[3] == 0x80 && bytes[0] == 0);
+}
+
+/* The swap itself, which a little-endian host never needs: it is checked here
+ * directly, at every width and at an address that is not aligned. */
+static void test_swap(void)
+{
+    unsigned char bytes[17] = {0};
+    for (size_t i = 0; i < sizeof bytes; ++i)
+    {
+        bytes[i] = (unsigned char)(i + 1);
+    }
+    unsigned char expected[17];
+    memcpy(expected, bytes, sizeof bytes);
+    /* Two values of 2 bytes, at the odd address 1. */
+    x3pio_swap_bytes(bytes + 1, 2, 2);
+    CHECK(bytes[1] == 3 && bytes[2] == 2 && bytes[3] == 5 && bytes[4] == 4);
+    CHECK(bytes[0] == 1 && bytes[5] == 6);
+    memcpy(bytes, expected, sizeof bytes);
+    x3pio_swap_bytes(bytes + 1, 2, 4);
+    CHECK(bytes[1] == 5 && bytes[2] == 4 && bytes[3] == 3 && bytes[4] == 2);
+    CHECK(bytes[5] == 9 && bytes[8] == 6 && bytes[9] == 10);
+    memcpy(bytes, expected, sizeof bytes);
+    x3pio_swap_bytes(bytes + 1, 2, 8);
+    CHECK(bytes[1] == 9 && bytes[8] == 2 && bytes[9] == 17 && bytes[16] == 10);
+    CHECK(bytes[0] == 1);
+    /* Swapping twice gives the values back, and other widths do nothing. */
+    memcpy(bytes, expected, sizeof bytes);
+    x3pio_swap_bytes(bytes, 4, 4);
+    x3pio_swap_bytes(bytes, 4, 4);
+    CHECK(memcmp(bytes, expected, sizeof bytes) == 0);
+    x3pio_swap_bytes(bytes, 8, 1);
+    x3pio_swap_bytes(bytes, 3, 3);
+    CHECK(memcmp(bytes, expected, sizeof bytes) == 0);
+    /* The conversion swaps on a big-endian host and does nothing on a
+     * little-endian one. */
+    uint32_t value = 0x01020304UL;
+    unsigned char before[4];
+    memcpy(before, &value, sizeof before);
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_INT32);
+    unsigned char after[4];
+    memcpy(after, &value, sizeof after);
+    CHECK((memcmp(before, after, 4) == 0) == x3pio_host_is_little_endian());
+    x3pio_convert_byte_order(&value, 1, X3PIO_TYPE_INT8);
+    CHECK(memcmp(after, &value, 4) == 0);
 }
 
 static void test_floats(void)
@@ -125,6 +160,7 @@ static void test_samples(void)
 int main(void)
 {
     test_integers();
+    test_swap();
     test_floats();
     test_alignment();
     test_samples();

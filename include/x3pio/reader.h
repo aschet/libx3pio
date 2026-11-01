@@ -351,6 +351,44 @@ X3PIO_API x3pio_status x3pio_read_vendor_file(x3pio_reader *reader,
                                               size_t capacity, size_t *size);
 
 /**
+ * Finds the next file of a vendor whose identifier lies below a prefix, to
+ * iterate over the files of one vendor or of one folder of it. Whole segments
+ * are compared, and the scheme is ignored, so the prefix
+ * `http://www.vendor.com` finds `https://www.vendor.com/a.xml` and
+ * `http://www.vendor.com/my/b.xml`, the prefix `www.vendor.com/my` the second
+ * only, and `www.vendor.com/m` neither. An identifier lies below itself, so its
+ * own file is found by it. A slash at the end of the prefix does not matter.
+ *
+ * @code
+ * size_t i = 0;
+ * for (;;)
+ * {
+ *     x3pio_reader_find_vendor_file(reader, "http://www.vendor.com", i, &i);
+ *     if (i == x3pio_reader_vendor_file_count(reader))
+ *     {
+ *         break;
+ *     }
+ *     // x3pio_reader_vendor_file_id(reader, i) lies below the vendor
+ *     ++i;
+ * }
+ * @endcode
+ *
+ * @param[in,out] reader The reader.
+ * @param[in] prefix A URI of a vendor, such as `http://www.vendor.com`, or of a
+ * folder of it, such as `http://www.vendor.com/my`.
+ * @param first The index to start at: 0, or one after the file found last.
+ * @param[out] index Receives the index of the first file at or after `first`
+ * below the prefix, or x3pio_reader_vendor_file_count() if there is none.
+ * @retval X3PIO_ERR_ARGUMENT A pointer is null, or the prefix is not a URI of a
+ * domain name with an optional path.
+ * @retval X3PIO_ERR_STATE No file is open.
+ */
+X3PIO_API x3pio_status x3pio_reader_find_vendor_file(x3pio_reader *reader,
+                                                     const char *prefix,
+                                                     size_t first,
+                                                     size_t *index);
+
+/**
  * Returns the text of the most recent failure of the reader, or an empty
  * string if none occurred. The result is never null, and a string of the
  * library, valid for the life of the program.

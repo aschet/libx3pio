@@ -102,6 +102,11 @@ set(X3PIO_SOURCES
     src/zip_write.c
 )
 
+# The files by wide-character path exist on Windows only.
+if(WIN32)
+    list(APPEND X3PIO_SOURCES src/file_win32.c)
+endif()
+
 # The code is compiled once. The tests link the objects, which have the
 # internal functions that the library hides.
 add_library(x3pio_objects OBJECT ${X3PIO_SOURCES})

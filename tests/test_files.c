@@ -14,6 +14,26 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
+/* Removes a file by a path in UTF-8. On Windows the path of remove() is in the
+ * code page of the system, so the path is converted first. */
+static void remove_file(const char *path)
+{
+#ifdef _WIN32
+    wchar_t wide[MAX_PATH];
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide, MAX_PATH) > 0)
+    {
+        (void)_wremove(wide);
+    }
+#else
+    (void)remove(path);
+#endif
+}
+
 static x3pio_document *base_document(x3pio_revision revision)
 {
     x3pio_document *d = NULL;
@@ -51,7 +71,7 @@ static void check_heights(x3pio_reader *reader)
 static void test_disk(void)
 {
     const char *path = "test_files_h\xC3\xA4llo.x3p"; /* a path in UTF-8 */
-    remove(path);
+    remove_file(path);
     x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
     x3pio_writer *writer = NULL;
     CHECK_OK(x3pio_writer_create(&writer));
@@ -89,7 +109,7 @@ static void test_disk(void)
     CHECK_OK(x3pio_create_file(writer, copy, doc));
     finish_with_heights(writer);
     x3pio_writer_free(writer);
-    remove(copy);
+    remove_file(copy);
 
     /* A document that cannot be written creates no file. */
     x3pio_document *empty = NULL;
@@ -104,7 +124,7 @@ static void test_disk(void)
     }
     CHECK_OK(x3pio_create_file(writer, copy, doc));
     x3pio_writer_free(writer);
-    remove(copy);
+    remove_file(copy);
     x3pio_document_free(empty);
 
     /* What cannot be opened. */
@@ -124,7 +144,7 @@ static void test_disk(void)
         fclose(text);
     }
     CHECK_STATUS(X3PIO_ERR_FORMAT, x3pio_open_file(reader, copy));
-    remove(copy);
+    remove_file(copy);
     /* The reader opens a good file after these failures. */
     CHECK_OK(x3pio_open_file(reader, path));
     check_heights(reader);
@@ -133,8 +153,55 @@ static void test_disk(void)
     x3pio_buffer_free(&on_disk);
     x3pio_buffer_free(&in_memory);
     x3pio_document_free(doc);
-    remove(path);
+    remove_file(path);
 }
+
+#ifdef _WIN32
+/* The same files by a path of wide characters, with letters outside the code
+ * page and a character that needs a surrogate pair. */
+static void test_wide_paths(void)
+{
+    static const wchar_t path[] = L"test_files_wäö \U0001F600.x3p";
+    static const char utf8[] =
+        "test_files_w\xC3\xA4\xC3\xB6 \xF0\x9F\x98\x80.x3p";
+    (void)_wremove(path);
+    x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
+    x3pio_writer *writer = NULL;
+    CHECK_OK(x3pio_writer_create(&writer));
+    CHECK_OK(x3pio_create_wfile(writer, path, doc));
+    finish_with_heights(writer);
+    x3pio_writer_free(writer);
+
+    x3pio_reader *reader = NULL;
+    CHECK_OK(x3pio_reader_create(&reader));
+    CHECK_OK(x3pio_open_wfile(reader, path));
+    check_heights(reader);
+    x3pio_reader_free(reader);
+
+    /* The path in UTF-8 reaches the same file. */
+    CHECK_OK(x3pio_reader_create(&reader));
+    CHECK_OK(x3pio_open_file(reader, utf8));
+    check_heights(reader);
+    x3pio_reader_free(reader);
+
+    /* A surrogate without a partner is no text. */
+    static const wchar_t lone[] = L"test_files_\xD800.x3p";
+    CHECK_OK(x3pio_reader_create(&reader));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_open_wfile(reader, lone));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_open_wfile(NULL, path));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_open_wfile(reader, NULL));
+    CHECK_STATUS(X3PIO_ERR_IO, x3pio_open_wfile(reader, L"no such file.x3p"));
+    x3pio_reader_free(reader);
+    CHECK_OK(x3pio_writer_create(&writer));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_wfile(writer, lone, doc));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_wfile(NULL, path, doc));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_wfile(writer, NULL, doc));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT, x3pio_create_wfile(writer, path, NULL));
+    x3pio_writer_free(writer);
+    (void)_wremove(path);
+    x3pio_document_free(doc);
+}
+#endif
 
 /* A file in memory: the writer holds the bytes until it is freed, they are the
  * bytes of the file on disk, and they open as they are. */
@@ -170,7 +237,7 @@ static void test_memory_writer(void)
     x3pio_buffer on_disk;
     x3pio_buffer_init(&on_disk, x3pio_default_allocator());
     CHECK(read_whole_file(path, &on_disk));
-    remove(path);
+    remove_file(path);
     CHECK_OK(x3pio_writer_memory(writer, &data, &size));
     CHECK(size == on_disk.size && memcmp(data, on_disk.data, size) == 0);
 
@@ -323,6 +390,42 @@ static void test_vendor_files_amd1(void)
     CHECK(x3pio_reader_vendor_file_member(reader, 5) == NULL);
     CHECK(x3pio_reader_vendor_file_id(NULL, 0) == NULL);
     CHECK(x3pio_reader_vendor_file_count(NULL) == 0);
+
+    /* The files of one vendor, or of one folder of it. */
+    size_t at = 0;
+    CHECK_OK(x3pio_reader_find_vendor_file(reader, "https://www.vendor.com", 0,
+                                           &at));
+    CHECK(at == 0);
+    CHECK_OK(
+        x3pio_reader_find_vendor_file(reader, "www.vendor.com", at + 1, &at));
+    CHECK(at == x3pio_reader_vendor_file_count(reader));
+    CHECK_OK(
+        x3pio_reader_find_vendor_file(reader, "http://other.org/", 0, &at));
+    CHECK(at == 1);
+    CHECK_OK(x3pio_reader_find_vendor_file(reader, "http://www.vendor.com/my",
+                                           0, &at));
+    CHECK(at == 0);
+    CHECK_OK(x3pio_reader_find_vendor_file(reader, "http://www.vendor.com/m", 0,
+                                           &at));
+    CHECK(at == x3pio_reader_vendor_file_count(reader));
+    /* An identifier without a file is found too. */
+    CHECK_OK(
+        x3pio_reader_find_vendor_file(reader, "http://nofile.org", 0, &at));
+    CHECK(at == 3 && x3pio_reader_vendor_file_member(reader, at) == NULL);
+    CHECK_OK(
+        x3pio_reader_find_vendor_file(reader, "http://nowhere.net", 0, &at));
+    CHECK(at == 5);
+    CHECK_OK(
+        x3pio_reader_find_vendor_file(reader, "http://other.org", 99, &at));
+    CHECK(at == 5);
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_reader_find_vendor_file(reader, "http:///x", 0, &at));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_reader_find_vendor_file(reader, NULL, 0, &at));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_reader_find_vendor_file(reader, "a.b", 0, NULL));
+    CHECK_STATUS(X3PIO_ERR_ARGUMENT,
+                 x3pio_reader_find_vendor_file(NULL, "a.b", 0, &at));
 
     /* A file by its identifier: the size first, then the bytes. */
     size_t size = 0;
@@ -555,6 +658,30 @@ static void test_vendor_files_2017(void)
     CHECK_OK(x3pio_read_member(reader, "extra/data.bin", content,
                                sizeof content, &size));
     CHECK(size == 5 && memcmp(content, "01234", 5) == 0);
+    /* The files of the vendor, or of a folder of it, as in Amd 1. */
+    size_t found = 0;
+    size_t matches = 0;
+    for (size_t at = 0;;)
+    {
+        CHECK_OK(x3pio_reader_find_vendor_file(
+            reader, "http://www.vendor.com/x", at, &found));
+        if (found == x3pio_reader_vendor_file_count(reader))
+        {
+            break;
+        }
+        ++matches;
+        at = found + 1;
+    }
+    CHECK(matches == 3);
+    CHECK_OK(x3pio_reader_find_vendor_file(
+        reader, "http://www.vendor.com/x/extra", 0, &found));
+    CHECK(found < 3
+          && strcmp(x3pio_reader_vendor_file_member(reader, found),
+                    "extra/data.bin")
+                 == 0);
+    CHECK_OK(
+        x3pio_reader_find_vendor_file(reader, "http://other.org", 0, &found));
+    CHECK(found == 3);
     /* The identifier reads the file, as in Amd 1. */
     CHECK_OK(x3pio_read_vendor_file(reader,
                                     "http://www.vendor.com/x/extra/data.bin",
@@ -905,6 +1032,9 @@ static void test_damage(void)
 int main(void)
 {
     test_disk();
+#ifdef _WIN32
+    test_wide_paths();
+#endif
     test_memory_writer();
     test_vendor_files_amd1();
     test_vendor_files_2017();

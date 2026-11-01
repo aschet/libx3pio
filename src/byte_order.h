@@ -6,27 +6,45 @@
 
 /**
  * @file
- * @brief Conversion between the little-endian byte order of files and the
- * numbers of the host.
- *
- * The values of a file are little endian. The functions compose and split the
- * bytes with shifts, so they work on a host of either byte order, and they do
- * not read memory as a wider type, so alignment does not matter.
+ * @brief Conversion between the little-endian byte order of files and that of
+ * the host.
  */
 
 #ifndef X3PIO_SRC_BYTE_ORDER_H
 #define X3PIO_SRC_BYTE_ORDER_H
 
-#include <stdint.h>
+#include "common.h"
+
+/** Tells whether the machine stores the least significant byte first. */
+bool x3pio_host_is_little_endian(void);
+
+/**
+ * Reverses the bytes of each of `count` values of `width` bytes, in place,
+ * whatever the byte order of the host. The values may lie at any address.
+ *
+ * @param[in,out] values The values.
+ * @param count The number of values.
+ * @param width The width of a value in bytes: 2, 4 or 8. Another width, such as
+ * 1, leaves the values as they are.
+ */
+void x3pio_swap_bytes(void *values, size_t count, size_t width);
+
+/**
+ * Converts values between the byte order of the host and the file order
+ * (little endian), in place. The conversion is the same in both directions. On
+ * a little-endian host it does nothing. A value of one byte is left as it is.
+ *
+ * @param[in,out] values The values.
+ * @param count The number of values.
+ * @param type The type of the values.
+ */
+void x3pio_convert_byte_order(void *values, size_t count, x3pio_type type);
 
 /** Reads a little-endian 16-bit integer. */
 uint16_t x3pio_load_u16(const unsigned char *p);
 
 /** Reads a little-endian 32-bit integer. */
 uint32_t x3pio_load_u32(const unsigned char *p);
-
-/** Reads a little-endian 64-bit integer. */
-uint64_t x3pio_load_u64(const unsigned char *p);
 
 /** Reads a little-endian IEEE 754 single precision number. */
 float x3pio_load_float(const unsigned char *p);
@@ -39,9 +57,6 @@ void x3pio_store_u16(unsigned char *p, uint16_t value);
 
 /** Writes a 32-bit integer as little-endian bytes. */
 void x3pio_store_u32(unsigned char *p, uint32_t value);
-
-/** Writes a 64-bit integer as little-endian bytes. */
-void x3pio_store_u64(unsigned char *p, uint64_t value);
 
 /** Writes a single precision number as little-endian bytes. */
 void x3pio_store_float(unsigned char *p, float value);

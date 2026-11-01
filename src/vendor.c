@@ -243,3 +243,103 @@ bool x3pio_vendor_same(const char *a, const char *b)
     x3pio_vendor_base(&b, &size_b);
     return size_a == size_b && memcmp(a, b, size_a) == 0;
 }
+
+/* A URI of a domain name, split into the host name and the path. */
+typedef struct uri_parts
+{
+    const char *host;
+    size_t host_size;
+    const char *path;
+    size_t path_size;
+} uri_parts;
+
+static bool split_uri(const char *uri, uri_parts *parts)
+{
+    size_t size = strlen(uri);
+    const char *rest = NULL;
+    size_t rest_size = 0;
+    after_scheme(&uri, &size, &rest, &rest_size);
+    for (size_t i = 0; i < size; ++i)
+    {
+        if (uri[i] == '\\' || uri[i] == '?' || uri[i] == '#')
+        {
+            return false;
+        }
+    }
+    size_t host_size = 0;
+    while (host_size < rest_size && rest[host_size] != '/')
+    {
+        ++host_size;
+    }
+    if (host_size == 0)
+    {
+        return false;
+    }
+    /* No empty label in the host name. */
+    size_t label = 0;
+    for (size_t i = 0; i <= host_size; ++i)
+    {
+        if (i == host_size || rest[i] == '.')
+        {
+            if (i == label)
+            {
+                return false;
+            }
+            label = i + 1;
+        }
+    }
+    const char *path = rest + host_size;
+    size_t path_size = rest_size - host_size;
+    if (path_size > 0)
+    {
+        ++path;
+        --path_size;
+    }
+    if (path_size > 0 && path[path_size - 1] == '/')
+    {
+        --path_size;
+    }
+    size_t begin = 0;
+    while (path_size > 0 && begin <= path_size)
+    {
+        size_t end = begin;
+        while (end < path_size && path[end] != '/')
+        {
+            ++end;
+        }
+        if (!segment_valid(path + begin, end - begin))
+        {
+            return false;
+        }
+        begin = end + 1;
+    }
+    *parts = (uri_parts){rest, host_size, path, path_size};
+    return true;
+}
+
+bool x3pio_vendor_prefix_valid(const char *prefix)
+{
+    uri_parts parts;
+    return split_uri(prefix, &parts);
+}
+
+bool x3pio_vendor_below(const char *prefix, const char *id)
+{
+    uri_parts wanted;
+    uri_parts found;
+    if (!split_uri(prefix, &wanted) || !split_uri(id, &found)
+        || wanted.host_size != found.host_size
+        || memcmp(wanted.host, found.host, wanted.host_size) != 0
+        || wanted.path_size > found.path_size)
+    {
+        return false;
+    }
+    if (memcmp(wanted.path, found.path, wanted.path_size) != 0)
+    {
+        return false;
+    }
+    /* The segments are whole: the path of the identifier goes on with a slash,
+     * or ends. */
+    return wanted.path_size == found.path_size || wanted.path_size == 0
+           || found.path[wanted.path_size] == '/';
+}

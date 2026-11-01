@@ -78,6 +78,32 @@ static void test_reserved(void)
     CHECK(!x3pio_is_reserved_name("Main.xml"));
 }
 
+static void test_vendor_below(void)
+{
+    /* Whole segments, and the scheme does not count. */
+    CHECK(x3pio_vendor_below("http://a.b", "http://a.b/c/d.xml"));
+    CHECK(x3pio_vendor_below("https://a.b", "http://a.b/c/d.xml"));
+    CHECK(x3pio_vendor_below("a.b", "http://a.b/c/d.xml"));
+    CHECK(x3pio_vendor_below("http://a.b/c", "http://a.b/c/d.xml"));
+    CHECK(x3pio_vendor_below("http://a.b/c/", "http://a.b/c/d.xml"));
+    CHECK(x3pio_vendor_below("http://a.b/", "http://a.b/c"));
+    CHECK(x3pio_vendor_below("http://a.b/c/d.xml", "http://a.b/c/d.xml"));
+    CHECK(!x3pio_vendor_below("http://a.b/c", "http://a.b/cd/e"));
+    CHECK(!x3pio_vendor_below("http://a.b/c/d.xml", "http://a.b/c"));
+    CHECK(!x3pio_vendor_below("http://a.b", "http://a.bc/x"));
+    CHECK(!x3pio_vendor_below("http://x.y", "http://a.b/c"));
+    /* What is no URI of a domain name matches nothing. */
+    CHECK(!x3pio_vendor_below("http:///c", "http://a.b/c"));
+    CHECK(!x3pio_vendor_below("http://a..b", "http://a..b/c"));
+    CHECK(!x3pio_vendor_below("http://a.b/c//d", "http://a.b/c/d"));
+    CHECK(!x3pio_vendor_below("http://a.b/../c", "http://a.b/c"));
+    CHECK(!x3pio_vendor_below("http://a.b", "not a uri\\x"));
+    CHECK(x3pio_vendor_prefix_valid("http://a.b"));
+    CHECK(x3pio_vendor_prefix_valid("a.b/c/"));
+    CHECK(!x3pio_vendor_prefix_valid(""));
+    CHECK(!x3pio_vendor_prefix_valid("http://a.b/c?x"));
+}
+
 static void test_vendor_members(void)
 {
     member_is("http://www.vendor.com/my/a.xml", "www\\vendor\\com\\my\\a.xml");
@@ -169,6 +195,7 @@ int main(void)
     test_links();
     test_reserved();
     test_vendor_members();
+    test_vendor_below();
     test_index();
     return finish_tests();
 }

@@ -266,6 +266,8 @@ def sources(*patterns):
 def static_analysis(directory):
     configure(directory, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DX3PIO_BUILD_EXAMPLES=ON")
     files = sources("src/*.c", "tests/*.c", "examples/*.c", "test_package/*.c")
+    # The files for Windows only need the headers of Windows.
+    files = [name for name in files if "file_win32" not in name]
     run("clang-tidy --warnings-as-errors=* -p", directory, *files)
 
 
