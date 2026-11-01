@@ -239,6 +239,16 @@
  * a program that converts a file to the first revision names the vendor itself,
  * and adds the files with it.
  *
+ * @section format_zip The Zip Container
+ *
+ * The container is written in the plain form of zip that every reader of zip
+ * files knows: version 2.0, the sizes and the checksum of a member in its
+ * header, and the members stored or deflated. A member that can reach 4 GiB,
+ * such as the points of a large surface, is written with Zip64, which older
+ * readers do not know. The writer decides that from the number of points
+ * before it writes the first byte, so the files of smaller data stay readable
+ * by those readers. The reader reads both forms.
+ *
  * @section format_tolerance Tolerance
  * Real files differ from the standard, and some are damaged. The reader
  * accepts what it can read without doubt, and refuses the rest with an error:

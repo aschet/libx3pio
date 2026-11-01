@@ -348,6 +348,22 @@ static void write_datums(out *o, const x3pio_document *d)
     close_element(o, "DataList");
 }
 
+uint64_t x3pio_xml_size_limit(const x3pio_document *d)
+{
+    /* The metadata is some kilobytes; the room is for the texts of a program
+     * that are far larger. A datum has the tags, the indentation, the
+     * separators and the numbers. */
+    const uint64_t metadata = (uint64_t)64 * 1024 * 1024;
+    if (d->text_values == NULL)
+    {
+        return metadata;
+    }
+    const uint64_t datum = 64
+                           + (uint64_t)x3pio_document_absolute_count(d)
+                                 * (X3PIO_NUMBER_CAPACITY + 1);
+    return metadata + (uint64_t)x3pio_document_point_count(d) * datum;
+}
+
 x3pio_status x3pio_xml_build(const x3pio_document *d, x3pio_xml_emit emit,
                              void *user, const char **message)
 {

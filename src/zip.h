@@ -173,13 +173,22 @@ x3pio_status x3pio_zip_writer_open_memory(const x3pio_allocator *allocator,
 /**
  * Starts a member. The previous one must be finished.
  *
+ * A member whose size cannot reach 4 GiB gets the plain header of a zip file,
+ * which every reader of zip files understands. A member that can reach it gets
+ * the Zip64 header, which older readers do not know. The header is written
+ * before the bytes, so the size that the member may have is stated here. A
+ * member that turns out larger than stated cannot be completed.
+ *
  * @param[in,out] writer The writer.
  * @param name The name of the member.
+ * @param size_limit The most bytes that the member will have, before the
+ * compression.
  * @param[in] compression The compression.
  * @param[out] message Receives the reason of a failure.
  * @retval X3PIO_ERR_IO The member cannot be started.
  */
 x3pio_status x3pio_zip_writer_begin(x3pio_zip_writer *writer, const char *name,
+                                    uint64_t size_limit,
                                     const x3pio_compression *compression,
                                     const char **message);
 

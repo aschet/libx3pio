@@ -333,9 +333,10 @@ static x3pio_status write_chunk(x3pio_writer *writer, const bound *b, mode m,
         }
         if (!writer->data_started)
         {
-            const x3pio_status status =
-                x3pio_zip_writer_begin(writer->zip, X3PIO_DATA_FILE,
-                                       &writer->compression, &writer->message);
+            const x3pio_status status = x3pio_zip_writer_begin(
+                writer->zip, X3PIO_DATA_FILE,
+                (uint64_t)x3pio_document_point_count(d) * record,
+                &writer->compression, &writer->message);
             if (status != X3PIO_OK)
             {
                 return status;

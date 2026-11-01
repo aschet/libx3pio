@@ -42,6 +42,9 @@ static x3pio_status failure(const x3pio_zip_writer *writer,
  * the first day of the DOS time stamp in every time zone. */
 #define ZIP_TIME ((time_t)315662400)
 
+/* The room that a plain member keeps below 4 GiB for the compression. */
+#define ZIP_PLAIN_MARGIN ((uint64_t)16 * 1024 * 1024)
+
 static void configure(void *writer)
 {
     mz_zip_writer_set_compress_method(writer, MZ_COMPRESS_METHOD_DEFLATE);
@@ -144,6 +147,7 @@ x3pio_status x3pio_zip_writer_open_memory(const x3pio_allocator *allocator,
 }
 
 x3pio_status x3pio_zip_writer_begin(x3pio_zip_writer *writer, const char *name,
+                                    uint64_t size_limit,
                                     const x3pio_compression *compression,
                                     const char **message)
 {
@@ -154,7 +158,10 @@ x3pio_status x3pio_zip_writer_begin(x3pio_zip_writer *writer, const char *name,
                                   ? MZ_COMPRESS_METHOD_STORE
                                   : MZ_COMPRESS_METHOD_DEFLATE;
     info.flag = MZ_ZIP_FLAG_UTF8;
-    info.zip64 = MZ_ZIP64_AUTO;
+    /* Deflate can make high-entropy data larger, by far less than the margin.
+     */
+    info.zip64 = size_limit > UINT32_MAX - ZIP_PLAIN_MARGIN ? MZ_ZIP64_FORCE
+                                                            : MZ_ZIP64_DISABLE;
     info.modified_date = ZIP_TIME;
     info.accessed_date = ZIP_TIME;
     info.creation_date = ZIP_TIME;
@@ -162,6 +169,14 @@ x3pio_status x3pio_zip_writer_begin(x3pio_zip_writer *writer, const char *name,
     if (MZ_HOST_SYSTEM(info.version_madeby) == MZ_HOST_SYSTEM_UNIX)
     {
         info.external_fa = 0100644U << 16U;
+    }
+    /* The sizes and the checksum go into the header after the bytes of the
+     * member, which every reader accepts, and not behind the bytes. The zip
+     * file exists once it is opened. */
+    void *zip = NULL;
+    if (mz_zip_writer_get_zip_handle(writer->writer, &zip) == MZ_OK)
+    {
+        mz_zip_set_data_descriptor(zip, 0);
     }
     /* The level is read when the member is opened. */
     mz_zip_writer_set_compress_level(writer->writer,

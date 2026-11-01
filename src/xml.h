@@ -82,4 +82,14 @@ x3pio_status x3pio_xml_build(const x3pio_document *document,
                              x3pio_xml_emit emit, void *user,
                              const char **message);
 
+/**
+ * The most bytes that x3pio_xml_build() writes for a document: the text of the
+ * metadata, which is allowed a fixed room, and the text values with the
+ * longest number each.
+ *
+ * @param[in] document The document.
+ * @return The number of bytes.
+ */
+uint64_t x3pio_xml_size_limit(const x3pio_document *document);
+
 #endif /* X3PIO_SRC_XML_H */

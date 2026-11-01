@@ -20,8 +20,8 @@ static x3pio_status put_member(x3pio_writer *writer, const char *name,
                                const void *data, size_t size,
                                const x3pio_compression *compression)
 {
-    x3pio_status status = x3pio_zip_writer_begin(writer->zip, name, compression,
-                                                 &writer->message);
+    x3pio_status status = x3pio_zip_writer_begin(writer->zip, name, size,
+                                                 compression, &writer->message);
     if (status == X3PIO_OK)
     {
         status =
@@ -140,6 +140,7 @@ x3pio_status x3pio_writer_finish(x3pio_writer *writer)
     main_sink sink = {writer, {{0}, {0}, 0}};
     x3pio_md5_init(&sink.hash);
     status = x3pio_zip_writer_begin(writer->zip, X3PIO_MAIN_XML,
+                                    x3pio_xml_size_limit(out),
                                     &writer->compression, &writer->message);
     if (status == X3PIO_OK)
     {

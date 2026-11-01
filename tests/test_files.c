@@ -257,6 +257,50 @@ static void test_memory_writer(void)
     x3pio_document_free(doc);
 }
 
+/* A member that is far below 4 GiB has the plain header of a zip file, so that
+ * a reader that does not know Zip64 or the data descriptor reads it: the
+ * version is 2.0, the sizes and the checksum are in the header, and no field of
+ * extra data holds Zip64 sizes. */
+static void test_plain_headers(void)
+{
+    x3pio_document *doc = base_document(X3PIO_REVISION_AMD1);
+    x3pio_writer *writer = NULL;
+    CHECK_OK(x3pio_writer_create(&writer));
+    CHECK_OK(x3pio_create_memory(writer, doc));
+    finish_with_heights(writer);
+    const void *data = NULL;
+    size_t size = 0;
+    CHECK_OK(x3pio_writer_memory(writer, &data, &size));
+    const unsigned char *bytes = data;
+    size_t headers = 0;
+    for (size_t at = 0; at + 30 <= size; ++at)
+    {
+        if (memcmp(bytes + at, "PK\3\4", 4) != 0)
+        {
+            continue;
+        }
+        ++headers;
+        const unsigned version = bytes[at + 4] | (unsigned)bytes[at + 5] << 8U;
+        const unsigned flags = bytes[at + 6] | (unsigned)bytes[at + 7] << 8U;
+        const size_t name = bytes[at + 26] | (size_t)bytes[at + 27] << 8U;
+        const size_t extra = bytes[at + 28] | (size_t)bytes[at + 29] << 8U;
+        CHECK(version == 20);
+        CHECK((flags & 8U) == 0);
+        size_t field = at + 30 + name;
+        while (field + 4 <= at + 30 + name + extra)
+        {
+            const unsigned id = bytes[field] | (unsigned)bytes[field + 1] << 8U;
+            CHECK(id != 1);
+            field += 4 + (bytes[field + 2] | (size_t)bytes[field + 3] << 8U);
+        }
+        /* The compressed size is in the header, not behind the bytes. */
+        CHECK(bytes[at + 18] != 0 || bytes[at + 19] != 0);
+    }
+    CHECK(headers >= 3);
+    x3pio_writer_free(writer);
+    x3pio_document_free(doc);
+}
+
 /* ---- the files of vendors
  * --------------------------------------------------------- */
 
@@ -1036,6 +1080,7 @@ int main(void)
     test_wide_paths();
 #endif
     test_memory_writer();
+    test_plain_headers();
     test_vendor_files_amd1();
     test_vendor_files_2017();
     test_vendor_rules();
