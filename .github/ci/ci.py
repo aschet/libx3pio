@@ -135,13 +135,13 @@ def vcpkg_installed(build):
     return sorted(path for path in build.glob("vcpkg_installed/*") if path.is_dir())
 
 
-def library_env(library_dir, path_dir=None):
+def library_env(library_dir, *path_dirs):
     """The environment that lets a program find the shared library: in the
     directories of the library path, and on Windows in the path of the programs."""
     env = dict(os.environ)
     env["LD_LIBRARY_PATH"] = env["DYLD_LIBRARY_PATH"] = str(library_dir)
-    if path_dir:
-        env["PATH"] = f"{path_dir}{os.pathsep}{env['PATH']}"
+    if path_dirs:
+        env["PATH"] = os.pathsep.join([*map(str, path_dirs), env["PATH"]])
     return env
 
 
@@ -236,7 +236,13 @@ def build_job(job, directory):
         )
         run("cmake --build", consumer, "--config", "Release")
         program = find(consumer, "test_package", "test_package.exe")
-        run(shlex.quote(str(program)), env=library_env(stage / "lib", stage / "bin"))
+        # On Windows the DLLs of the libraries that vcpkg built are next to its
+        # import libraries.
+        dlls = [root / "bin" for root in vcpkg_installed(build)]
+        run(
+            shlex.quote(str(program)),
+            env=library_env(stage / "lib", stage / "bin", *dlls),
+        )
         pc = find(stage, "x3pio.pc")
         if pc and shutil.which("pkg-config"):
             print(f"== pkg-config, BUILD_SHARED_LIBS={shared}")
