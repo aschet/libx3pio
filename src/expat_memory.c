@@ -25,7 +25,11 @@ typedef union block_header
         const x3pio_allocator *allocator;
         size_t size;
     } fields;
-    max_align_t alignment;
+    /* The alignment of the widest types, since max_align_t is missing in the C
+     * of some compilers. */
+    long double wide_float;
+    long long wide_integer;
+    void *pointer;
 } block_header;
 
 static void *expat_malloc(size_t size)
