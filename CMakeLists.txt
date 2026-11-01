@@ -275,6 +275,11 @@ if(UNIX)
     if(NOT BUILD_SHARED_LIBS)
         set(X3PIO_PC_CFLAGS " -DX3PIO_STATIC_DEFINE")
         set(X3PIO_PC_REQUIRES "expat minizip-ng")
+        if(APPLE)
+            # minizip-ng compresses with the Compression library of macOS
+            # there, which its pkg-config file does not name.
+            set(X3PIO_PC_LIBS_PRIVATE " -lcompression")
+        endif()
     endif()
     configure_file(cmake/x3pio.pc.in "${PROJECT_BINARY_DIR}/x3pio.pc" @ONLY)
     install(FILES "${PROJECT_BINARY_DIR}/x3pio.pc"

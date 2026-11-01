@@ -248,9 +248,9 @@ def configure(directory, options="", env=None):
     run(command, *dependency_options(), "-B", directory, env=env)
 
 
-def build_and_test(directory):
+def build_and_test(directory, env=None):
     run("cmake --build", directory)
-    run("ctest --output-on-failure --no-tests=error --test-dir", directory)
+    run("ctest --output-on-failure --no-tests=error --test-dir", directory, env=env)
 
 
 def sanitizer(flags, directory):
@@ -270,7 +270,13 @@ def sanitizer(flags, directory):
         f"-DCMAKE_COMPILE_WARNING_AS_ERROR=ON {options}",
         env=dict(os.environ, CC="clang"),
     )
-    build_and_test(directory)
+    # The time functions of the C library, which minizip-ng calls for the time
+    # stamps of the members, guard their state with locks that the sanitizer
+    # does not see in a C library that it did not build.
+    suppressions = ROOT / ".github" / "ci" / "tsan.supp"
+    build_and_test(
+        directory, env=dict(os.environ, TSAN_OPTIONS=f"suppressions={suppressions}")
+    )
 
 
 def sources(*patterns):

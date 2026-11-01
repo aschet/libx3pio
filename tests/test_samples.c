@@ -488,7 +488,7 @@ static void test_standard_example(void)
     CHECK(x3pio_document_feature(doc) == X3PIO_SURFACE);
     const x3pio_dimensions dims = x3pio_document_dimensions(doc);
     CHECK(dims.size_x == 4 && dims.size_y == 4 && dims.size_z == 1);
-    CHECK(x3pio_document_axis(doc, X3PIO_X).increment == 1.6016e-6);
+    CHECK(equals(x3pio_document_axis(doc, X3PIO_X).increment, 1.6016e-6));
     const x3pio_transformation place = x3pio_document_transformation(doc);
     CHECK(!x3pio_transformation_has_rotation(&place));
     CHECK_STRING(x3pio_document_creator(doc), "Name of measuring person");
@@ -503,7 +503,7 @@ static void test_standard_example(void)
     CHECK_STRING(text, "2007-04-30T13:58:02.6+02:00");
     double z[16];
     CHECK_OK(x3pio_read_z(reader, x3pio_layout_packed(X3PIO_TYPE_DOUBLE), z));
-    CHECK(z[0] == 4.86219120804151E-0006);
+    CHECK(equals(z[0], 4.86219120804151E-0006));
     CHECK(isnan(z[7]));
     x3pio_reader_free(reader);
     archive_free(&a);

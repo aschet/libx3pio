@@ -11,6 +11,7 @@
 #define X3PIO_TESTS_CHECK_H
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,6 +49,15 @@ static int checks = 0;
     } while (0)
 
 #define CHECK_OK(call) CHECK_STATUS(X3PIO_OK, call)
+
+/* Compares two numbers as doubles. Where the processor computes in extended
+ * precision (the x87 unit of 32-bit x86), a literal such as 0.1 in a comparison
+ * may keep more digits than a double holds, and the double that was read or
+ * computed differs from it. The arguments of a call are doubles. */
+static inline bool equals(double a, double b)
+{
+    return a == b;
+}
 
 /* Compares two numbers that may be NaN, which equal each other here. */
 #define CHECK_SAME(a, b)                                                       \

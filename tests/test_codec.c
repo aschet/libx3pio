@@ -93,10 +93,11 @@ static void test_round_trip_of_types(void)
     double back = 0;
     CHECK_OK(x3pio_encode_samples(X3PIO_TYPE_FLOAT, fine, 1, bytes, 4));
     x3pio_decode_samples(X3PIO_TYPE_FLOAT, bytes, 4, &back, 1);
-    CHECK(back == (double)0.1F);
+    const float tenth = 0.1F;
+    CHECK(equals(back, (double)tenth));
     CHECK_OK(x3pio_encode_samples(X3PIO_TYPE_DOUBLE, fine, 1, bytes, 8));
     x3pio_decode_samples(X3PIO_TYPE_DOUBLE, bytes, 8, &back, 1);
-    CHECK(back == 0.1);
+    CHECK(equals(back, 0.1));
 }
 
 static void test_rounding(void)

@@ -25,11 +25,24 @@
 # same way.
 
 macro(x3pio_find_dependencies)
-    find_package(minizip-ng CONFIG QUIET)
+    # The libraries that a package manager provides come before those of the
+    # system: a program that names them in a toolchain file or in a prefix
+    # path wants those, also where the system has a package of its own.
+    set(_x3pio_explicit NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH
+        NO_CMAKE_SYSTEM_PACKAGE_REGISTRY)
+    find_package(minizip-ng CONFIG QUIET ${_x3pio_explicit})
+    if(NOT TARGET MINIZIP::minizip-ng)
+        find_package(minizip CONFIG QUIET ${_x3pio_explicit})
+    endif()
+    if(NOT TARGET MINIZIP::minizip-ng AND NOT TARGET MINIZIP::minizip)
+        find_package(minizip-ng CONFIG QUIET)
+    endif()
+    if(NOT TARGET MINIZIP::minizip-ng AND NOT TARGET MINIZIP::minizip)
+        find_package(minizip CONFIG REQUIRED)
+    endif()
     if(TARGET MINIZIP::minizip-ng)
         set(_x3pio_minizip MINIZIP::minizip-ng)
     else()
-        find_package(minizip CONFIG REQUIRED)
         set(_x3pio_minizip MINIZIP::minizip)
         get_target_property(_x3pio_mz_dirs ${_x3pio_minizip} INTERFACE_INCLUDE_DIRECTORIES)
         foreach(_x3pio_mz_dir IN LISTS _x3pio_mz_dirs)

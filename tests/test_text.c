@@ -23,8 +23,8 @@ static void test_parse(void)
 {
     double v = 0;
     CHECK(parse("1.5", &v) && v == 1.5);
-    CHECK(parse("  +2.5e-3 \n", &v) && v == 2.5e-3);
-    CHECK(parse("2.e-06", &v) && v == 2e-6);
+    CHECK(parse("  +2.5e-3 \n", &v) && equals(v, 2.5e-3));
+    CHECK(parse("2.e-06", &v) && equals(v, 2e-6));
     CHECK(parse(".5", &v) && v == 0.5);
     CHECK(parse("-7", &v) && v == -7.0);
     CHECK(parse("1E3", &v) && v == 1000.0);

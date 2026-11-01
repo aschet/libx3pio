@@ -52,8 +52,8 @@ static void test_descriptions(void)
     CHECK_OK(x3pio_document_set_feature_surface(d, 640, 480, 1e-6, 2e-6,
                                                 X3PIO_TYPE_FLOAT, 1.0, 1));
     CHECK(x3pio_document_feature(d) == X3PIO_SURFACE);
-    CHECK(x3pio_document_axis(d, X3PIO_X).increment == 1e-6);
-    CHECK(x3pio_document_axis(d, X3PIO_Y).increment == 2e-6);
+    CHECK(equals(x3pio_document_axis(d, X3PIO_X).increment, 1e-6));
+    CHECK(equals(x3pio_document_axis(d, X3PIO_Y).increment, 2e-6));
     CHECK(x3pio_document_axis(d, X3PIO_Z).storage == X3PIO_TYPE_FLOAT);
     CHECK(x3pio_document_point_count(d) == 640 * 480);
     CHECK_OK(x3pio_document_validate(d, NULL));
@@ -64,7 +64,7 @@ static void test_descriptions(void)
     x3pio_dimensions dims = x3pio_document_dimensions(d);
     CHECK(dims.size_x == 256 && dims.size_y == 1 && dims.size_z == 3
           && !dims.list);
-    CHECK(x3pio_document_axis(d, X3PIO_Y).increment == 1e-6);
+    CHECK(equals(x3pio_document_axis(d, X3PIO_Y).increment, 1e-6));
     CHECK_OK(x3pio_document_validate(d, NULL));
 
     CHECK_OK(x3pio_document_set_feature_point_cloud(d, 1000, X3PIO_TYPE_INT32,
@@ -76,7 +76,8 @@ static void test_descriptions(void)
     {
         const x3pio_axis axis = x3pio_document_axis(d, (x3pio_coordinate)c);
         CHECK(axis.type == X3PIO_AXIS_ABSOLUTE
-              && axis.storage == X3PIO_TYPE_INT32 && axis.increment == 1e-8);
+              && axis.storage == X3PIO_TYPE_INT32
+              && equals(axis.increment, 1e-8));
     }
     CHECK_OK(x3pio_document_validate(d, NULL));
 
@@ -350,7 +351,7 @@ static void test_irregular_profile(void)
     CHECK(x3pio_document_feature(d) == X3PIO_PROFILE);
     x3pio_axis axis = x3pio_document_axis(d, X3PIO_X);
     CHECK(axis.type == X3PIO_AXIS_ABSOLUTE && axis.storage == X3PIO_TYPE_INT16
-          && axis.increment == 1e-9);
+          && equals(axis.increment, 1e-9));
     axis = x3pio_document_axis(d, X3PIO_Y);
     CHECK(axis.type == X3PIO_AXIS_INCREMENTAL);
     axis = x3pio_document_axis(d, X3PIO_Z);

@@ -374,10 +374,10 @@ static void test_numbers_in_text(void)
     rewrite_datums(&a, odd, 4);
     double z[12] = {0};
     CHECK_OK(try_read(&a, true, z));
-    CHECK(z[0] == 2e-6);
-    CHECK(z[1] == 3e-7);
-    CHECK(z[2] == 5e-7);
-    CHECK(z[3] == 1.0000000000000001e-07);
+    CHECK(equals(z[0], 2e-6));
+    CHECK(equals(z[1], 3e-7));
+    CHECK(equals(z[2], 5e-7));
+    CHECK(equals(z[3], 1.0000000000000001e-07));
     CHECK_NEAR(z[4], 5e-7, 1e-12);
     archive_free(&a);
 

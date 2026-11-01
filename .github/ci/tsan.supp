@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Thomas Ascher <thomas.ascher@gmx.at>
+#
+# SPDX-License-Identifier: MIT
+
+# mktime() of the C library changes the time zone state under a lock of its
+# own, which ThreadSanitizer cannot see in a library that was not built with it.
+# minizip-ng calls it for the time stamp of every member that it reads.
+race:mz_zip_dosdate_to_time_t
+race:mz_zip_tm_to_time_t

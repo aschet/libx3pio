@@ -110,7 +110,7 @@ static void test_floats(void)
     x3pio_store_double(out, -INFINITY);
     CHECK(isinf(x3pio_load_double(out)) && x3pio_load_double(out) < 0);
     x3pio_store_double(out, 0.1);
-    CHECK(x3pio_load_double(out) == 0.1);
+    CHECK(equals(x3pio_load_double(out), 0.1));
 }
 
 /* Reading at an odd address, as in a record that is not aligned. */
@@ -120,7 +120,7 @@ static void test_alignment(void)
     for (size_t offset = 0; offset < 4; ++offset)
     {
         x3pio_store_double(buffer + offset, 123.456);
-        CHECK(x3pio_load_double(buffer + offset) == 123.456);
+        CHECK(equals(x3pio_load_double(buffer + offset), 123.456));
         x3pio_store_u32(buffer + offset, 0xCAFEBABEUL);
         CHECK(x3pio_load_u32(buffer + offset) == 0xCAFEBABEUL);
     }
