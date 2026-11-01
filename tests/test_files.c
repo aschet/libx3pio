@@ -564,7 +564,11 @@ static void test_vendor_rules(void)
     size_t files = 0;
     for (size_t i = 0; i < a.count; ++i)
     {
-        files += strncmp(a.items[i].name, "a\\b", 3) == 0 ? 1U : 0U;
+        const char *name = a.items[i].name;
+        files += name[0] == 'a' && (name[1] == '\\' || name[1] == '/')
+                         && name[2] == 'b'
+                     ? 1U
+                     : 0U;
     }
     CHECK(files == 1);
     archive_free(&a);

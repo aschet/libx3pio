@@ -60,7 +60,7 @@
  *   supported.
  *
  * @section building_build Building and Installing
- * The library requires a C11 compiler, CMake, minizip-ng (4.0 or later) built
+ * The library requires a C11 compiler, CMake, minizip-ng (4.0.3 or later) built
  * with zlib, which the deflate compression of the container needs, and Expat. Both are available as packages of vcpkg and Conan; their CMake
  * targets and package names differ, which the build hides behind the targets
  * `x3pio_deps::minizip` and `x3pio_deps::expat`.
@@ -218,6 +218,11 @@
  *   those of the format. A file with several identifiers is read as Amendment 1.
  *
  * A name is a file or a folder of the container, not both.
+ *
+ * The separator that the zip file holds is the one that minizip-ng writes,
+ * which depends on its version and on the platform: it can be a slash where
+ * the standard has the backslash. The library reads both as the same name, and
+ * so does the x3pio package.
  *
  * The functions hide this difference, so that a program serves both revisions
  * with the same calls. A file has an identifier of its own, the vendor, a `/`

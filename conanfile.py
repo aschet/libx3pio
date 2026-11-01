@@ -83,7 +83,7 @@ class X3pioConan(ConanFile):
             self.options["minizip-ng"].with_libbsd = False
 
     def requirements(self):
-        self.requires("minizip-ng/[>=4.0 <5]")
+        self.requires("minizip-ng/[>=4.0.3 <5]")
         self.requires("expat/[>=2.6 <3]")
 
     def build_requirements(self):

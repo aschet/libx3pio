@@ -93,11 +93,28 @@ static member *archive_add(archive *a, const char *name)
     return m;
 }
 
+/* The separator of the names in a zip file is the one that the zip library
+ * writes, which depends on its version and on the platform: both are the same
+ * name here. */
+static bool same_name(const char *a, const char *b)
+{
+    for (; *a != '\0' && *b != '\0'; ++a, ++b)
+    {
+        const char x = *a == '\\' ? '/' : *a;
+        const char y = *b == '\\' ? '/' : *b;
+        if (x != y)
+        {
+            return false;
+        }
+    }
+    return *a == *b;
+}
+
 member *archive_find(archive *a, const char *name)
 {
     for (size_t i = 0; i < a->count; ++i)
     {
-        if (strcmp(a->items[i].name, name) == 0)
+        if (same_name(a->items[i].name, name))
         {
             return &a->items[i];
         }
