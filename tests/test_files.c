@@ -7,6 +7,7 @@
 /* Files on disk and in memory, the files of vendors, the compression of the
  * container, and the states of the handles. */
 
+#include "byte_order.h"
 #include "helpers.h"
 
 #include <x3pio/file.h>
@@ -1037,10 +1038,9 @@ static void test_damage(void)
     x3pio_buffer_free(&damaged);
     x3pio_buffer_init(&damaged, x3pio_default_allocator());
     x3pio_buffer_append(&damaged, bytes.data, bytes.size);
-    /* The points are floats of the machine in the file. */
-    const float one = (float)heights[0];
+    /* The points are little-endian floats in the file. */
     unsigned char needle[4];
-    memcpy(needle, &one, 4);
+    x3pio_store_float(needle, (float)heights[0]);
     unsigned char *where = NULL;
     for (size_t i = 0; i + 4 <= damaged.size; ++i)
     {

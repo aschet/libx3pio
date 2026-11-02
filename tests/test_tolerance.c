@@ -8,6 +8,7 @@
  * tolerates what it can read without doubt and refuses the rest with an error.
  * Every case here changes a valid file in one respect. */
 
+#include "byte_order.h"
 #include "helpers.h"
 #include "md5.h"
 
@@ -580,8 +581,7 @@ static void test_infinite_value(void)
     char old_digest[X3PIO_MD5_HEX_SIZE];
     member *data = archive_find(&a, "bindata/data.bin");
     x3pio_md5_of(data->data.data, data->data.size, old_digest);
-    const double inf = INFINITY;
-    memcpy(data->data.data + 3 * 8, &inf, 8);
+    x3pio_store_double(data->data.data + 3 * 8, INFINITY);
     char new_digest[X3PIO_MD5_HEX_SIZE];
     x3pio_md5_of(data->data.data, data->data.size, new_digest);
     replace_first(&a, old_digest, new_digest);

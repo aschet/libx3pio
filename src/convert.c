@@ -11,7 +11,6 @@
 
 #include "document.h"
 #include "matrix.h"
-#include "samples.h"
 #include <math.h>
 
 /* The values that are converted at a time. */
@@ -44,14 +43,19 @@ x3pio_status x3pio_decode_values(const x3pio_document *document,
         return X3PIO_ERR_ARGUMENT;
     }
     const x3pio_axis *axis = &document->axes[coordinate];
-    const size_t size = x3pio_type_size(axis->storage);
+    /* The stored values are those of a buffer of the program, in the byte
+     * order of the machine. */
+    x3pio_matrix in;
+    if (!x3pio_matrix_init(&in, stored, x3pio_layout_packed(axis->storage),
+                           count, 1, false))
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
     double block[BLOCK];
     for (size_t at = 0; at < count; at += BLOCK)
     {
         const size_t n = count - at < BLOCK ? count - at : BLOCK;
-        x3pio_decode_samples(axis->storage,
-                             (const unsigned char *)stored + at * size, size,
-                             block, n);
+        x3pio_matrix_load(&in, at, block, n);
         for (size_t i = 0; i < n; ++i)
         {
             block[i] *= axis->increment;
@@ -88,7 +92,12 @@ x3pio_status x3pio_encode_values(const x3pio_document *document,
         return X3PIO_ERR_ARGUMENT;
     }
     const x3pio_axis *axis = &document->axes[coordinate];
-    const size_t size = x3pio_type_size(axis->storage);
+    x3pio_matrix out;
+    if (!x3pio_matrix_init(&out, stored, x3pio_layout_packed(axis->storage),
+                           count, 1, true))
+    {
+        return X3PIO_ERR_ARGUMENT;
+    }
     double block[BLOCK];
     for (size_t at = 0; at < count; at += BLOCK)
     {
@@ -98,8 +107,7 @@ x3pio_status x3pio_encode_values(const x3pio_document *document,
         {
             block[i] /= axis->increment;
         }
-        const x3pio_status status = x3pio_encode_samples(
-            axis->storage, block, n, (unsigned char *)stored + at * size, size);
+        const x3pio_status status = x3pio_matrix_store(&out, at, block, n);
         if (status != X3PIO_OK)
         {
             return status;
