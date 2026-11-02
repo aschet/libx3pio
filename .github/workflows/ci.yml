@@ -37,6 +37,18 @@ jobs:
             runner: ubuntu-24.04-arm
             job: gcc-aarch64-linux
             packages: ninja-build gcc
+          - name: GCC ARM Linux
+            runner: ubuntu-latest
+            job: gcc-arm-linux
+            packages: ninja-build qemu-user gcc-arm-linux-gnueabihf libc6-dev-armhf-cross
+          - name: GCC z/Architecture Linux
+            runner: ubuntu-latest
+            job: gcc-z-architecture-linux
+            packages: ninja-build qemu-user gcc-s390x-linux-gnu libc6-dev-s390x-cross
+          - name: GCC RISC-V Linux
+            runner: ubuntu-latest
+            job: gcc-risc-v-linux
+            packages: ninja-build qemu-user gcc-riscv64-linux-gnu libc6-dev-riscv64-cross
           - name: Clang x86-64 Linux
             runner: ubuntu-latest
             job: clang-x86-64-linux

@@ -13,7 +13,9 @@ the job on a development machine.
 
 A build job builds the library as a static and as a shared library, runs the
 tests, installs the library, and builds and runs a consumer project against the
-installation.
+installation. A job for a processor architecture that differs from that of the
+machine uses a cross compiler and runs the programs with qemu; it needs no
+emulator on a machine of the architecture of the job.
 
 The libraries minizip-ng, Expat and libxml2 come from vcpkg in manifest mode,
 from the root that VCPKG_ROOT or, on the runners of GitHub,
@@ -39,16 +41,18 @@ NINJA = "Ninja"
 class Build(NamedTuple):
     """The properties of a build job. The generator, the platform of a Visual
     Studio generator, the compiler and the flags apply to the library and to the
-    consumer project. The triplet is that of vcpkg. The machine is the
-    architecture that the job requires natively. A strict job builds the library
-    as ISO C11 without extensions, with every diagnostic of -pedantic-errors
-    treated as an error."""
+    consumer project. The triplet is that of vcpkg. The architecture of a GCC job
+    selects the GCC of the machine if the machine has the architecture, else the
+    cross GCC and qemu; the machine is the architecture that the job requires
+    natively. A strict job builds the library as ISO C11 without extensions,
+    with every diagnostic of -pedantic-errors treated as an error."""
 
     triplet: str
     generator: str = ""
     platform: str = ""
     compiler: str = ""
     flags: str = ""
+    arch: str = ""
     machine: str = ""
     strict: bool = False
     external_examples: bool = False
@@ -64,9 +68,10 @@ BUILDS = {
         external_examples=True,
     ),
     "gcc-x86-linux": Build("x86-linux", generator=NINJA, compiler="gcc", flags="-m32"),
-    "gcc-aarch64-linux": Build(
-        "arm64-linux", generator=NINJA, compiler="gcc", machine="aarch64"
-    ),
+    "gcc-aarch64-linux": Build("arm64-linux", generator=NINJA, arch="aarch64"),
+    "gcc-arm-linux": Build("arm-linux", generator=NINJA, arch="arm"),
+    "gcc-z-architecture-linux": Build("s390x-linux", generator=NINJA, arch="s390x"),
+    "gcc-risc-v-linux": Build("riscv64-linux", generator=NINJA, arch="riscv64"),
     "clang-x86-64-linux": Build(
         "x64-linux", generator=NINJA, compiler="clang", machine="x86_64"
     ),
@@ -100,8 +105,25 @@ def machine_is(arch):
     return {"arm64": "aarch64", "amd64": "x86_64"}.get(machine, machine) == arch
 
 
-def dependency_options(triplet=""):
-    """The CMake options that make the dependencies findable."""
+def cross_gcc(arch):
+    """The compiler, the CMake options and the emulator of a GCC job: the GCC of
+    the machine if the machine has the architecture, otherwise the cross GCC of
+    the GNU triplet and the qemu user-mode emulator for that architecture."""
+    if machine_is(arch):
+        return "gcc", [], ""
+    triplet = "arm-linux-gnueabihf" if arch == "arm" else f"{arch}-linux-gnu"
+    return (
+        f"{triplet}-gcc",
+        ["-DCMAKE_SYSTEM_NAME=Linux", f"-DCMAKE_SYSTEM_PROCESSOR={arch}"]
+        + [f"-DCMAKE_CROSSCOMPILING_EMULATOR=qemu-{arch};-L;/usr/{triplet}"],
+        f"qemu-{arch} -L /usr/{triplet}",
+    )
+
+
+def dependency_options(triplet="", cross=False):
+    """The CMake options that make the dependencies findable. For a cross
+    compilation vcpkg builds them with the triplets of this repository, which
+    chainload the cross compiler."""
     options = os.environ.get("DEPENDENCY_OPTIONS")
     if options:
         return shlex.split(options)
@@ -115,6 +137,9 @@ def dependency_options(triplet=""):
     options = [f"-DCMAKE_TOOLCHAIN_FILE={toolchain}", "-DVCPKG_MANIFEST_FEATURES=tests"]
     if triplet:
         options.append(f"-DVCPKG_TARGET_TRIPLET={triplet}")
+    if cross:
+        triplets = ROOT / ".github" / "ci" / "cross" / "triplets"
+        options.append(f"-DVCPKG_OVERLAY_TRIPLETS={triplets}")
     return options
 
 
@@ -158,7 +183,7 @@ def cache_value(build, name):
     return match.group(1) if match else ""
 
 
-def check_pkg_config(build, pc, static):
+def check_pkg_config(build, pc, emulator, static):
     """Builds and runs a program with the flags that pkg-config reports, using
     the compiler of the build."""
     # A static library requires its private dependencies, which pkg-config
@@ -182,24 +207,27 @@ def check_pkg_config(build, pc, static):
         *shlex.split(f"{compiler_flags} test_package/main.c {flags} -o"),
         program,
     )
-    run(shlex.quote(str(program)), env=library_env(pc.parent.parent))
+    run(emulator, program, env=library_env(pc.parent.parent))
 
 
 def build_job(job, directory):
     properties = BUILDS[job]
     if properties.machine and not machine_is(properties.machine):
         sys.exit(f"This job needs the architecture {properties.machine}.")
-    toolchain = ["-DCMAKE_BUILD_TYPE=Release"]
+    compiler, system, emulator = properties.compiler, [], ""
+    if properties.arch:
+        compiler, system, emulator = cross_gcc(properties.arch)
+    toolchain = ["-DCMAKE_BUILD_TYPE=Release", *system]
     if properties.generator:
         toolchain += ["-G", properties.generator]
     if properties.platform:
         toolchain += ["-A", properties.platform]
-    if properties.compiler:
-        toolchain.append(f"-DCMAKE_C_COMPILER={properties.compiler}")
+    if compiler:
+        toolchain.append(f"-DCMAKE_C_COMPILER={compiler}")
     if properties.flags:
         for kind in ("C", "EXE_LINKER", "SHARED_LINKER"):
             toolchain.append(f"-DCMAKE_{kind}_FLAGS={properties.flags}")
-    toolchain += dependency_options(properties.triplet)
+    toolchain += dependency_options(properties.triplet, cross=bool(system))
     library = []
     if properties.strict:
         library += ["-DCMAKE_C_STANDARD=11", "-DCMAKE_C_STANDARD_REQUIRED=ON"]
@@ -239,14 +267,11 @@ def build_job(job, directory):
         # On Windows the DLLs of the libraries that vcpkg built are next to its
         # import libraries.
         dlls = [root / "bin" for root in vcpkg_installed(build)]
-        run(
-            shlex.quote(str(program)),
-            env=library_env(stage / "lib", stage / "bin", *dlls),
-        )
+        run(emulator, program, env=library_env(stage / "lib", stage / "bin", *dlls))
         pc = find(stage, "x3pio.pc")
         if pc and shutil.which("pkg-config"):
             print(f"== pkg-config, BUILD_SHARED_LIBS={shared}")
-            check_pkg_config(build, pc, static=shared == "OFF")
+            check_pkg_config(build, pc, emulator, static=shared == "OFF")
 
 
 def configure(directory, options="", env=None):
